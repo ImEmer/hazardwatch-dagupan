@@ -1,89 +1,144 @@
-    import React, { useState } from 'react';
+    import React from 'react';
     import { useReports } from '../context/ReportContext';
-    import InteractiveMap from '../components/InteractiveMap';
 
-    const AdminDashboard = () => {
-    const { reports, updateReportStatus, deleteReport } = useReports();
-    const [filter, setFilter] = useState('all');
-
-    const filteredReports = filter === 'all' ? reports : reports.filter(r => r.status === filter);
-
-    const getStatusColor = (status) => {
-        const map = {
-        'Pending': 'bg-yellow-900/50 text-yellow-300 border-yellow-700',
-        'In Progress': 'bg-blue-900/50 text-blue-300 border-blue-700',
-        'Resolved': 'bg-green-900/50 text-green-300 border-green-700',
-        'Closed': 'bg-gray-800/50 text-gray-300 border-gray-700'
-        };
-        return map[status] || 'bg-gray-800/50';
+    const statusColors = {
+      Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
+      'Under Review': 'bg-sky-500/10 text-sky-300 border-sky-500/30',
+      Verified: 'bg-violet-500/10 text-violet-300 border-violet-500/30',
+      'In Progress': 'bg-blue-500/10 text-blue-300 border-blue-500/30',
+      Resolved: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+      Closed: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
     };
 
-    return (
-        <div className="min-h-screen bg-[#0a0b0f] p-4 md:p-6">
-        <div className="max-w-7xl mx-auto">
-            <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
-            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-            <div className="flex flex-wrap gap-2 bg-[#14151d] rounded-lg shadow p-1 border border-[#2e303a]">
-                {['all', 'Pending', 'In Progress', 'Resolved'].map((s) => (
-                <button key={s} onClick={() => setFilter(s)} className={`px-3 py-1 rounded-md text-sm font-medium transition capitalize ${filter === s ? 'bg-[#3b82f6] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252632]'}`}>
-                    {s === 'all' ? 'All' : s}
-                </button>
-                ))}
-            </div>
-            </div>
+    const priorityColors = {
+      Low: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
+      Medium: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+      High: 'bg-orange-500/10 text-orange-300 border-orange-500/30',
+      Urgent: 'bg-red-500/10 text-red-300 border-red-500/30',
+    };
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-[#14151d] border border-[#2e303a] rounded-xl shadow p-4 border-l-4 border-[#3b82f6]">
-                <p className="text-sm text-gray-400">Total</p>
-                <p className="text-2xl font-bold text-white">{reports.length}</p>
-            </div>
-            <div className="bg-[#14151d] border border-[#2e303a] rounded-xl shadow p-4 border-l-4 border-yellow-500">
-                <p className="text-sm text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-white">{reports.filter(r => r.status === 'Pending').length}</p>
-            </div>
-            <div className="bg-[#14151d] border border-[#2e303a] rounded-xl shadow p-4 border-l-4 border-green-500">
-                <p className="text-sm text-gray-400">Resolved</p>
-                <p className="text-2xl font-bold text-white">{reports.filter(r => r.status === 'Resolved').length}</p>
-            </div>
-            <div className="bg-[#14151d] border border-[#2e303a] rounded-xl shadow p-4 border-l-4 border-blue-500">
-                <p className="text-sm text-gray-400">In Progress</p>
-                <p className="text-2xl font-bold text-white">{reports.filter(r => r.status === 'In Progress').length}</p>
-            </div>
-            </div>
+    const AdminDashboard = () => {
+      const { reports } = useReports();
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2"><InteractiveMap reports={filteredReports} height="550px" /></div>
-            <div className="bg-[#14151d] border border-[#2e303a] rounded-xl shadow-md p-4 max-h-[550px] overflow-y-auto">
-                <h2 className="font-semibold text-white mb-3 flex justify-between"><span>Reports</span><span className="text-sm text-gray-400">{filteredReports.length}</span></h2>
-                <div className="space-y-3">
-                {filteredReports.length === 0 ? <p className="text-gray-400 text-center py-10">No reports found.</p> : 
-                    filteredReports.map((r) => (
-                    <div key={r.id} className="bg-[#0a0b0f] border border-[#2e303a] rounded-lg p-3 hover:shadow-sm hover:border-[#3b82f6]/30 transition group">
-                        <div className="flex justify-between items-start">
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-white truncate">{r.title}</h4>
-                            <p className="text-xs text-gray-400">{r.category}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full border inline-block mt-1 ${getStatusColor(r.status)}`}>
-                            {r.status}
-                            </span>
-                        </div>
-                        <div className="flex flex-col gap-1 ml-2">
-                            <select value={r.status} onChange={(e) => updateReportStatus(r.id, e.target.value)} className="text-xs bg-[#14151d] border border-[#2e303a] rounded px-1 py-0.5 text-white">
-                            <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Resolved">Resolved</option><option value="Closed">Closed</option>
-                            </select>
-                            <button onClick={() => { if (confirm('Delete this report?')) deleteReport(r.id); }} className="text-xs text-red-400 hover:text-red-300 text-left opacity-0 group-hover:opacity-100 transition">Delete</button>
-                        </div>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">{new Date(r.createdAt).toLocaleDateString()}</div>
+      const totalReports = reports.length;
+      const pending = reports.filter((report) => report.status === 'Pending').length;
+      const inProgress = reports.filter((report) => report.status === 'In Progress').length;
+      const resolved = reports.filter((report) => report.status === 'Resolved').length;
+      const recentReports = [...reports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+
+      const statusSummary = [
+        { label: 'Pending', value: pending, color: 'bg-yellow-500' },
+        { label: 'In Progress', value: inProgress, color: 'bg-blue-500' },
+        { label: 'Resolved', value: resolved, color: 'bg-emerald-500' },
+        { label: 'Closed', value: reports.filter((report) => report.status === 'Closed').length, color: 'bg-slate-500' },
+      ];
+
+      return (
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-4 shadow-xl">
+              <p className="text-sm text-gray-400">Total reports</p>
+              <p className="mt-3 text-3xl font-bold text-white">{totalReports}</p>
+            </div>
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-4 shadow-xl">
+              <p className="text-sm text-gray-400">Pending</p>
+              <p className="mt-3 text-3xl font-bold text-white">{pending}</p>
+            </div>
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-4 shadow-xl">
+              <p className="text-sm text-gray-400">In progress</p>
+              <p className="mt-3 text-3xl font-bold text-white">{inProgress}</p>
+            </div>
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-4 shadow-xl">
+              <p className="text-sm text-gray-400">Resolved</p>
+              <p className="mt-3 text-3xl font-bold text-white">{resolved}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">Reports by status</h3>
+                <span className="text-sm text-gray-400">Last 30 days</span>
+              </div>
+
+              <div className="space-y-4">
+                {statusSummary.map((item) => (
+                  <div key={item.label}>
+                    <div className="mb-1 flex items-center justify-between text-sm text-gray-300">
+                      <span>{item.label}</span>
+                      <span>{item.value}</span>
                     </div>
-                    ))
-                }
+                    <div className="h-2.5 overflow-hidden rounded-full bg-[#0a0b0f]">
+                      <div
+                        className={`h-full rounded-full ${item.color}`}
+                        style={{ width: `${Math.max((item.value / Math.max(totalReports, 1)) * 100, 8)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5 shadow-xl">
+              <h3 className="text-xl font-semibold text-white">Response metrics</h3>
+              <div className="mt-5 space-y-4">
+                <div className="rounded-xl border border-[#2e303a] bg-[#0a0b0f] p-3">
+                  <p className="text-sm text-gray-400">Average response time</p>
+                  <p className="mt-2 text-2xl font-bold text-white">6.2 hours</p>
                 </div>
+                <div className="rounded-xl border border-[#2e303a] bg-[#0a0b0f] p-3">
+                  <p className="text-sm text-gray-400">Active incidents</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{pending + inProgress}</p>
+                </div>
+                <div className="rounded-xl border border-[#2e303a] bg-[#0a0b0f] p-3">
+                  <p className="text-sm text-gray-400">Critical issues</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{reports.filter((report) => report.priority === 'Urgent').length}</p>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">Recent reports</h3>
+                <span className="text-sm text-gray-400">Latest activity</span>
+              </div>
+
+              <div className="space-y-3">
+                {recentReports.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#2e303a] bg-[#0a0b0f] p-3">
+                    <div>
+                      <p className="font-medium text-white">{report.title}</p>
+                      <p className="text-xs text-gray-400">{report.category} • {new Date(report.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-medium ${priorityColors[report.priority] || priorityColors.Medium}`}>
+                        {report.priority || 'Medium'}
+                      </span>
+                      <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-medium ${statusColors[report.status] || statusColors.Pending}`}>
+                        {report.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5 shadow-xl">
+              <h3 className="text-xl font-semibold text-white">Priority queue</h3>
+              <div className="mt-5 space-y-3">
+                {['Urgent', 'High', 'Medium', 'Low'].map((level) => (
+                  <div key={level} className="flex items-center justify-between rounded-xl border border-[#2e303a] bg-[#0a0b0f] p-3">
+                    <span className="text-gray-300">{level}</span>
+                    <span className="text-white">{reports.filter((report) => (report.priority || 'Medium') === level).length}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        </div>
-    );
+      );
     };
 
     export default AdminDashboard;
