@@ -8,6 +8,9 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import SubmitReport from './pages/SubmitReport';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminReportDetailPage from './pages/AdminReportDetailPage';
@@ -39,6 +42,9 @@ function App() {
             <Route path="/track" element={<PublicPage><PublicPlaceholder title="Track a Report" description="Enter your report reference to follow its progress." /></PublicPage>} />
             <Route path="/about" element={<PublicPage><PublicPlaceholder title="About HazardWatch" description="HazardWatch connects citizens and local responders for faster hazard reporting." /></PublicPage>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
+            <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
+            <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
+            <Route path="/reset-password/:token" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />

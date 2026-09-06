@@ -108,6 +108,20 @@ export const AuthProvider = ({ children }) => {
     }, token);
   }, [token]);
 
+  const forgotPassword = useCallback(async (email) => {
+    return request('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }, []);
+
+  const resetPassword = useCallback(async (resetToken, password) => {
+    return request('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token: resetToken, password }),
+    });
+  }, []);
+
   const value = useMemo(() => ({
     user,
     token,
@@ -118,7 +132,9 @@ export const AuthProvider = ({ children }) => {
     register,
     getCurrentUser,
     changePassword,
-  }), [changePassword, getCurrentUser, loading, login, logout, register, token, user]);
+    forgotPassword,
+    resetPassword,
+  }), [changePassword, forgotPassword, getCurrentUser, loading, login, logout, register, resetPassword, token, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import { showError, showSuccess } from '../services/alerts';
+import { AuthCard } from './RegisterPage';
 
 const LoginPage = () => {
   const { login, isAuthenticated } = useAuth();
@@ -18,27 +20,27 @@ const LoginPage = () => {
     setSubmitting(true);
     try {
       await login(form.email, form.password);
+      await showSuccess('Login successful. Welcome back!');
       navigate(location.state?.from?.pathname || '/admin/dashboard', { replace: true });
     } catch (loginError) {
       setError(loginError.message);
+      await showError(loginError.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0b0f] px-4 pt-16">
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-[#2e303a] bg-[#14151d] p-6 shadow-xl">
-        <h1 className="text-2xl font-bold text-white">Staff login</h1>
-        <p className="mt-2 text-sm text-gray-400">Access the HazardWatch response console.</p>
-        {error && <p className="mt-4 rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-        <div className="mt-5 space-y-4">
-          <input type="email" required placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-3 text-white outline-none focus:border-[#3b82f6]" />
-          <input type="password" required placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-3 text-white outline-none focus:border-[#3b82f6]" />
-        </div>
-        <button disabled={submitting} className="mt-5 w-full rounded-xl bg-[#3b82f6] px-4 py-3 font-semibold text-white hover:bg-[#2563eb] disabled:opacity-60">{submitting ? 'Signing in...' : 'Sign in'}</button>
+    <AuthCard title="Welcome Back" description="Login to HazardWatch">
+      <form onSubmit={submit} className="space-y-4">
+        {error && <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+        <input type="email" required placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="auth-input" />
+        <input type="password" required placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="auth-input" />
+        <div className="text-right"><Link className="auth-link text-sm" to="/forgot-password">Forgot Password?</Link></div>
+        <button disabled={submitting} className="auth-button">{submitting ? 'Signing in...' : 'Login'}</button>
+        <p className="text-center text-sm text-gray-400">Don't have an account? <Link className="auth-link" to="/register">Register</Link></p>
       </form>
-    </div>
+    </AuthCard>
   );
 };
 

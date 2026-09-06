@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import { confirmAction } from '../../services/alerts';
 
 const items = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: '▣' },
-  { to: '/admin/reports', label: 'Reports', icon: '◫' },
-  { to: '/admin/map', label: 'Map', icon: '⌖' },
-  { to: '/admin/users', label: 'Users', icon: '◍', roles: ['superadmin', 'admin'] },
-  { to: '/admin/settings', label: 'Settings', icon: '⚙' },
+  { to: '/admin/dashboard', label: 'Dashboard' },
+  { to: '/admin/reports', label: 'Reports' },
+  { to: '/admin/map', label: 'Map View' },
+  { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'] },
+  { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin'] },
 ];
 
 const Sidebar = () => {
@@ -17,8 +18,11 @@ const Sidebar = () => {
   const visibleItems = items.filter((item) => !item.roles || item.roles.includes(user?.role));
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/');
+    const result = await confirmAction("You won't be able to access the admin panel until you log in again.", 'Yes, logout!');
+    if (result.isConfirmed) {
+      await logout();
+      navigate('/');
+    }
   };
 
   return (
@@ -35,7 +39,7 @@ const Sidebar = () => {
         <nav className="space-y-1">
           {visibleItems.map((item) => (
             <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${isActive ? 'border-[#3b82f6]/20 bg-[#3b82f6]/10 text-[#60a5fa]' : 'border-transparent text-gray-300 hover:bg-[#14151d] hover:text-white'}`}>
-              <span>{item.icon}</span>{item.label}
+              {item.label}
             </NavLink>
           ))}
         </nav>

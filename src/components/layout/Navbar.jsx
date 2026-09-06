@@ -1,21 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import { confirmAction } from '../../services/alerts';
 
 const publicLinks = [
-  { to: '/', label: 'Home', icon: '⌂' },
-  { to: '/submit', label: 'Submit Report', icon: '✎' },
-  { to: '/map', label: 'Hazard Map', icon: '⌖' },
-  { to: '/track', label: 'Track Report', icon: '⌕' },
-  { to: '/about', label: 'About', icon: 'ⓘ' },
+  { to: '/', label: 'Home' },
+  { to: '/submit', label: 'Submit Report' },
+  { to: '/map', label: 'Hazard Map' },
+  { to: '/track', label: 'Track Report' },
+  { to: '/about', label: 'About' },
 ];
 
 const adminLinks = [
   { to: '/admin/dashboard', label: 'Dashboard' },
   { to: '/admin/reports', label: 'Reports' },
-  { to: '/admin/map', label: 'Map' },
+  { to: '/admin/map', label: 'Map View' },
   { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'] },
-  { to: '/admin/settings', label: 'Settings' },
+  { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin'] },
 ];
 
 const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -38,9 +39,12 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    await logout();
-    setMenuOpen(false);
-    navigate('/');
+    const result = await confirmAction("You won't be able to access the admin panel until you log in again.", 'Yes, logout!');
+    if (result.isConfirmed) {
+      await logout();
+      setMenuOpen(false);
+      navigate('/');
+    }
   };
 
   return (
@@ -49,11 +53,11 @@ const Navbar = () => {
     }`}>
       <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between px-4 md:px-6">
         <Link to="/" className="text-lg font-bold tracking-tight text-white" onClick={() => setMenuOpen(false)}>
-          ⚠️ HazardWatch
+          HazardWatch
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass}>{item.icon ? `${item.icon} ` : ''}{item.label}</NavLink>)}
+          {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass}>{item.label}</NavLink>)}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -68,17 +72,17 @@ const Navbar = () => {
         </div>
 
         <button className="rounded-lg border border-[#2e303a] px-3 py-2 text-white md:hidden" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle navigation menu">
-          {menuOpen ? '×' : '☰'}
+          {menuOpen ? 'Close' : 'Menu'}
         </button>
       </div>
 
       {menuOpen && (
         <nav className="border-b border-[#2e303a] bg-[#0a0b0f] px-4 pb-4 md:hidden">
           <div className="flex flex-col gap-1">
-            {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.icon ? `${item.icon} ` : ''}{item.label}</NavLink>)}
+            {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.label}</NavLink>)}
             {isAuthenticated ? (
               <button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-[#14151d]">Logout ({user.name})</button>
-            ) : <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>🔐 Login</NavLink>}
+            ) : <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Login</NavLink>}
           </div>
         </nav>
       )}
