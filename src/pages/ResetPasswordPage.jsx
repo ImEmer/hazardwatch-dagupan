@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { AuthCard } from './RegisterPage';
 import { showError, showSuccess, showWarning } from '../services/alerts';
+import { validatePassword } from '../services/validation';
 
 const ResetPasswordPage = () => {
   const { token } = useParams();
@@ -10,15 +11,17 @@ const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const submit = async (event) => {
     event.preventDefault();
-    if (passwords.password.length < 6) {
-      await showWarning('Password must be at least 6 characters.');
-      return;
-    }
-    if (passwords.password !== passwords.confirmPassword) {
-      await showWarning('Passwords do not match.');
+    const nextErrors = {
+      password: validatePassword(passwords.password),
+      confirmPassword: !passwords.confirmPassword ? 'Please confirm your password.' : passwords.password !== passwords.confirmPassword ? 'Passwords do not match.' : '',
+    };
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      await showWarning('Please fill in all required fields correctly.');
       return;
     }
     setSubmitting(true);
@@ -36,8 +39,14 @@ const ResetPasswordPage = () => {
   return (
     <AuthCard title="Create New Password" description="Choose a new password for your account.">
       <form onSubmit={submit} className="space-y-4">
-        <input required minLength="6" type="password" placeholder="New password" value={passwords.password} onChange={(event) => setPasswords({ ...passwords, password: event.target.value })} className="auth-input" />
-        <input required minLength="6" type="password" placeholder="Confirm password" value={passwords.confirmPassword} onChange={(event) => setPasswords({ ...passwords, confirmPassword: event.target.value })} className="auth-input" />
+        <label className="block text-sm text-gray-300">New Password
+          <input minLength="6" type="password" placeholder="New password" value={passwords.password} onChange={(event) => setPasswords({ ...passwords, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
+          {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
+        </label>
+        <label className="block text-sm text-gray-300">Confirm Password
+          <input minLength="6" type="password" placeholder="Confirm password" value={passwords.confirmPassword} onChange={(event) => setPasswords({ ...passwords, confirmPassword: event.target.value })} className={`auth-input mt-2 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+          {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}
+        </label>
         <button disabled={submitting} className="auth-button">{submitting ? 'Resetting...' : 'Reset Password'}</button>
         <p className="text-center text-sm"><Link className="auth-link" to="/login">Back to Login</Link></p>
       </form>

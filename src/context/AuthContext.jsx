@@ -97,9 +97,9 @@ export const AuthProvider = ({ children }) => {
     const response = await request('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
-    }, token);
+    });
     return response.user || response;
-  }, [token]);
+  }, []);
 
   const changePassword = useCallback(async (currentPassword, newPassword) => {
     return request('/api/auth/change-password', {

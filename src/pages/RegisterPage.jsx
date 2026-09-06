@@ -2,34 +2,38 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { showError, showSuccess, showWarning } from '../services/alerts';
+import { validateEmail, validatePassword } from '../services/validation';
 
 const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const submit = async (event) => {
     event.preventDefault();
-    if (form.name.trim().length < 2 || !form.email || !form.password || !form.confirmPassword) {
-      await showWarning('Please fill in all required fields.');
-      return;
-    }
-    if (form.password.length < 6) {
-      await showWarning('Password must be at least 6 characters.');
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      await showWarning('Passwords do not match.');
+    const nextErrors = {
+      name: !form.name.trim() ? 'Full name is required.' : form.name.trim().length < 2 ? 'Name must be at least 2 characters.' : form.name.trim().length > 50 ? 'Name must be 50 characters or fewer.' : '',
+      email: validateEmail(form.email),
+      password: validatePassword(form.password),
+      confirmPassword: !form.confirmPassword ? 'Please confirm your password.' : form.password !== form.confirmPassword ? 'Passwords do not match.' : '',
+    };
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      await showWarning('Please fill in all required fields correctly.');
       return;
     }
     setSubmitting(true);
     try {
       await register({ name: form.name.trim(), email: form.email, password: form.password });
-      await showSuccess('Your account has been created. You can now log in.');
+      await showSuccess('Account created! Please login.');
       navigate('/login');
     } catch (error) {
-      await showError(error.message);
+      const message = error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('exist')
+        ? 'Email already registered. Please use a different email.'
+        : error.message;
+      await showError(message);
     } finally {
       setSubmitting(false);
     }
@@ -38,10 +42,22 @@ const RegisterPage = () => {
   return (
     <AuthCard title="Create Account" description="Register for HazardWatch">
       <form onSubmit={submit} className="space-y-4">
-        <input required minLength="2" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="auth-input" />
-        <input required type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="auth-input" />
-        <input required minLength="6" type="password" placeholder="Password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="auth-input" />
-        <input required minLength="6" type="password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className="auth-input" />
+        <label className="block text-sm text-gray-300">Full Name
+          <input maxLength="50" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={`auth-input mt-2 ${errors.name ? 'border-red-500' : ''}`} />
+          {errors.name && <span className="mt-1 block text-xs text-red-400">{errors.name}</span>}
+        </label>
+        <label className="block text-sm text-gray-300">Email
+          <input type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
+          {errors.email && <span className="mt-1 block text-xs text-red-400">{errors.email}</span>}
+        </label>
+        <label className="block text-sm text-gray-300">Password
+          <input minLength="6" type="password" placeholder="Password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
+          {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
+        </label>
+        <label className="block text-sm text-gray-300">Confirm Password
+          <input minLength="6" type="password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input mt-2 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+          {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}
+        </label>
         <button disabled={submitting} className="auth-button">{submitting ? 'Creating account...' : 'Register'}</button>
         <p className="text-center text-sm text-gray-400">Already have an account? <Link className="auth-link" to="/login">Login</Link></p>
       </form>

@@ -38,12 +38,12 @@ const Sidebar = () => {
         </div>
         <nav className="space-y-1">
           {visibleItems.map((item) => (
-            <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${isActive ? 'border-[#3b82f6]/20 bg-[#3b82f6]/10 text-[#60a5fa]' : 'border-transparent text-gray-300 hover:bg-[#14151d] hover:text-white'}`}>
+            <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${isActive ? 'border-[#3b82f6]/20 text-[#3b82f6]' : 'border-transparent text-gray-300 hover:text-[#3b82f6]'}`}>
               {item.label}
             </NavLink>
           ))}
         </nav>
-        <button onClick={handleLogout} className="mt-8 w-full rounded-lg border border-red-500/20 px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10">Logout</button>
+        <button onClick={handleLogout} className="mt-8 w-full rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:text-[#3b82f6]">Logout</button>
       </aside>
     </>
   );

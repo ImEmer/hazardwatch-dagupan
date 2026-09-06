@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AboutPage from './pages/AboutPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminReportDetailPage from './pages/AdminReportDetailPage';
@@ -40,7 +41,7 @@ function App() {
             <Route path="/submit" element={<PublicPage><SubmitReport /></PublicPage>} />
             <Route path="/map" element={<PublicPage><PublicPlaceholder title="Hazard Map" description="Explore reported hazards across Dagupan City." /></PublicPage>} />
             <Route path="/track" element={<PublicPage><PublicPlaceholder title="Track a Report" description="Enter your report reference to follow its progress." /></PublicPage>} />
-            <Route path="/about" element={<PublicPage><PublicPlaceholder title="About HazardWatch" description="HazardWatch connects citizens and local responders for faster hazard reporting." /></PublicPage>} />
+            <Route path="/about" element={<PublicPage><AboutPage /></PublicPage>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
@@ -53,7 +54,7 @@ function App() {
               <Route path="reports/:id" element={<AdminReportDetailPage />} />
               <Route path="map" element={<AdminMapPage />} />
               <Route path="users" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminUsersPage /></ProtectedRoute>} />
-              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminSettingsPage /></ProtectedRoute>} />
             </Route>
 
             <Route path="/logout" element={<Navigate to="/" replace />} />

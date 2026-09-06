@@ -4,7 +4,6 @@ import useAuth from '../../hooks/useAuth';
 import { confirmAction } from '../../services/alerts';
 
 const publicLinks = [
-  { to: '/', label: 'Home' },
   { to: '/submit', label: 'Submit Report' },
   { to: '/map', label: 'Hazard Map' },
   { to: '/track', label: 'Track Report' },
@@ -20,7 +19,7 @@ const adminLinks = [
 ];
 
 const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium transition ${
-  isActive ? 'bg-[#3b82f6]/10 text-[#60a5fa]' : 'text-gray-300 hover:bg-[#14151d] hover:text-white'
+  isActive ? 'text-[#3b82f6]' : 'text-gray-300 hover:text-[#3b82f6]'
 }`;
 
 const Navbar = () => {
@@ -64,7 +63,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <>
               <span className="text-sm text-gray-300">{user.name}</span>
-              <button onClick={handleLogout} className="rounded-lg border border-[#2e303a] px-3 py-2 text-sm text-gray-300 hover:text-white">Logout</button>
+              <button onClick={handleLogout} className="rounded-lg px-3 py-2 text-sm text-gray-300 hover:text-[#3b82f6]">Logout</button>
             </>
           ) : (
             <Link to="/login" className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">Login</Link>
@@ -81,7 +80,7 @@ const Navbar = () => {
           <div className="flex flex-col gap-1">
             {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.label}</NavLink>)}
             {isAuthenticated ? (
-              <button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-[#14151d]">Logout ({user.name})</button>
+              <button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:text-[#3b82f6]">Logout ({user.name})</button>
             ) : <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Login</NavLink>}
           </div>
         </nav>
