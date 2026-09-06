@@ -82,6 +82,8 @@ const AdminReportDetailPage = () => {
             <label className="block text-sm text-gray-300">
               Status
               <select
+                id="status"
+                name="status"
                 value={report.status}
                 onChange={(event) => updateReportStatus(report.id, event.target.value)}
                 className="mt-2 w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none"
@@ -98,6 +100,8 @@ const AdminReportDetailPage = () => {
             <label className="block text-sm text-gray-300">
               Priority
               <select
+                id="priority"
+                name="priority"
                 value={report.priority || 'Medium'}
                 className="mt-2 w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none"
               >

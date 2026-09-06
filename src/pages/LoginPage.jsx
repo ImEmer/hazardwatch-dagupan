@@ -47,11 +47,11 @@ const LoginPage = () => {
       <form onSubmit={submit} className="space-y-4">
         {error && <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
         <label className="block text-sm text-gray-300">Email
-          <input type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
+          <input type="email" id="email" name="email" autoComplete="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
           {errors.email && <span className="mt-1 block text-xs text-red-400">{errors.email}</span>}
         </label>
         <label className="block text-sm text-gray-300">Password
-          <input type="password" placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
+          <input type="password" id="password" name="password" autoComplete="current-password" placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
           {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
         </label>
         <div className="text-right"><Link className="auth-link text-sm" to="/forgot-password">Forgot Password?</Link></div>

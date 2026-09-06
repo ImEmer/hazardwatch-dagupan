@@ -12,6 +12,7 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AboutPage from './pages/AboutPage';
+import TrackReportPage from './pages/TrackReportPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminReportDetailPage from './pages/AdminReportDetailPage';
@@ -40,7 +41,7 @@ function App() {
             <Route path="/" element={<PublicPage><HomePage /></PublicPage>} />
             <Route path="/submit" element={<PublicPage><SubmitReport /></PublicPage>} />
             <Route path="/map" element={<PublicPage><PublicPlaceholder title="Hazard Map" description="Explore reported hazards across Dagupan City." /></PublicPage>} />
-            <Route path="/track" element={<PublicPage><PublicPlaceholder title="Track a Report" description="Enter your report reference to follow its progress." /></PublicPage>} />
+            <Route path="/track" element={<PublicPage><TrackReportPage /></PublicPage>} />
             <Route path="/about" element={<PublicPage><AboutPage /></PublicPage>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />

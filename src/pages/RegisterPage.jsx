@@ -43,19 +43,19 @@ const RegisterPage = () => {
     <AuthCard title="Create Account" description="Register for HazardWatch">
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm text-gray-300">Full Name
-          <input maxLength="50" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={`auth-input mt-2 ${errors.name ? 'border-red-500' : ''}`} />
+          <input type="text" id="name" name="name" autoComplete="name" maxLength="50" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={`auth-input mt-2 ${errors.name ? 'border-red-500' : ''}`} />
           {errors.name && <span className="mt-1 block text-xs text-red-400">{errors.name}</span>}
         </label>
         <label className="block text-sm text-gray-300">Email
-          <input type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
+          <input type="email" id="email" name="email" autoComplete="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
           {errors.email && <span className="mt-1 block text-xs text-red-400">{errors.email}</span>}
         </label>
         <label className="block text-sm text-gray-300">Password
-          <input minLength="6" type="password" placeholder="Password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
+          <input minLength="6" type="password" id="password" name="password" autoComplete="new-password" placeholder="Password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
           {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
         </label>
         <label className="block text-sm text-gray-300">Confirm Password
-          <input minLength="6" type="password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input mt-2 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+          <input minLength="6" type="password" id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input mt-2 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
           {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}
         </label>
         <button disabled={submitting} className="auth-button">{submitting ? 'Creating account...' : 'Register'}</button>

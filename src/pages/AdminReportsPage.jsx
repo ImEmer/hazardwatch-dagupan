@@ -65,6 +65,8 @@ const AdminReportsPage = () => {
 
         <div className="mt-4 grid gap-3 md:grid-cols-[1.7fr_1fr_1fr]">
           <input
+            id="reportSearch"
+            name="reportSearch"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search report title, address, category..."
@@ -72,6 +74,8 @@ const AdminReportsPage = () => {
           />
 
           <select
+            id="priorityFilter"
+            name="priorityFilter"
             value={priorityFilter}
             onChange={(event) => setPriorityFilter(event.target.value)}
             className="rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-sm text-white focus:border-[#3b82f6] focus:outline-none"
@@ -140,6 +144,8 @@ const AdminReportsPage = () => {
                           Open detail
                         </Link>
                         <select
+                          id={`status-${report.id}`}
+                          name={`status-${report.id}`}
                           value={report.status}
                           onChange={(event) => updateReportStatus(report.id, event.target.value)}
                           className="rounded-lg border border-[#2e303a] bg-[#0a0b0f] px-2 py-1.5 text-xs text-white focus:border-[#3b82f6] focus:outline-none"

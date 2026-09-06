@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { addComment, assignReport, createReport, deleteReport, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
-import { allowRoles, isAdmin, isStaff, protect } from '../middleware/auth.js';
+import { allowRoles, isStaff, protect } from '../middleware/auth.js';
 import { uploadPhoto } from '../middleware/upload.js';
 import { validateId, validatePagination, validateReport } from '../middleware/validate.js';
 

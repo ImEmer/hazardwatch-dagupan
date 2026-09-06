@@ -16,15 +16,15 @@ const AdminSettingsPage = () => {
         <div className="mt-5 space-y-4">
           <label className="block">
             <span className="mb-2 block text-sm text-gray-300">Full name</span>
-            <input defaultValue="Marian Dela Cruz" className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none" />
+            <input id="profileName" name="profileName" autoComplete="name" defaultValue="Marian Dela Cruz" className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none" />
           </label>
           <label className="block">
             <span className="mb-2 block text-sm text-gray-300">Email</span>
-            <input defaultValue="marian@hazardwatch.gov" className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none" />
+            <input id="profileEmail" name="profileEmail" autoComplete="email" type="email" defaultValue="marian@hazardwatch.gov" className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none" />
           </label>
           <label className="block">
             <span className="mb-2 block text-sm text-gray-300">Password</span>
-            <input type="password" defaultValue="password123" className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none" />
+            <input id="profilePassword" name="profilePassword" autoComplete="new-password" type="password" defaultValue="password123" className="w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white focus:border-[#3b82f6] focus:outline-none" />
           </label>
         </div>
       </div>

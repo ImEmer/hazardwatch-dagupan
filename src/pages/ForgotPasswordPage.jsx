@@ -33,7 +33,7 @@ const ForgotPasswordPage = () => {
     <AuthCard title="Reset Password" description="Enter your email and we will send you a reset link.">
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm text-gray-300">Email
-          <input type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} className={`auth-input mt-2 ${error ? 'border-red-500' : ''}`} />
+          <input type="email" id="email" name="email" autoComplete="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} className={`auth-input mt-2 ${error ? 'border-red-500' : ''}`} />
           {error && <span className="mt-1 block text-xs text-red-400">{error}</span>}
         </label>
         <button disabled={submitting} className="auth-button">{submitting ? 'Sending...' : 'Send Reset Link'}</button>

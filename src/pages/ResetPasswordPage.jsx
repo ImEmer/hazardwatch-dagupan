@@ -40,11 +40,11 @@ const ResetPasswordPage = () => {
     <AuthCard title="Create New Password" description="Choose a new password for your account.">
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm text-gray-300">New Password
-          <input minLength="6" type="password" placeholder="New password" value={passwords.password} onChange={(event) => setPasswords({ ...passwords, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
+          <input minLength="6" type="password" id="password" name="password" autoComplete="new-password" placeholder="New password" value={passwords.password} onChange={(event) => setPasswords({ ...passwords, password: event.target.value })} className={`auth-input mt-2 ${errors.password ? 'border-red-500' : ''}`} />
           {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
         </label>
         <label className="block text-sm text-gray-300">Confirm Password
-          <input minLength="6" type="password" placeholder="Confirm password" value={passwords.confirmPassword} onChange={(event) => setPasswords({ ...passwords, confirmPassword: event.target.value })} className={`auth-input mt-2 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+          <input minLength="6" type="password" id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" value={passwords.confirmPassword} onChange={(event) => setPasswords({ ...passwords, confirmPassword: event.target.value })} className={`auth-input mt-2 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
           {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}
         </label>
         <button disabled={submitting} className="auth-button">{submitting ? 'Resetting...' : 'Reset Password'}</button>

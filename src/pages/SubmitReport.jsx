@@ -97,9 +97,22 @@ const SubmitReport = () => {
             {/* LEFT COLUMN - FORM */}
             <div className="lg:col-span-2 bg-[#14151d] border border-[#2e303a] rounded-xl shadow-md p-6">
                 <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1.5">Report Title <span className="text-red-400">*</span></label>
+                    <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={form.title}
+                    onChange={handleChange}
+                    placeholder="Report title"
+                    className={`w-full px-4 py-2.5 bg-[#0a0b0f] border ${errors.title ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg focus:ring-2 focus:ring-[#3b82f6] focus:border-[#3b82f6] outline-none text-white transition`}
+                    />
+                    {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
+                </div>
                 {/* Hazard Type */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-1.5">
                     <span className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -108,6 +121,7 @@ const SubmitReport = () => {
                     </span>
                     </label>
                     <select
+                    id="category"
                     name="category"
                     value={form.category}
                     onChange={handleChange}
@@ -143,6 +157,7 @@ const SubmitReport = () => {
                     </span>
                     </label>
                     <textarea
+                    id="description"
                     name="description"
                     value={form.description}
                     onChange={handleChange}
@@ -193,6 +208,7 @@ const SubmitReport = () => {
                         <input
                             type="file"
                             id="photo"
+                            name="photo"
                             accept="image/*"
                             onChange={handlePhotoChange}
                             className="hidden"
