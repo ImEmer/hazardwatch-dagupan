@@ -2,71 +2,17 @@
     import useAuth from '../hooks/useAuth';
 
     const ReportContext = createContext();
-    const generateId = () => Math.random().toString(36).substr(2, 9);
-
-    // MGA SAMPLE REPORTS - NASA DAGUPAN CITY TALAGA!
-    const INITIAL_REPORTS = [
-    {
-        id: generateId(),
-        title: 'Malalim na lubak sa Perez Blvd.',
-        category: 'Pothole',
-        description: 'Malaking lubak malapit sa Dagupan City Plaza. Delikado sa mga motorista.',
-        location: { type: 'Point', coordinates: [120.3340, 16.0420] },
-        status: 'Pending',
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-    },
-    {
-        id: generateId(),
-        title: 'Sira na poste ng ilaw sa Bonuan Gueset',
-        category: 'Streetlight',
-        description: 'Madilim ang kalsada malapit sa Bonuan Gueset Elementary School.',
-        location: { type: 'Point', coordinates: [120.3220, 16.0610] },
-        status: 'In Progress',
-        createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
-    },
-    {
-        id: generateId(),
-        title: 'Baradong kanal sa Lucao District',
-        category: 'Drainage',
-        description: 'Umaapaw tuwing umuulan. Umaabot sa tuhod ang baha.',
-        location: { type: 'Point', coordinates: [120.3400, 16.0380] },
-        status: 'Pending',
-        createdAt: new Date(Date.now() - 86400000 * 1).toISOString()
-    },
-    {
-        id: generateId(),
-        title: 'Tambak na basura sa De Venecia Highway',
-        category: 'Waste Disposal',
-        description: 'Ilegal na tambakan ng basura. Mabaho at maraming langaw.',
-        location: { type: 'Point', coordinates: [120.3500, 16.0500] },
-        status: 'Resolved',
-        createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
-    },
-    {
-        id: generateId(),
-        title: 'Sirang covered court sa Tapuac',
-        category: 'Public Facility',
-        description: 'Sirang backboard at kalawanging ring sa covered court.',
-        location: { type: 'Point', coordinates: [120.3280, 16.0330] },
-        status: 'Pending',
-        createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-    }
-    ];
+    const INITIAL_REPORTS = [];
 
     export const ReportProvider = ({ children }) => {
     const { token, user } = useAuth();
     const canFetchReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
-    const [reports, setReports] = useState(() => {
-        const saved = localStorage.getItem('hazardwatch_reports');
-        if (saved) {
-        try {
-            return JSON.parse(saved);
-        } catch {
-            return INITIAL_REPORTS;
-        }
-        }
-        return INITIAL_REPORTS;
-    });
+    const [reports, setReports] = useState(INITIAL_REPORTS);
+
+    useEffect(() => {
+        localStorage.removeItem('hazardwatch_reports');
+        setReports([]);
+    }, []);
 
     useEffect(() => {
         localStorage.setItem('hazardwatch_reports', JSON.stringify(reports));

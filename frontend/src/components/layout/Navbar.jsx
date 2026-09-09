@@ -29,51 +29,13 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
   const canAccessAdmin = Boolean(isAuthenticated && ['superadmin', 'admin', 'staff'].includes(user?.role));
-
-  useEffect(() => {
-    const roleNotifications = {
-      superadmin: [
-        { id: 1, message: 'New report submitted in Bonuan', createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(), isRead: false },
-        { id: 2, message: 'Admin updated a report in Lucao', createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), isRead: false },
-        { id: 3, message: 'System settings changed by super admin', createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(), isRead: true },
-      ],
-      admin: [
-        { id: 1, message: 'New user registered: Maria Santos', createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString(), isRead: false },
-        { id: 2, message: 'Staff updated report #456', createdAt: new Date(Date.now() - 1000 * 60 * 80).toISOString(), isRead: true },
-      ],
-      barangay: [
-        { id: 1, message: 'Report #789 updated to Resolved', createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(), isRead: false },
-        { id: 2, message: 'New report submitted in your barangay', createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), isRead: true },
-      ],
-      user: [
-        { id: 1, message: 'Your report is under review', createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(), isRead: false },
-      ],
-    };
-
-    if (isAuthenticated && user?.role) {
-      setNotifications(roleNotifications[user.role] || []);
-    } else {
-      setNotifications([]);
-    }
-  }, [isAuthenticated, user?.role]);
 
   const authenticatedLinks = publicLinks.filter((item) => !item.authenticated || isAuthenticated);
   const links = canAccessAdmin
     ? [...authenticatedLinks, ...adminLinks.filter((item) => item.roles.includes(user.role))]
     : authenticatedLinks;
-
-  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
-  const formatTime = (value) => {
-    const diff = Date.now() - new Date(value).getTime();
-    const minutes = Math.max(1, Math.round(diff / 60000));
-    if (minutes < 60) return `${minutes} min ago`;
-    if (minutes < 1440) return `${Math.round(minutes / 60)} hr ago`;
-    return `${Math.round(minutes / 1440)} day ago`;
-  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -106,38 +68,6 @@ const Navbar = () => {
         <div className="hidden items-center gap-3 md:flex">
           {isAuthenticated ? (
             <>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowNotifications((open) => !open)}
-                  className="relative rounded-lg p-2 text-gray-300 transition hover:bg-[#14151d] hover:text-white"
-                  aria-label="Open notifications"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-                {showNotifications && (
-                  <div className="absolute right-0 top-12 w-80 rounded-xl border border-[#2e303a] bg-[#14151d] p-1 shadow-xl">
-                    <div className="border-b border-[#2e303a] p-3"><p className="font-semibold text-white">Notifications</p></div>
-                    {notifications.length === 0 ? (
-                      <div className="p-4 text-sm text-gray-400">No notifications</div>
-                    ) : (
-                      notifications.map((notification) => (
-                        <div key={notification.id} className="border-b border-[#2e303a] p-3 last:border-0 hover:bg-[#0a0b0f]">
-                          <p className="text-sm text-white">{notification.message}</p>
-                          <p className="mt-1 text-xs text-gray-400">{formatTime(notification.createdAt)}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
               <div className="relative">
                 <button onClick={() => setAccountOpen((open) => !open)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-gray-300 hover:text-white" aria-expanded={accountOpen}>
                   <span aria-hidden="true">{user.name}</span><span aria-hidden="true" className="text-xs">&#9662;</span>

@@ -31,24 +31,42 @@ const MyReportsPage = () => {
     }
 
     let cancelled = false;
-    fetch('/api/reports/mine', { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (response) => {
+
+    const loadReports = async () => {
+      try {
+        let response = await fetch('/api/reports/mine', { headers: { Authorization: `Bearer ${token}` } });
+
+        if (!response.ok && response.status === 404) {
+          response = await fetch(`/api/reports?email=${encodeURIComponent(user?.email || '')}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.message || 'Unable to load your reports.');
-        if (!cancelled) setReports(body.reports || []);
-      })
-      .catch((error) => {
+
+        const reportList = Array.isArray(body.reports) ? body.reports : Array.isArray(body.data) ? body.data : [];
+        const filteredReports = user?.email
+          ? reportList.filter((report) => {
+              const reporterEmail = report.reportedBy?.email || report.email || report.user?.email;
+              return !reporterEmail || reporterEmail.toLowerCase() === user.email.toLowerCase();
+            })
+          : reportList;
+
+        if (!cancelled) setReports(filteredReports);
+      } catch (error) {
         if (!cancelled) showError(error.message);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setLoading(false);
           AOS.refresh();
         }
-      });
+      }
+    };
 
+    loadReports();
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, user?.email]);
 
   const filteredReports = useMemo(() => reports.filter((report) => {
     const matchesStatus = status === 'all' || report.status === status;
