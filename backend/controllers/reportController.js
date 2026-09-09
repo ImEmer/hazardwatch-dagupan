@@ -1,6 +1,6 @@
 import Report from '../models/Report.js';
 
-const scoped = (user) => user.role === 'barangay' ? { assignedBarangay: user.barangay } : {};
+const scoped = (user) => user.role === 'barangay' ? { assignedBarangay: user.barangay || '__unassigned_barangay__' } : {};
 
 export const getReports = async (req, res, next) => {
   try {
@@ -19,6 +19,14 @@ export const getReports = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const getMyReports = async (req, res, next) => {
+  try {
+    const reports = await Report.find({ 'reportedBy.email': req.user.email, deletedAt: null })
+      .sort({ createdAt: -1 });
+    res.json({ success: true, reports });
+  } catch (error) { next(error); }
+};
+
 export const getReport = async (req, res, next) => {
   try {
     const report = await Report.findOne({ _id: req.params.id, deletedAt: null }).populate('assignedTo', 'name email');
@@ -31,7 +39,18 @@ export const getReport = async (req, res, next) => {
 
 export const createReport = async (req, res, next) => {
   try {
-    const report = await Report.create({ ...req.body, photo: req.file ? `/uploads/${req.file.filename}` : req.body.photo });
+    const report = await Report.create({
+      ...req.body,
+      title: `${req.body.category} report - ${new Date().toLocaleDateString('en-PH')}`,
+      location: typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location,
+      barangay: req.body.barangay || '',
+      photo: req.file ? `/uploads/${req.file.filename}` : req.body.photo,
+      reportedBy: {
+        name: req.user.name,
+        email: req.user.email,
+        phone: req.user.phone,
+      },
+    });
     res.status(201).json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -45,17 +64,33 @@ export const updateReport = async (req, res, next) => {
 };
 
 export const updateStatus = async (req, res, next) => {
-  try { const report = await Report.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true, runValidators: true }); res.json({ success: true, report }); } catch (error) { next(error); }
+  try {
+    const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { status: req.body.status }, { new: true, runValidators: true });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    res.json({ success: true, report });
+  } catch (error) { next(error); }
 };
 export const updatePriority = async (req, res, next) => {
-  try { const report = await Report.findByIdAndUpdate(req.params.id, { priority: req.body.priority }, { new: true, runValidators: true }); res.json({ success: true, report }); } catch (error) { next(error); }
+  try {
+    const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { priority: req.body.priority }, { new: true, runValidators: true });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    res.json({ success: true, report });
+  } catch (error) { next(error); }
 };
 export const assignReport = async (req, res, next) => {
   try { const report = await Report.findByIdAndUpdate(req.params.id, { assignedTo: req.body.assignedTo, assignedBarangay: req.body.assignedBarangay }, { new: true }); res.json({ success: true, report }); } catch (error) { next(error); }
 };
 export const addComment = async (req, res, next) => {
-  try { const report = await Report.findByIdAndUpdate(req.params.id, { $push: { comments: { text: req.body.text, author: req.user._id, authorName: req.user.name } } }, { new: true }); res.json({ success: true, report }); } catch (error) { next(error); }
+  try {
+    const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { $push: { comments: { text: req.body.text, author: req.user._id, authorName: req.user.name } } }, { new: true });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    res.json({ success: true, report });
+  } catch (error) { next(error); }
 };
 export const deleteReport = async (req, res, next) => {
-  try { await Report.findByIdAndUpdate(req.params.id, { deletedAt: new Date() }); res.json({ success: true, message: 'Report deleted.' }); } catch (error) { next(error); }
+  try {
+    const report = await Report.findByIdAndDelete(req.params.id);
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    res.json({ success: true, message: 'Report deleted.', report });
+  } catch (error) { next(error); }
 };

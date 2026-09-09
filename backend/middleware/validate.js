@@ -14,10 +14,20 @@ export const validateRegister = [
 ];
 export const validateLogin = [body('email').isEmail().normalizeEmail(), body('password').notEmpty(), validate];
 export const validateReport = [
-  body('title').trim().isLength({ min: 1, max: 100 }),
   body('category').isIn(['Pothole', 'Streetlight', 'Drainage', 'Flooding', 'Waste Disposal', 'Public Facility', 'Other']),
   body('description').trim().isLength({ min: 10 }),
-  body('location.coordinates').isArray({ min: 2, max: 2 }),
+  body('location').custom((value, { req }) => {
+    const location = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!location?.coordinates || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+      throw new Error('A valid map location is required.');
+    }
+    req.body.location = location;
+    return true;
+  }),
+  body('photo').custom((value, { req }) => {
+    if (!req.file && !value) throw new Error('Photo evidence is required.');
+    return true;
+  }),
   validate,
 ];
 export const validateId = [param('id').isMongoId().withMessage('Invalid id.'), validate];

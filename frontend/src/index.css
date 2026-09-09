@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: clip;
+}
+
+.homepage-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.auth-input {
+  @apply w-full rounded-lg border border-[#2e303a] bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6];
+}
+
+.auth-button {
+  @apply w-full rounded-lg bg-[#3b82f6] py-3 font-semibold text-white shadow-lg shadow-[#3b82f6]/25 transition hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.auth-link {
+  @apply text-[#3b82f6] hover:underline;
+}
+
+.maplibregl-map {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.maplibregl-popup-content {
+  color: #1e293b;
+}
+
+[data-theme='light'] .maplibregl-ctrl-group {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 15%);
+}
+
+[data-theme='light'] .maplibregl-ctrl-group button {
+  border-color: #e2e8f0;
+}
+
+[data-theme='dark'] .maplibregl-ctrl-group {
+  background: #14151d;
+  border-color: #2e303a;
+}
+
+[data-theme='dark'] .maplibregl-ctrl-group button {
+  filter: invert(1);
+  border-color: #2e303a;
+}
+
+[data-theme='dark'] .maplibregl-popup-content {
+  background: #ffffff;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #16171d;
+  }
+}

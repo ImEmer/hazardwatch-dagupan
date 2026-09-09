@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.js';
 import reportRoutes from './routes/reports.js';
 import userRoutes from './routes/users.js';
 import statisticsRoutes from './routes/statistics.js';
+import notificationRoutes from './routes/notifications.js';
+import activityRoutes from './routes/activity.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
@@ -23,6 +25,8 @@ app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }), authRo
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/statistics', statisticsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/activity', activityRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, service: 'hazardwatch-api' }));
 app.use(notFound);
 app.use(errorHandler);
