@@ -18,7 +18,19 @@ const port = process.env.PORT || 5000;
 fs.mkdirSync('uploads', { recursive: true });
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+
+
+app.use(cors({
+  origin: [
+    'https://hazardwatch-dagupan.vercel.app',
+    'http://localhost:5173',
+    'https://hazardwatch-dagupan.onrender.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '2mb' }));
 app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }), authRoutes);
