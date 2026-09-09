@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     const currentToken = localStorage.getItem(TOKEN_KEY);
     try {
       if (currentToken) {
-        await request('/api/auth/logout', { method: 'POST' }, currentToken);
+        await request('/auth/logout', { method: 'POST' }, currentToken);
       }
     } finally {
       setToken(null);
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await request('/api/auth/me', {}, currentToken);
+      const response = await request('/auth/me', {}, currentToken);  
       const nextUser = response.user || response;
       setUser(nextUser);
       localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }) => {
   }, [getCurrentUser, token]);
 
   const login = useCallback(async (email, password) => {
-    const response = await request('/api/auth/login', {
+    const response = await request('/auth/login', { 
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }) => {
   }, [persistSession]);
 
   const register = useCallback(async (userData) => {
-    const response = await request('/api/auth/register', {
+    const response = await request('/auth/register', { 
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -102,14 +102,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const changePassword = useCallback(async (currentPassword, newPassword) => {
-    return request('/api/auth/change-password', {
+    return request('/auth/change-password', { 
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     }, token);
   }, [token]);
 
   const updateProfile = useCallback(async (name, email) => {
-    const response = await request('/api/auth/profile', {
+    const response = await request('/auth/profile', { 
       method: 'PUT',
       body: JSON.stringify({ name, email }),
     }, token);
@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const deleteAccount = useCallback(async () => {
-    await request('/api/auth/account', { method: 'DELETE' }, token);
+    await request('/auth/account', { method: 'DELETE' }, token); 
     setToken(null);
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
@@ -128,14 +128,14 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const forgotPassword = useCallback(async (email) => {
-    return request('/api/auth/forgot-password', {
+    return request('/auth/forgot-password', { 
       method: 'POST',
       body: JSON.stringify({ email }),
     });
   }, []);
 
   const resetPassword = useCallback(async (resetToken, password) => {
-    return request('/api/auth/reset-password', {
+    return request('/auth/reset-password', { 
       method: 'POST',
       body: JSON.stringify({ token: resetToken, password }),
     });
