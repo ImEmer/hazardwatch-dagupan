@@ -25,7 +25,8 @@
         let page = 1;
         let pages = 1;
         do {
-        const response = await fetch(`/api/reports?page=${page}&limit=100`, {
+
+        const response = await fetch(`/reports?page=${page}&limit=100`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         const body = await response.json().catch(() => ({}));
@@ -59,7 +60,8 @@
         payload.append('photo', newReport.photoFile);
         payload.append('barangay', newReport.barangay || '');
 
-        const response = await fetch('/api/reports', {
+
+        const response = await fetch('/reports', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: payload,
@@ -76,7 +78,8 @@
     const updateReportStatus = async (id, newStatus) => {
         const reportId = String(id);
         if (/^[a-f\d]{24}$/i.test(reportId) && token) {
-        const response = await fetch(`/api/reports/${reportId}/status`, {
+
+        const response = await fetch(`/reports/${reportId}/status`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ status: newStatus }),
@@ -91,7 +94,8 @@
     const updateReportPriority = async (id, newPriority) => {
         const reportId = String(id);
         if (/^[a-f\d]{24}$/i.test(reportId) && token) {
-        const response = await fetch(`/api/reports/${reportId}/priority`, {
+
+        const response = await fetch(`/reports/${reportId}/priority`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ priority: newPriority }),
@@ -106,7 +110,8 @@
     const deleteReport = async (id, token) => {
         const reportId = String(id);
         if (/^[a-f\d]{24}$/i.test(reportId) && token) {
-        const response = await fetch(`/api/reports/${reportId}`, {
+
+        const response = await fetch(`/reports/${reportId}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` },
         });
@@ -126,7 +131,6 @@
     );
     };
 
-    // ITO ANG IMPORTANTE - SIGURADONG NASA LABAS ITO NG COMPONENT!
     export const useReports = () => {
     const context = useContext(ReportContext);
     if (!context) {
