@@ -39,12 +39,16 @@ export const getReport = async (req, res, next) => {
 
 export const createReport = async (req, res, next) => {
   try {
+    const photoValue = req.file
+      ? `/uploads/${req.file.filename}`
+      : (typeof req.body.photo === 'string' ? req.body.photo : '');
+
     const report = await Report.create({
       ...req.body,
       title: `${req.body.category} report - ${new Date().toLocaleDateString('en-PH')}`,
       location: typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location,
       barangay: req.body.barangay || '',
-      photo: req.file ? `/uploads/${req.file.filename}` : req.body.photo,
+      photo: photoValue,
       reportedBy: {
         name: req.user.name,
         email: req.user.email,

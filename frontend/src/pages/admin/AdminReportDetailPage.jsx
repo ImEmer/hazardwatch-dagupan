@@ -128,7 +128,14 @@ const AdminReportDetailPage = () => {
   return (
     <div className="space-y-6">
       <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-        <div>
+        <div className="w-full">
+          <button
+            type="button"
+            onClick={() => navigate('/my-reports')}
+            className="mb-3 inline-flex items-center text-sm font-medium text-[#3b82f6] hover:text-[#60a5fa]"
+          >
+            ← Back to My Reports
+          </button>
           <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Report detail</p>
           <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</h2>
         </div>
@@ -157,10 +164,13 @@ const AdminReportDetailPage = () => {
                 <img
                   src={photoUrl}
                   alt="Submitted evidence"
-                  className="max-h-48 w-full cursor-pointer rounded-lg border object-contain transition hover:opacity-90"
+                  className="max-h-48 w-full cursor-pointer rounded-lg border border-slate-300 object-contain transition hover:opacity-90"
                   onClick={(event) => {
                     event.preventDefault();
                     window.open(photoUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  onError={(event) => {
+                    event.target.style.display = 'none';
                   }}
                 />
               </a>

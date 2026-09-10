@@ -32,7 +32,11 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '2mb' }));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static('uploads'));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }), authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
