@@ -25,7 +25,7 @@ const SuperAdminUsers = () => {
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
-    const response = await fetch('/api/users', {
+    const response = await fetch('/users', {
       headers: { Authorization: `Bearer ${token}` },
     });
     const body = await response.json().catch(() => ({}));
@@ -62,7 +62,7 @@ const SuperAdminUsers = () => {
   const handleSave = async () => {
     if (!selectedUser) return;
     try {
-      const response = await fetch(`/api/users/${selectedUser._id || selectedUser.id}`, {
+      const response = await fetch(`/users/${selectedUser._id || selectedUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ const SuperAdminUsers = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const response = await fetch(`/api/users/${userToDelete._id || userToDelete.id}`, {
+      const response = await fetch(`/users/${userToDelete._id || userToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

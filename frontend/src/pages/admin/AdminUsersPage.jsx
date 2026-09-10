@@ -31,7 +31,7 @@ const AdminUsersPage = () => {
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
-    const response = await fetch('/api/users', {
+    const response = await fetch('/users', {
       headers: { Authorization: `Bearer ${token}` },
     });
     const body = await response.json().catch(() => ({}));
@@ -85,7 +85,7 @@ const AdminUsersPage = () => {
     }
 
     try {
-      const response = await fetch(`/api/users/${selectedUser._id || selectedUser.id}`, {
+      const response = await fetch(`/users/${selectedUser._id || selectedUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

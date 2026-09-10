@@ -34,10 +34,10 @@ const MyReportsPage = () => {
 
     const loadReports = async () => {
       try {
-        let response = await fetch('/api/reports/mine', { headers: { Authorization: `Bearer ${token}` } });
+        let response = await fetch('/reports/mine', { headers: { Authorization: `Bearer ${token}` } });
 
         if (!response.ok && response.status === 404) {
-          response = await fetch(`/api/reports?email=${encodeURIComponent(user?.email || '')}`, {
+          response = await fetch(`/reports?email=${encodeURIComponent(user?.email || '')}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
         }

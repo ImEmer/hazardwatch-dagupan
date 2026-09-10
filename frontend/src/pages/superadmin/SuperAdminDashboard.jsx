@@ -12,7 +12,7 @@ const SuperAdminDashboard = () => {
     const fetchActivities = async () => {
       if (!token) return;
       try {
-        const response = await fetch('/api/activity', { headers: { Authorization: `Bearer ${token}` } });
+        const response = await fetch('/activity', { headers: { Authorization: `Bearer ${token}` } });
         const body = await response.json().catch(() => ({ activities: [] }));
         if (response.ok) setActivities(body.activities || []);
       } catch (error) {

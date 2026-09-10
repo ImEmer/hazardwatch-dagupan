@@ -1,13 +1,10 @@
     import axios from 'axios';
 
     const api = axios.create({
-    baseURL: 'https://hazardwatch-dagupan.onrender.com/api', 
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    });
-
-    // Request interceptor to add token
+  baseURL: import.meta.env.VITE_API_URL || 'https://hazardwatch-dagupan.onrender.com/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
     api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
