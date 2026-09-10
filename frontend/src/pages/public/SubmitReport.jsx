@@ -80,7 +80,11 @@ const SubmitReport = () => {
     const validateForm = () => {
         const newErrors = {};
         if (!form.category) newErrors.category = 'Please select a hazard type.';
-        if (!form.description.trim()) newErrors.description = 'Please describe the hazard.';
+        if (!form.description.trim()) {
+            newErrors.description = 'Please describe the hazard.';
+        } else if (form.description.trim().length < 10) {
+            newErrors.description = 'Description must be at least 10 characters long.';
+        }
         if (!photo) newErrors.photo = 'Photo evidence is required.';
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
         return newErrors;

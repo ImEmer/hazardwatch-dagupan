@@ -34,7 +34,7 @@ const Navbar = () => {
 
   const authenticatedLinks = publicLinks.filter((item) => !item.authenticated || isAuthenticated);
   const links = canAccessAdmin
-    ? [...authenticatedLinks, ...adminLinks.filter((item) => item.roles.includes(user.role))]
+    ? [...authenticatedLinks, ...adminLinks.filter((item) => item.roles.includes(user?.role))]
     : authenticatedLinks;
 
   useEffect(() => {
@@ -70,7 +70,7 @@ const Navbar = () => {
             <>
               <div className="relative">
                 <button onClick={() => setAccountOpen((open) => !open)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-gray-300 hover:text-white" aria-expanded={accountOpen}>
-                  <span aria-hidden="true">{user.name}</span><span aria-hidden="true" className="text-xs">&#9662;</span>
+                  <span aria-hidden="true">{user?.name || 'Account'}</span><span aria-hidden="true" className="text-xs">&#9662;</span>
                 </button>
                 {accountOpen && (
                   <div className="absolute right-0 top-12 w-44 rounded-xl border border-[#2e303a] bg-[#14151d] p-1 shadow-xl">
@@ -98,7 +98,7 @@ const Navbar = () => {
           <div className="flex flex-col gap-1">
             {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.label}</NavLink>)}
             {isAuthenticated ? (
-              <><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Go to My Profile ({user.name})</NavLink><button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-red-500/10 hover:text-red-400">Logout</button></>
+              <><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Go to My Profile ({user?.name || 'Account'})</NavLink><button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-red-500/10 hover:text-red-400">Logout</button></>
             ) : <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Login</NavLink>}
           </div>
       </nav>

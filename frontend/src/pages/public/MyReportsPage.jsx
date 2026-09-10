@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
 import { showError } from '../../services/alerts';
 import AOS from 'aos';
@@ -24,8 +23,6 @@ const priorityStyles = {
 
 const MyReportsPage = () => {
   const { token, user, isAuthenticated, loading: authLoading } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const [reports, setReports] = useState([]);
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
@@ -88,13 +85,13 @@ const MyReportsPage = () => {
   }), [reports, search, status]);
 
   if (authLoading) {
-    return <main className={`flex min-h-screen items-center justify-center px-4 pb-16 pt-28 ${isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-500'}`}>Loading session...</main>;
+    return <main className="flex min-h-screen items-center justify-center bg-[#0a0b0f] px-4 pb-16 pt-28 text-gray-400">Loading session...</main>;
   }
 
   if (!isAuthenticated) {
     return (
-      <main className={`flex min-h-screen items-center justify-center px-4 pb-16 pt-28 ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
-        <div data-aos="fade-up" className={`w-full max-w-md rounded-2xl border p-8 text-center shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+      <main className="flex min-h-screen items-center justify-center bg-[#0a0b0f] px-4 pb-16 pt-28 text-white">
+        <div data-aos="fade-up" className="w-full max-w-md rounded-2xl border border-[#2e303a] bg-[#14151d] p-8 text-center shadow-xl">
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#3b82f6]/10 text-[#60a5fa]" aria-hidden="true">
             <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="5" y="10" width="14" height="10" rx="2" /><path strokeLinecap="round" d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
           </div>
@@ -107,16 +104,16 @@ const MyReportsPage = () => {
   }
 
   return (
-    <main className={`min-h-screen px-4 pb-16 pt-28 ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
+    <main className="min-h-screen bg-[#0a0b0f] px-4 pb-16 pt-28 text-white">
       <div className="mx-auto max-w-6xl space-y-6">
         <header data-aos="fade-up">
-          <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-[#60a5fa]' : 'text-blue-700'}`}>Citizen portal</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Citizen portal</p>
           <h1 className="mt-2 text-3xl font-bold">My Reports</h1>
-          <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>Review the hazards you have submitted and follow their status.</p>
+          <p className="mt-2 text-gray-400">Review the hazards you have submitted and follow their status.</p>
         </header>
-        <div data-aos="fade-up" data-aos-delay="100" className={`flex flex-col gap-3 rounded-2xl border p-4 md:flex-row ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reports" className={`auth-input flex-1 ${isDark ? '' : 'border-slate-200 bg-slate-50 text-slate-900'}`} />
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className={`auth-input md:max-w-xs ${isDark ? '' : 'border-slate-200 bg-slate-50 text-slate-900'}`}>
+        <div data-aos="fade-up" data-aos-delay="100" className="flex flex-col gap-3 rounded-2xl border border-[#2e303a] bg-[#14151d] p-4 md:flex-row">
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reports" className="auth-input flex-1" />
+          <select value={status} onChange={(event) => setStatus(event.target.value)} className="auth-input md:max-w-xs">
             <option value="all">All statuses</option>
             <option value="Pending">Pending</option>
             <option value="In Progress">In Progress</option>
@@ -131,7 +128,7 @@ const MyReportsPage = () => {
             ))}
           </div>
         ) : filteredReports.length === 0 ? (
-          <div data-aos="fade-up" className={`rounded-2xl border p-10 text-center ${isDark ? 'border-[#2e303a] bg-[#14151d] text-gray-400' : 'border-slate-200 bg-white text-slate-500'}`}>No reports found.</div>
+          <div data-aos="fade-up" className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-10 text-center text-gray-400">No reports found.</div>
         ) : (
           <div data-aos="fade-up" data-aos-delay="150" className="space-y-3">
             {filteredReports.map((report) => {
@@ -140,24 +137,24 @@ const MyReportsPage = () => {
               const formattedDate = report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown date';
 
               return (
-                <Link key={reportId} to={`/reports/${reportId}`} className={`block rounded-2xl border transition ${isDark ? 'border-[#2e303a] bg-[#14151d] hover:border-[#3b82f6]/40 hover:bg-[#171a22]' : 'border-slate-200 bg-white hover:border-[#3b82f6]/40 hover:bg-slate-50'}`}>
+                <Link key={reportId} to={`/reports/${reportId}`} className="block rounded-2xl border border-[#2e303a] bg-[#14151d] transition hover:border-[#3b82f6]/40 hover:bg-[#171a22]">
                   <article data-aos="fade-up" className="p-5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{reportTitle}</h2>
+                      <h2 className="text-lg font-semibold text-white">{reportTitle}</h2>
                       <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status || 'Pending'}</span>
                       <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${priorityStyles[report.priority] || priorityStyles.Medium}`}>{report.priority || 'Medium'}</span>
                     </div>
 
-                    <div className={`mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.15em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.15em] text-gray-400">
                       <span>{report.category || 'General hazard'}</span>
                       <span>•</span>
                       <span>{formattedDate}</span>
                     </div>
 
-                    <p className={`mt-3 text-sm leading-6 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{report.description || 'No description provided.'}</p>
+                    <p className="mt-3 text-sm leading-6 text-gray-200">{report.description || 'No description provided.'}</p>
 
                     {report.address && (
-                      <p className={`mt-3 text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Location: {report.address}</p>
+                      <p className="mt-3 text-sm text-gray-400">Location: {report.address}</p>
                     )}
                   </article>
                 </Link>
