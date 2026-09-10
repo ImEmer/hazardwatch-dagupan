@@ -31,6 +31,13 @@ const AdminReportDetailPage = () => {
   const [fetchedReport, setFetchedReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const report = reports.find((item) => String(item._id || item.id) === id) || fetchedReport;
+  const photoUrl = report?.photo ? (
+    report.photo.startsWith('http://') || report.photo.startsWith('https://')
+      ? report.photo
+      : report.photo.startsWith('/')
+        ? `https://hazardwatch-dagupan.onrender.com${report.photo}`
+        : `https://hazardwatch-dagupan.onrender.com/uploads/${report.photo}`
+  ) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +70,48 @@ const AdminReportDetailPage = () => {
   }, [id, reports, token]);
 
   if (loading) {
-    return <div className={`rounded-2xl border p-8 text-center shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d] text-gray-400' : 'border-slate-200 bg-white text-slate-500'}`}>Loading report...</div>;
+    return (
+      <div className="space-y-6">
+        <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="w-full space-y-3">
+              <div className="h-4 w-24 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className="h-8 w-3/5 animate-pulse rounded-md bg-[#1a1a1f]" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-8 w-20 animate-pulse rounded-full bg-[#1a1a1f]" />
+              <div className="h-8 w-20 animate-pulse rounded-full bg-[#1a1a1f]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+          <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+            <div className="space-y-4">
+              <div className="h-4 w-28 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className="h-4 w-full animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className="h-4 w-5/6 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className="h-4 w-2/3 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className="mt-6 h-52 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
+                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
+                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
+                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+            <div className="space-y-4">
+              <div className="h-4 w-20 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!report) {
@@ -102,11 +150,19 @@ const AdminReportDetailPage = () => {
           <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Summary</p>
           <p className={`mt-4 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{report.description}</p>
 
-          {report.photo ? (
+          {photoUrl ? (
             <div className={`mt-6 rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
               <p className={`mb-3 text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Photo / Evidence</p>
-              <a href={report.photo} target="_blank" rel="noreferrer" className="block">
-                <img src={report.photo} alt="Submitted evidence" className="max-h-48 w-full cursor-pointer rounded-lg border object-contain transition hover:opacity-90" />
+              <a href={photoUrl} target="_blank" rel="noreferrer" className="block">
+                <img
+                  src={photoUrl}
+                  alt="Submitted evidence"
+                  className="max-h-48 w-full cursor-pointer rounded-lg border object-contain transition hover:opacity-90"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    window.open(photoUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                />
               </a>
               <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Click image to view full size</p>
             </div>

@@ -8,7 +8,6 @@
       Cell,
       Legend,
       Line,
-      LineChart,
       Pie,
       PieChart,
       ResponsiveContainer,
@@ -20,7 +19,8 @@
     import useTheme from '../../hooks/useTheme';
     import useAuth from '../../hooks/useAuth';
     import api from '../../services/api';
-    import { REPORT_STATUSES, STATUS_BADGES, STATUS_CHART_COLORS } from '../../services/reportOptions';
+    import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
+    import { SkeletonCard, SkeletonChart, SkeletonTable } from '../../components/common/Skeleton';
 
     const AdminDashboard = () => {
       const { reports } = useReports();
@@ -31,6 +31,7 @@
       const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
       const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
       const [activities, setActivities] = useState([]);
+      const isLoading = reports.length === 0;
 
       const totalReports = reports.length;
       const pending = reports.filter((report) => report.status === 'Pending').length;
@@ -90,6 +91,45 @@
 
         fetchActivities();
       }, [token]);
+
+      if (isLoading) {
+        return (
+          <div className="space-y-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded-md bg-[#1a1a1f]" />
+                <div className="h-8 w-44 animate-pulse rounded-md bg-[#1a1a1f]" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <SkeletonCard key={index} className="h-28 w-full" />
+              ))}
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-2">
+              <SkeletonChart className="h-[280px] w-full" />
+              <div className="space-y-3 rounded-2xl border border-[#2e303a] bg-[#14151d] p-5">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="h-4 w-1/3 animate-pulse rounded-md bg-[#1a1a1f]" />
+                    <div className="h-2.5 w-full animate-pulse rounded-full bg-[#1a1a1f]" />
+                  </div>
+                ))}
+              </div>
+              <div className="xl:col-span-2">
+                <SkeletonChart className="h-[280px] w-full" />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5">
+              <div className="mb-4 h-5 w-32 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <SkeletonTable rows={5} cols={6} />
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="space-y-6">

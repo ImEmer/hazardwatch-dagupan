@@ -79,15 +79,12 @@
             payload.append('description', String(newReport.description).trim());
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));
-            payload.append('photo', newReport.photoFile);
             payload.append('barangay', String(newReport.barangay || ''));
+            payload.append('photo', newReport.photoFile);
 
             try {
             const response = await api.post('/reports', payload, {
-                headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${token}`,
-                },
+                headers: { Authorization: `Bearer ${token}` },
             });
             const report = response.data?.report;
             setReports(prev => [report, ...prev]);

@@ -28,6 +28,7 @@ const AdminReportsPage = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState('');
+  const isLoading = reports.length === 0;
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -144,7 +145,17 @@ const AdminReportsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredReports.length === 0 ? (
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, rowIndex) => (
+                  <tr key={rowIndex} className={`border-t align-middle ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+                    {Array.from({ length: 7 }).map((__, colIndex) => (
+                      <td key={`${rowIndex}-${colIndex}`} className="px-4 py-3">
+                        <div className="h-5 animate-pulse rounded-md bg-[#1a1a1f]" style={{ width: colIndex === 0 ? '80%' : colIndex === 1 ? '60%' : colIndex === 2 ? '90%' : colIndex === 3 ? '70%' : colIndex === 4 ? '70%' : colIndex === 5 ? '60%' : '50%' }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : filteredReports.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-4 py-10 text-center text-gray-400">
                     No matching reports found.

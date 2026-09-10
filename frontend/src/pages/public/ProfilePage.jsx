@@ -3,10 +3,42 @@ import useAuth from '../../hooks/useAuth';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 
 const ProfilePage = () => {
-  const { user, updateProfile, changePassword, deleteAccount, logout } = useAuth();
+  const { user, updateProfile, changePassword, deleteAccount, logout, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-[#0a0b0f] px-4 pb-16 pt-28 text-white">
+        <div className="mx-auto max-w-4xl space-y-6">
+          <header>
+            <div className="h-4 w-24 animate-pulse rounded-md bg-[#1a1a1f]" />
+            <div className="mt-2 h-8 w-52 animate-pulse rounded-md bg-[#1a1a1f]" />
+          </header>
+
+          <section className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6">
+            <div className="h-4 w-16 animate-pulse rounded-md bg-[#1a1a1f]" />
+            <div className="mt-6 space-y-4">
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="h-11 w-32 animate-pulse rounded-lg bg-[#1a1a1f]" />
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6">
+            <div className="h-6 w-40 animate-pulse rounded-md bg-[#1a1a1f]" />
+            <div className="mt-5 space-y-4">
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className="h-11 w-36 animate-pulse rounded-lg bg-[#1a1a1f]" />
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   const saveProfile = async (event) => {
     event.preventDefault();

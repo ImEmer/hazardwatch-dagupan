@@ -5,12 +5,27 @@ import api from '../../services/api';
 import { showError } from '../../services/alerts';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { SkeletonReportCard } from '../../components/common/Skeleton';
 
 const statusStyles = {
   Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
   'In Progress': 'bg-violet-500/10 text-violet-300 border-violet-500/30',
   Resolved: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
   Closed: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+};
+
+const priorityStyles = {
+  Low: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+  Medium: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+  High: 'bg-orange-500/10 text-orange-300 border-orange-500/30',
+  Urgent: 'bg-red-500/10 text-red-300 border-red-500/30',
+};
+
+const normalizePhotoUrl = (photo) => {
+  if (!photo) return null;
+  if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
+  if (photo.startsWith('/')) return `https://hazardwatch-dagupan.onrender.com${photo}`;
+  return `https://hazardwatch-dagupan.onrender.com/uploads/${photo}`;
 };
 
 const MyReportsPage = () => {
@@ -115,7 +130,11 @@ const MyReportsPage = () => {
           </select>
         </div>
         {loading ? (
-          <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-10 text-center text-gray-400">Loading your reports...</div>
+          <div data-aos="fade-up" className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonReportCard key={index} />
+            ))}
+          </div>
         ) : filteredReports.length === 0 ? (
           <div data-aos="fade-up" className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-10 text-center text-gray-400">No reports found.</div>
         ) : (
@@ -123,21 +142,61 @@ const MyReportsPage = () => {
             {filteredReports.map((report) => {
               const reportId = report._id || report.id;
               const isSelected = selectedId === reportId;
+              const photoUrl = normalizePhotoUrl(report.photo);
+              const reportTitle = report.title || report.description || `${report.category || 'Hazard'} report`;
+              const formattedDate = report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown date';
+
               return (
                 <article key={reportId} data-aos="fade-up" className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5">
-                  <button type="button" onClick={() => setSelectedId(isSelected ? null : reportId)} className="w-full text-left">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <h2 className="font-semibold text-white">{report.title || `${report.category} report`}</h2>
-                        <p className="mt-1 text-sm text-gray-400">{report.category} · {new Date(report.createdAt).toLocaleDateString()}</p>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="font-semibold text-white">{reportTitle}</h2>
+                        <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status || 'Pending'}</span>
+                        <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${priorityStyles[report.priority] || priorityStyles.Medium}`}>{report.priority || 'Medium'}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-full border px-2 py-1 text-xs ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status}</span>
-                        <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-1 text-xs text-orange-300">{report.priority || 'Medium'}</span>
-                      </div>
+
+                      <p className="mt-2 text-sm text-gray-400">{report.category || 'General hazard'} · {formattedDate}</p>
+                      <p className="mt-3 text-sm leading-6 text-gray-200">{report.description || 'No description provided.'}</p>
+
+                      {report.address && (
+                        <p className="mt-3 text-sm text-gray-400">Location: {report.address}</p>
+                      )}
                     </div>
-                  </button>
-                  {isSelected && <div className="mt-4 border-t border-[#2e303a] pt-4 text-sm text-gray-300"><p>{report.description}</p><p className="mt-2 text-gray-400">{report.address || 'Location recorded on the map.'}</p></div>}
+
+                    <div className="w-full md:max-w-xs">
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt="Report evidence"
+                          className="max-h-48 w-full cursor-pointer rounded-lg border border-[#2e303a] object-contain hover:opacity-90 transition"
+                          onClick={() => window.open(photoUrl, '_blank', 'noopener,noreferrer')}
+                        />
+                      ) : (
+                        <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-[#2e303a] text-sm text-gray-500">
+                          No photo uploaded
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between border-t border-[#2e303a] pt-4">
+                    <button type="button" onClick={() => setSelectedId(isSelected ? null : reportId)} className="text-sm font-medium text-[#60a5fa] hover:text-white">
+                      {isSelected ? 'Hide details' : 'View details'}
+                    </button>
+                    <Link to={`/reports/${reportId}`} className="text-sm font-medium text-[#60a5fa] hover:text-white">
+                      Open report
+                    </Link>
+                  </div>
+
+                  {isSelected && (
+                    <div className="mt-4 space-y-2 border-t border-[#2e303a] pt-4 text-sm text-gray-300">
+                      <p><span className="font-medium text-white">Category:</span> {report.category || 'Unspecified'}</p>
+                      <p><span className="font-medium text-white">Status:</span> {report.status || 'Pending'}</p>
+                      <p><span className="font-medium text-white">Priority:</span> {report.priority || 'Medium'}</p>
+                      <p><span className="font-medium text-white">Date:</span> {formattedDate}</p>
+                    </div>
+                  )}
                 </article>
               );
             })}
