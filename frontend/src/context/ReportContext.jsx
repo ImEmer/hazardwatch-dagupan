@@ -31,6 +31,7 @@
         const isTokenValid = hasValidToken(token);
         const canAccessStaffReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
         const [reports, setReports] = useState(INITIAL_REPORTS);
+        const [publicReports, setPublicReports] = useState(INITIAL_REPORTS);
 
         useEffect(() => {
             localStorage.removeItem('hazardwatch_reports');
@@ -41,46 +42,82 @@
             localStorage.setItem('hazardwatch_reports', JSON.stringify(reports));
         }, [reports]);
 
-        const fetchReports = useCallback(async () => {
-            if (!isTokenValid) {
-                setReports([]);
-                return [];
-            }
-
+        const fetchPublicReports = useCallback(async () => {
             try {
-                const endpoint = canAccessStaffReports ? '/reports' : '/reports/public';
-                const config = canAccessStaffReports
-                    ? {
-                        params: { page: 1, limit: 100 },
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
-                    : {
-                        params: { page: 1, limit: 100 },
-                    };
-
-                const response = await api.get(endpoint, config);
-                const body = response.data || {};
-                const nextReports = body.reports || [];
-                setReports(nextReports);
+                const response = await api.get('/reports/public', {
+                    params: { page: 1, limit: 100 },
+                });
+                const nextReports = response.data?.reports || [];
+                setPublicReports(nextReports);
+                if (!canAccessStaffReports) {
+                    setReports(nextReports);
+                }
                 return nextReports;
             } catch (error) {
                 const status = error.response?.status;
                 if (status === 401 || status === 403) {
-                    setReports([]);
+                    setPublicReports([]);
+                    if (!canAccessStaffReports) {
+                        setReports([]);
+                    }
                     return [];
                 }
 
-                throw new Error(error.response?.data?.message || 'Unable to load reports.');
+                throw new Error(error.response?.data?.message || 'Unable to load public reports.');
             }
-        }, [canAccessStaffReports, isTokenValid, token]);
+        }, [canAccessStaffReports]);
+
+        const fetchReports = useCallback(async () => {
+            if (canAccessStaffReports) {
+                try {
+                    const response = await api.get('/reports', {
+                        params: { page: 1, limit: 100 },
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const nextReports = response.data?.reports || [];
+                    setReports(nextReports);
+                    return nextReports;
+                } catch (error) {
+                    const status = error.response?.status;
+                    if (status === 401 || status === 403) {
+                        setReports([]);
+                        return [];
+                    }
+                    throw new Error(error.response?.data?.message || 'Unable to load reports.');
+                }
+            }
+
+            if (!token && !isTokenValid) {
+                return fetchPublicReports();
+            }
+
+            if (token && !isTokenValid) {
+                setReports([]);
+                setPublicReports([]);
+                return [];
+            }
+
+            return fetchPublicReports();
+        }, [canAccessStaffReports, fetchPublicReports, isTokenValid, token]);
 
         useEffect(() => {
-            if (!isTokenValid) {
-                setReports([]);
+            const handleReportsUpdated = () => {
+                fetchReports().catch(() => {});
+            };
+
+            window.addEventListener('hw:reports-updated', handleReportsUpdated);
+            return () => {
+                window.removeEventListener('hw:reports-updated', handleReportsUpdated);
+            };
+        }, [fetchReports]);
+
+        useEffect(() => {
+            if (canAccessStaffReports) {
+                fetchReports().catch(() => {});
                 return undefined;
             }
 
-            fetchReports().catch(() => {});
+            fetchPublicReports().catch(() => {});
 
             if (!token || !user) {
                 return undefined;
@@ -95,7 +132,7 @@
             window.clearInterval(interval);
             window.removeEventListener('focus', handleFocus);
             };
-        }, [fetchReports, isTokenValid, token, user?._id, user?.role]);
+        }, [canAccessStaffReports, fetchPublicReports, fetchReports, isTokenValid, token, user?._id, user?.role]);
 
         const addReport = async (newReport, token) => {
             const photoFile = newReport?.photoFile || newReport?.photo;
@@ -131,7 +168,9 @@
             });
             const report = response.data?.report;
             setReports(prev => [report, ...prev]);
-            fetchReports().catch(() => {});
+            setPublicReports(prev => [report, ...prev]);
+            window.dispatchEvent(new Event('hw:reports-updated'));
+            fetchPublicReports().catch(() => {});
             return report;
             } catch (error) {
             throw new Error(error.response?.data?.message || 'Unable to save the report.');
@@ -184,7 +223,7 @@
         };
 
         return (
-            <ReportContext.Provider value={{ reports, addReport, updateReportStatus, updateReportPriority, deleteReport, fetchReports }}>
+            <ReportContext.Provider value={{ reports, publicReports, addReport, updateReportStatus, updateReportPriority, deleteReport, fetchReports, fetchPublicReports }}>
             {children}
             </ReportContext.Provider>
         );

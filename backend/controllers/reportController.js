@@ -14,7 +14,7 @@ export const getPublicReports = async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
     const [reports, total] = await Promise.all([
       Report.find(filter)
-        .select('_id category status priority location address barangay createdAt')
+        .select('_id category description status priority location address barangay createdAt')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),

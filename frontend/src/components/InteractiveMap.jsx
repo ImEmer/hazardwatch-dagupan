@@ -13,11 +13,19 @@ const CATEGORY_COLORS = {
     'Other': '#6B7280'
 };
 
+const STATUS_COLORS = {
+    Pending: '#F59E0B',
+    'In Progress': '#3B82F6',
+    Resolved: '#10B981',
+    Closed: '#6B7280',
+};
+
 const InteractiveMap = ({
     reports = [],
     onMapClick,
     selectedLocation,
     height = '500px',
+    colorBy = 'category',
     showClickInstruction = false,
     showSelectedMarker = false
 }) => {
@@ -161,9 +169,15 @@ const InteractiveMap = ({
             if (!report.location || !report.location.coordinates) return;
 
             const [lng, lat] = report.location.coordinates;
+            if (typeof lng !== 'number' || typeof lat !== 'number' || Number.isNaN(lng) || Number.isNaN(lat)) return;
 
             const color =
-                CATEGORY_COLORS[report.category] || '#6B7280';
+                colorBy === 'status'
+                    ? STATUS_COLORS[report.status] || '#6B7280'
+                    : CATEGORY_COLORS[report.category] || '#6B7280';
+
+            const description = (report.description || report.title || 'Hazard report').replace(/<[^>]*>/g, '').trim();
+            const shortDescription = description.length > 120 ? `${description.slice(0, 117)}...` : description;
 
             const el = document.createElement('div');
 
@@ -184,14 +198,14 @@ const InteractiveMap = ({
             }).setHTML(`
                 <div class="p-2 max-w-xs">
                     <h3 class="font-bold text-gray-800">
-                        ${report.title || 'Untitled'}
+                        ${report.category || 'Hazard'}
                     </h3>
 
-                    <p class="text-sm text-gray-600">
-                        ${report.category}
+                    <p class="text-sm text-gray-600 mt-1">
+                        ${shortDescription}
                     </p>
 
-                    <p class="text-xs text-gray-500 mt-1">
+                    <p class="text-xs text-gray-500 mt-2">
                         Status:
                         <span class="font-medium">
                             ${report.status || 'Pending'}
@@ -207,7 +221,7 @@ const InteractiveMap = ({
                     ${
                         report.address
                             ? `
-                                <p class="text-xs text-gray-500 mt-1 truncate">
+                                <p class="text-xs text-gray-500 mt-1 break-words">
                                     ${report.address}
                                 </p>
                             `

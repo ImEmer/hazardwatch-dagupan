@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { addComment, assignReport, createReport, deleteReport, getMyReports, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
+import { addComment, assignReport, createReport, deleteReport, getMyReports, getPublicReports, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
 import { allowRoles, isStaff, protect } from '../middleware/auth.js';
 import { uploadPhoto } from '../middleware/upload.js';
 import { validateId, validatePagination, validateReport } from '../middleware/validate.js';
 
 const router = Router();
-router.get('/public', getPublicReports);
+router.get('/public', validatePagination, getPublicReports);
 router.get('/', protect, isStaff, validatePagination, getReports);
 router.get('/mine', protect, getMyReports);
 router.get('/:id', protect, isStaff, validateId, getReport);
