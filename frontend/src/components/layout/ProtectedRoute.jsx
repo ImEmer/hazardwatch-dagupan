@@ -6,6 +6,10 @@ const ProtectedRoute = ({ children, roles, allowedRoles, allowedBarangay }) => {
   const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
 
+  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || location.pathname === '/reset-password') {
+    return children;
+  }
+
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#0a0b0f] text-gray-300">Loading session...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />;
 

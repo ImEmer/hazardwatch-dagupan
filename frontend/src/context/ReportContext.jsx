@@ -5,8 +5,30 @@
         const ReportContext = createContext();
         const INITIAL_REPORTS = [];
 
+        const decodeJwtPayload = (jwt) => {
+            if (!jwt || typeof jwt !== 'string') return null;
+
+            try {
+                const payload = jwt.split('.')[1];
+                if (!payload) return null;
+                const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+                const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+                return JSON.parse(atob(padded));
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const hasValidToken = (jwt) => {
+            if (!jwt) return false;
+            const decoded = decodeJwtPayload(jwt);
+            if (!decoded || !decoded.exp) return true;
+            return Number(decoded.exp) * 1000 > Date.now();
+        };
+
         export const ReportProvider = ({ children }) => {
         const { token, user } = useAuth();
+        const isTokenValid = hasValidToken(token);
         const canAccessStaffReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
         const [reports, setReports] = useState(INITIAL_REPORTS);
 
@@ -20,6 +42,11 @@
         }, [reports]);
 
         const fetchReports = useCallback(async () => {
+            if (!isTokenValid) {
+                setReports([]);
+                return [];
+            }
+
             try {
                 const endpoint = canAccessStaffReports ? '/reports' : '/reports/public';
                 const config = canAccessStaffReports
@@ -37,20 +64,33 @@
                 setReports(nextReports);
                 return nextReports;
             } catch (error) {
+                const status = error.response?.status;
+                if (status === 401 || status === 403) {
+                    setReports([]);
+                    return [];
+                }
+
                 throw new Error(error.response?.data?.message || 'Unable to load reports.');
             }
-        }, [canAccessStaffReports, token]);
+        }, [canAccessStaffReports, isTokenValid, token]);
 
         useEffect(() => {
+            if (!isTokenValid) {
+                setReports([]);
+                return undefined;
+            }
+
             fetchReports().catch(() => {});
-            const interval = window.setInterval(() => fetchReports().catch(() => {}), 30000);
+            const interval = window.setInterval(() => {
+                if (isTokenValid) fetchReports().catch(() => {});
+            }, 30000);
             const handleFocus = () => fetchReports().catch(() => {});
             window.addEventListener('focus', handleFocus);
             return () => {
             window.clearInterval(interval);
             window.removeEventListener('focus', handleFocus);
             };
-        }, [fetchReports]);
+        }, [fetchReports, isTokenValid, user?.role, token]);
 
         const addReport = async (newReport, token) => {
             const photoFile = newReport?.photoFile || newReport?.photo;
