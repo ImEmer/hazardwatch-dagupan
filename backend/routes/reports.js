@@ -5,6 +5,7 @@ import { uploadPhoto } from '../middleware/upload.js';
 import { validateId, validatePagination, validateReport } from '../middleware/validate.js';
 
 const router = Router();
+router.get('/public', getPublicReports);
 router.get('/', protect, isStaff, validatePagination, getReports);
 router.get('/mine', protect, getMyReports);
 router.get('/:id', protect, isStaff, validateId, getReport);

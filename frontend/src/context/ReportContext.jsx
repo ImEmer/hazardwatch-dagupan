@@ -7,7 +7,7 @@
 
         export const ReportProvider = ({ children }) => {
         const { token, user } = useAuth();
-        const canFetchReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
+        const canAccessStaffReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
         const [reports, setReports] = useState(INITIAL_REPORTS);
 
         useEffect(() => {
@@ -20,31 +20,28 @@
         }, [reports]);
 
         const fetchReports = useCallback(async () => {
-            if (!canFetchReports) return;
-
-            const allReports = [];
-            let page = 1;
-            let pages = 1;
-            do {
             try {
-                const response = await api.get('/reports', {
-                params: { page, limit: 100 },
-                headers: { Authorization: `Bearer ${token}` },
-                });
+                const endpoint = canAccessStaffReports ? '/reports' : '/reports/public';
+                const config = canAccessStaffReports
+                    ? {
+                        params: { page: 1, limit: 100 },
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                    : {
+                        params: { page: 1, limit: 100 },
+                    };
+
+                const response = await api.get(endpoint, config);
                 const body = response.data || {};
-                allReports.push(...(body.reports || []));
-                pages = body.pagination?.pages || 1;
-                page += 1;
+                const nextReports = body.reports || [];
+                setReports(nextReports);
+                return nextReports;
             } catch (error) {
                 throw new Error(error.response?.data?.message || 'Unable to load reports.');
             }
-            } while (page <= pages);
-            setReports(allReports);
-        }, [canFetchReports, token]);
+        }, [canAccessStaffReports, token]);
 
         useEffect(() => {
-            if (!canFetchReports) return undefined;
-
             fetchReports().catch(() => {});
             const interval = window.setInterval(() => fetchReports().catch(() => {}), 30000);
             const handleFocus = () => fetchReports().catch(() => {});
@@ -53,7 +50,7 @@
             window.clearInterval(interval);
             window.removeEventListener('focus', handleFocus);
             };
-        }, [canFetchReports, fetchReports]);
+        }, [fetchReports]);
 
         const addReport = async (newReport, token) => {
             const photoFile = newReport?.photoFile || newReport?.photo;

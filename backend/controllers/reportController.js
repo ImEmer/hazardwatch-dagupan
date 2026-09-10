@@ -2,6 +2,33 @@ import Report from '../models/Report.js';
 
 const scoped = (user) => user.role === 'barangay' ? { assignedBarangay: user.barangay || '__unassigned_barangay__' } : {};
 
+export const getPublicReports = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 100, status, category, priority, barangay } = req.query;
+    const filter = { deletedAt: null };
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+    if (priority) filter.priority = priority;
+    if (barangay) filter.barangay = barangay;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [reports, total] = await Promise.all([
+      Report.find(filter)
+        .select('_id category status priority location address barangay createdAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      Report.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      reports,
+      pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) },
+    });
+  } catch (error) { next(error); }
+};
+
 export const getReports = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, search, status, category, priority, barangay, assignedTo, startDate, endDate } = req.query;
