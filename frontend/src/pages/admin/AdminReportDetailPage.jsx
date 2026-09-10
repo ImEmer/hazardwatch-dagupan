@@ -30,6 +30,7 @@ const AdminReportDetailPage = () => {
   const isDark = theme === 'dark';
   const [fetchedReport, setFetchedReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [photoLoadError, setPhotoLoadError] = useState(false);
   const report = reports.find((item) => String(item._id || item.id) === id) || fetchedReport;
   const photoUrl = report?.photo ? (
     report.photo.startsWith('http://') || report.photo.startsWith('https://')
@@ -38,6 +39,10 @@ const AdminReportDetailPage = () => {
         ? `https://hazardwatch-dagupan.onrender.com${report.photo}`
         : `https://hazardwatch-dagupan.onrender.com/uploads/${report.photo}`
   ) : null;
+
+  useEffect(() => {
+    setPhotoLoadError(false);
+  }, [id, report?._id, report?.photo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,13 +134,6 @@ const AdminReportDetailPage = () => {
     <div className="space-y-6">
       <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
         <div className="w-full">
-          <button
-            type="button"
-            onClick={() => navigate('/my-reports')}
-            className="mb-3 inline-flex items-center text-sm font-medium text-[#3b82f6] hover:text-[#60a5fa]"
-          >
-            ← Back to My Reports
-          </button>
           <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Report detail</p>
           <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</h2>
         </div>
@@ -157,26 +155,32 @@ const AdminReportDetailPage = () => {
           <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Summary</p>
           <p className={`mt-4 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{report.description}</p>
 
-          {photoUrl ? (
-            <div className={`mt-6 rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
-              <p className={`mb-3 text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Photo / Evidence</p>
-              <a href={photoUrl} target="_blank" rel="noreferrer" className="block">
+          {report.address && (
+            <p className={`mt-4 text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+              Location: {report.address}
+            </p>
+          )}
+
+          {photoUrl && !photoLoadError ? (
+            <div className="mt-4">
+              <p className={`mb-2 text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Evidence</p>
+              <button
+                type="button"
+                onClick={() => window.open(photoUrl, '_blank', 'noopener,noreferrer')}
+                className="inline-block overflow-hidden rounded-lg border border-[#2e303a] bg-[#0a0b0f] p-2 text-left"
+                aria-label="Open report evidence in a new tab"
+              >
                 <img
                   src={photoUrl}
                   alt="Submitted evidence"
-                  className="max-h-48 w-full cursor-pointer rounded-lg border border-slate-300 object-contain transition hover:opacity-90"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    window.open(photoUrl, '_blank', 'noopener,noreferrer');
-                  }}
-                  onError={(event) => {
-                    event.target.style.display = 'none';
-                  }}
+                  className="max-h-[200px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
+                  onError={() => setPhotoLoadError(true)}
                 />
-              </a>
-              <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Click image to view full size</p>
+              </button>
             </div>
-          ) : <p className={`mt-6 text-sm ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>No photo uploaded</p>}
+          ) : (
+            !photoUrl && <p className={`mt-4 text-sm ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>No photo uploaded</p>
+          )}
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <div className={`rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>

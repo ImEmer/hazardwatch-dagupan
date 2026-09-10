@@ -31,6 +31,7 @@ const ReportDetailPage = () => {
   const navigate = useNavigate();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [photoLoadError, setPhotoLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +63,10 @@ const ReportDetailPage = () => {
     fetchReport();
     return () => { cancelled = true; };
   }, [id, token]);
+
+  useEffect(() => {
+    setPhotoLoadError(false);
+  }, [id, report?.photo]);
 
   if (loading) {
     return (
@@ -126,6 +131,27 @@ const ReportDetailPage = () => {
               {report.address && (
                 <p className="mt-4 text-sm text-gray-400">Location: {report.address}</p>
               )}
+
+              {photoUrl && !photoLoadError ? (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs uppercase tracking-[0.2em] text-gray-400">Evidence</p>
+                  <button
+                    type="button"
+                    onClick={() => window.open(photoUrl, '_blank', 'noopener,noreferrer')}
+                    className="inline-block overflow-hidden rounded-lg border border-[#2e303a] bg-[#0a0b0f] p-2 text-left"
+                    aria-label="Open report evidence in a new tab"
+                  >
+                    <img
+                      src={photoUrl}
+                      alt="Report evidence"
+                      className="max-h-[200px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
+                      onError={() => setPhotoLoadError(true)}
+                    />
+                  </button>
+                </div>
+              ) : (
+                !photoUrl && <p className="mt-4 text-sm text-gray-500">No photo uploaded</p>
+              )}
             </div>
 
             <div className="space-y-3 rounded-2xl border border-[#2e303a] bg-[#0a0b0f] p-4">
@@ -148,21 +174,6 @@ const ReportDetailPage = () => {
             </div>
           </div>
 
-          {photoUrl && (
-            <div className="mt-6">
-              <p className="mb-3 text-xs uppercase tracking-[0.2em] text-gray-400">Evidence</p>
-              <a href={photoUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-[#2e303a] bg-[#0a0b0f] p-2">
-                <img
-                  src={photoUrl}
-                  alt="Report evidence"
-                  className="max-h-80 w-full rounded-lg object-contain"
-                  onError={(event) => {
-                    event.target.style.display = 'none';
-                  }}
-                />
-              </a>
-            </div>
-          )}
         </div>
       </div>
     </main>
