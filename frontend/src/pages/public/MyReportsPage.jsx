@@ -13,7 +13,7 @@ const statusStyles = {
 };
 
 const MyReportsPage = () => {
-  const { token, isAuthenticated, loading: authLoading } = useAuth();
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth();
   const [reports, setReports] = useState([]);
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
