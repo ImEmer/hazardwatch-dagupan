@@ -37,12 +37,7 @@ const InteractiveMap = ({
     const reverseGeocode = async (lng, lat) => {
         try {
             const response = await axios.get(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-                {
-                    headers: {
-                        'User-Agent': 'HazardWatch-Dagupan'
-                    }
-                }
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
             );
 
             const data = response.data;
