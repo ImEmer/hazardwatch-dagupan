@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
+import api from '../../services/api';
 import { showError, showSuccess } from '../../services/alerts';
 
 const roleBadge = {
@@ -31,17 +32,20 @@ const AdminUsersPage = () => {
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
-    const response = await fetch('/users', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || 'Unable to load users.');
-    setUsers((body.users || []).map((user) => ({
-      ...user,
-      id: user._id || user.id,
-      status: user.isActive ? 'Active' : 'Inactive',
-      lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
-    })));
+    try {
+      const response = await api.get('/users', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = response.data || {};
+      setUsers((body.users || []).map((user) => ({
+        ...user,
+        id: user._id || user.id,
+        status: user.isActive ? 'Active' : 'Inactive',
+        lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+      })));
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Unable to load users.');
+    }
   }, [token]);
 
   useEffect(() => {
@@ -85,21 +89,18 @@ const AdminUsersPage = () => {
     }
 
     try {
-      const response = await fetch(`/users/${selectedUser._id || selectedUser.id}`, {
-        method: 'PUT',
+      const response = await api.put(`/users/${selectedUser._id || selectedUser.id}`, {
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        barangay: form.role === 'barangay' ? form.barangay : '',
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          role: form.role,
-          barangay: form.role === 'barangay' ? form.barangay : '',
-        }),
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || 'Unable to update user.');
+      const body = response.data || {};
+      if (!body) throw new Error(body.message || 'Unable to update user.');
       await fetchUsers();
       await showSuccess('User updated successfully.');
       closeEditor();

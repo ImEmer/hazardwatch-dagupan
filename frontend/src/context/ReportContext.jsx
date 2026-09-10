@@ -1,5 +1,6 @@
     import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
     import useAuth from '../hooks/useAuth';
+    import api from '../services/api';
 
     const ReportContext = createContext();
     const INITIAL_REPORTS = [];
@@ -25,15 +26,18 @@
         let page = 1;
         let pages = 1;
         do {
-
-        const response = await fetch(`/reports?page=${page}&limit=100`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Unable to load reports.');
-        allReports.push(...(body.reports || []));
-        pages = body.pagination?.pages || 1;
-        page += 1;
+          try {
+            const response = await api.get('/reports', {
+              params: { page, limit: 100 },
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const body = response.data || {};
+            allReports.push(...(body.reports || []));
+            pages = body.pagination?.pages || 1;
+            page += 1;
+          } catch (error) {
+            throw new Error(error.response?.data?.message || 'Unable to load reports.');
+          }
         } while (page <= pages);
         setReports(allReports);
     }, [canFetchReports, token]);
@@ -60,32 +64,29 @@
         payload.append('photo', newReport.photoFile);
         payload.append('barangay', newReport.barangay || '');
 
-
-        const response = await fetch('/reports', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: payload,
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Unable to save the report.');
-
-        const report = body.report;
-        setReports(prev => [report, ...prev]);
-        fetchReports().catch(() => {});
-        return report;
+        try {
+          const response = await api.post('/reports', payload, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const report = response.data?.report;
+          setReports(prev => [report, ...prev]);
+          fetchReports().catch(() => {});
+          return report;
+        } catch (error) {
+          throw new Error(error.response?.data?.message || 'Unable to save the report.');
+        }
     };
 
     const updateReportStatus = async (id, newStatus) => {
         const reportId = String(id);
         if (/^[a-f\d]{24}$/i.test(reportId) && token) {
-
-        const response = await fetch(`/reports/${reportId}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ status: newStatus }),
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Unable to update report status.');
+          try {
+            await api.patch(`/reports/${reportId}/status`, { status: newStatus }, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch (error) {
+            throw new Error(error.response?.data?.message || 'Unable to update report status.');
+          }
         }
         setReports((prev) => prev.map((report) => String(report.id || report._id) === reportId ? { ...report, status: newStatus } : report));
         fetchReports().catch(() => {});
@@ -94,14 +95,13 @@
     const updateReportPriority = async (id, newPriority) => {
         const reportId = String(id);
         if (/^[a-f\d]{24}$/i.test(reportId) && token) {
-
-        const response = await fetch(`/reports/${reportId}/priority`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ priority: newPriority }),
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Unable to update report priority.');
+          try {
+            await api.patch(`/reports/${reportId}/priority`, { priority: newPriority }, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch (error) {
+            throw new Error(error.response?.data?.message || 'Unable to update report priority.');
+          }
         }
         setReports((prev) => prev.map((report) => String(report.id || report._id) === reportId ? { ...report, priority: newPriority } : report));
         fetchReports().catch(() => {});
@@ -110,15 +110,13 @@
     const deleteReport = async (id, token) => {
         const reportId = String(id);
         if (/^[a-f\d]{24}$/i.test(reportId) && token) {
-
-        const response = await fetch(`/reports/${reportId}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
-            throw new Error(body.message || 'Unable to delete the report.');
-        }
+          try {
+            await api.delete(`/reports/${reportId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch (error) {
+            throw new Error(error.response?.data?.message || 'Unable to delete the report.');
+          }
         }
         setReports((prev) => prev.filter((report) => String(report.id || report._id) !== reportId));
         fetchReports().catch(() => {});

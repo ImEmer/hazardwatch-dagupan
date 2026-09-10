@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -35,7 +36,7 @@ const InteractiveMap = ({
 
     const reverseGeocode = async (lng, lat) => {
         try {
-            const response = await fetch(
+            const response = await axios.get(
                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
                 {
                     headers: {
@@ -44,7 +45,7 @@ const InteractiveMap = ({
                 }
             );
 
-            const data = await response.json();
+            const data = response.data;
 
             if (data && data.display_name) {
                 let address = data.display_name;

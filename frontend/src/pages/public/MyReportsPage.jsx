@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import api from '../../services/api';
 import { showError } from '../../services/alerts';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -34,17 +35,18 @@ const MyReportsPage = () => {
 
     const loadReports = async () => {
       try {
-        let response = await fetch('/reports/mine', { headers: { Authorization: `Bearer ${token}` } });
-
-        if (!response.ok && response.status === 404) {
-          response = await fetch(`/reports?email=${encodeURIComponent(user?.email || '')}`, {
+        let response;
+        try {
+          response = await api.get('/reports/mine', { headers: { Authorization: `Bearer ${token}` } });
+        } catch (error) {
+          if (error.response?.status !== 404) throw error;
+          response = await api.get('/reports', {
+            params: { email: user?.email || '' },
             headers: { Authorization: `Bearer ${token}` },
           });
         }
 
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Unable to load your reports.');
-
+        const body = response?.data || {};
         const reportList = Array.isArray(body.reports) ? body.reports : Array.isArray(body.data) ? body.data : [];
         const filteredReports = user?.email
           ? reportList.filter((report) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
+import api from '../../services/api';
 
 const SuperAdminDashboard = () => {
   const { token } = useAuth();
@@ -12,9 +13,9 @@ const SuperAdminDashboard = () => {
     const fetchActivities = async () => {
       if (!token) return;
       try {
-        const response = await fetch('/activity', { headers: { Authorization: `Bearer ${token}` } });
-        const body = await response.json().catch(() => ({ activities: [] }));
-        if (response.ok) setActivities(body.activities || []);
+        const response = await api.get('/activity', { headers: { Authorization: `Bearer ${token}` } });
+        const body = response.data || { activities: [] };
+        setActivities(body.activities || []);
       } catch (error) {
         setActivities([]);
       }

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
+import api from '../../services/api';
 import { REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
 import { showError } from '../../services/alerts';
 
@@ -46,10 +47,9 @@ const AdminReportDetailPage = () => {
     }
 
     setLoading(true);
-    fetch(`/api/reports/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (response) => {
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Report not found.');
+    api.get(`/reports/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => {
+        const body = response.data || {};
         if (!cancelled) setFetchedReport(body.report);
       })
       .catch(() => {

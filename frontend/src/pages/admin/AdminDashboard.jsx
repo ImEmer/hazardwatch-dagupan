@@ -19,6 +19,7 @@
     import { useReports } from '../../context/ReportContext';
     import useTheme from '../../hooks/useTheme';
     import useAuth from '../../hooks/useAuth';
+    import api from '../../services/api';
     import { REPORT_STATUSES, STATUS_BADGES, STATUS_CHART_COLORS } from '../../services/reportOptions';
 
     const AdminDashboard = () => {
@@ -77,13 +78,11 @@
         const fetchActivities = async () => {
           if (!token) return;
           try {
-            const response = await fetch('/activity', {
+            const response = await api.get('/activity', {
               headers: { Authorization: `Bearer ${token}` },
             });
-            const body = await response.json().catch(() => ({ activities: [] }));
-            if (response.ok) {
-              setActivities(body.activities || []);
-            }
+            const body = response.data || { activities: [] };
+            setActivities(body.activities || []);
           } catch (error) {
             setActivities([]);
           }

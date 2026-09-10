@@ -1,26 +1,35 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
-const API_URL = import.meta.env.VITE_API_URL || '';
 
 const request = async (path, options = {}, token = null) => {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  try {
+    const config = {
+      ...options,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    };
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || 'The request could not be completed.');
+    let response;
+    if (options.method === 'POST') {
+      response = await api.post(path, options.body ? JSON.parse(options.body) : {}, config);
+    } else if (options.method === 'PUT') {
+      response = await api.put(path, options.body ? JSON.parse(options.body) : {}, config);
+    } else if (options.method === 'DELETE') {
+      response = await api.delete(path, config);
+    } else {
+      response = await api.get(path, config);
+    }
+
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'The request could not be completed.');
   }
-
-  return response.status === 204 ? null : response.json();
 };
 
 export const AuthProvider = ({ children }) => {

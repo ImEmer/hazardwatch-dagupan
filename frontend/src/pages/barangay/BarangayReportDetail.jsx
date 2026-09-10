@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { useReports } from '../../context/ReportContext';
+import api from '../../services/api';
 import { showError, showSuccess } from '../../services/alerts';
 
 const statusOptions = ['Pending', 'In Progress', 'Resolved', 'Closed'];
@@ -40,13 +41,11 @@ const BarangayReportDetail = () => {
     const loadReport = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/reports/${id}`, {
+        const response = await api.get(`/reports/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || 'Report not found.');
-
+        const body = response.data || {};
         if (isMounted) setFetchedReport(body.report || null);
       } catch (error) {
         if (isMounted) setFetchedReport(null);
@@ -75,17 +74,14 @@ const BarangayReportDetail = () => {
 
     setSavingComment(true);
     try {
-      const response = await fetch(`/api/reports/${id}/comments`, {
-        method: 'POST',
+      const response = await api.post(`/reports/${id}/comments`, { text: comment.trim() }, {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ text: comment.trim() }),
       });
 
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || 'Unable to add comment.');
+      const body = response.data || {};
+      if (!body) throw new Error(body.message || 'Unable to add comment.');
 
       setComment('');
       await fetchReports();

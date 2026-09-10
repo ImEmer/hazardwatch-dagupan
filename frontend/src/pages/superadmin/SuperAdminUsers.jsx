@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
+import api from '../../services/api';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 
 const roleBadge = {
@@ -25,17 +26,20 @@ const SuperAdminUsers = () => {
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
-    const response = await fetch('/users', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || 'Unable to load users.');
-    setUsers((body.users || []).map((user) => ({
-      ...user,
-      id: user._id || user.id,
-      status: user.isActive ? 'Active' : 'Inactive',
-      lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
-    })));
+    try {
+      const response = await api.get('/users', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = response.data || {};
+      setUsers((body.users || []).map((user) => ({
+        ...user,
+        id: user._id || user.id,
+        status: user.isActive ? 'Active' : 'Inactive',
+        lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+      })));
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Unable to load users.');
+    }
   }, [token]);
 
   useEffect(() => {
@@ -62,21 +66,18 @@ const SuperAdminUsers = () => {
   const handleSave = async () => {
     if (!selectedUser) return;
     try {
-      const response = await fetch(`/users/${selectedUser._id || selectedUser.id}`, {
-        method: 'PUT',
+      const response = await api.put(`/users/${selectedUser._id || selectedUser.id}`, {
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        barangay: form.role === 'barangay' ? form.barangay : '',
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          role: form.role,
-          barangay: form.role === 'barangay' ? form.barangay : '',
-        }),
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || 'Unable to update user.');
+      const body = response.data || {};
+      if (!body) throw new Error(body.message || 'Unable to update user.');
       await fetchUsers();
       await showSuccess('User updated successfully.');
       closeEditor();
@@ -90,12 +91,11 @@ const SuperAdminUsers = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const response = await fetch(`/users/${userToDelete._id || userToDelete.id}`, {
-        method: 'DELETE',
+      const response = await api.delete(`/users/${userToDelete._id || userToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || 'Unable to delete user.');
+      const body = response.data || {};
+      if (!body) throw new Error(body.message || 'Unable to delete user.');
       await fetchUsers();
       await showSuccess('User deleted successfully.');
     } catch (error) {
