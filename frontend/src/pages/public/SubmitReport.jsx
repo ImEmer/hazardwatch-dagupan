@@ -37,13 +37,13 @@ const SubmitReport = () => {
         });
         setSelectedAddress(address || `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
         setSelectedBarangay(barangay || '');
-        setErrors({ ...errors, location: '' });
+        setErrors((prev) => ({ ...prev, location: '' }));
     };
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
         if (errors[e.target.name]) {
-            setErrors({ ...errors, [e.target.name]: '' });
+            setErrors((prev) => ({ ...prev, [e.target.name]: '' }));
         }
     };
 
@@ -51,7 +51,7 @@ const SubmitReport = () => {
         const file = e.target.files[0];
         if (file) {
             setPhoto(file);
-            setErrors({ ...errors, photo: '' });
+            setErrors((prev) => ({ ...prev, photo: '' }));
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPhotoPreview(reader.result);
@@ -60,10 +60,21 @@ const SubmitReport = () => {
         }
     };
 
+    const resetFormState = () => {
+        setForm({ category: '', description: '' });
+        setSelectedLocation(null);
+        setSelectedAddress('');
+        setSelectedBarangay('');
+        setPhoto(null);
+        setPhotoPreview(null);
+        setErrors({});
+        if (photoInputRef.current) photoInputRef.current.value = '';
+    };
+
     const handleRemovePhoto = () => {
         setPhoto(null);
         setPhotoPreview(null);
-        setErrors({ ...errors, photo: 'Photo evidence is required.' });
+        setErrors((prev) => ({ ...prev, photo: 'Photo evidence is required.' }));
     };
 
     const validateForm = () => {
@@ -95,6 +106,7 @@ const SubmitReport = () => {
         }
 
         setIsSubmitting(true);
+        setErrors({});
         const newReport = {
             category: form.category,
             description: form.description.trim(),
@@ -109,18 +121,11 @@ const SubmitReport = () => {
         try {
             await addReport(newReport, token);
             await showSuccess('Your hazard report was submitted successfully.');
-            setForm({ category: '', description: '' });
-            setSelectedLocation(null);
-            setSelectedAddress('');
-            setSelectedBarangay('');
-            setPhoto(null);
-            setPhotoPreview(null);
-            setErrors({});
-            if (photoInputRef.current) photoInputRef.current.value = '';
-            setIsSubmitting(false);
+            resetFormState();
         } catch (error) {
-            setIsSubmitting(false);
             await showError(error.message || 'Unable to save the report. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

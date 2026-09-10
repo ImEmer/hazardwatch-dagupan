@@ -187,13 +187,7 @@ const AdminReportsPage = () => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <Link to={`/admin/reports/${report._id || report.id}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]" aria-label={`View details for ${report.title}`} title="View details">
-                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z" />
-                              <circle cx="12" cy="12" r="2.5" />
-                            </svg>
-                          </Link>
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleDelete(report)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
@@ -204,6 +198,11 @@ const AdminReportsPage = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7V4h6v3m-9 0l1 13h10l1-13" />
                             </svg>
                           </button>
+                          <Link to={`/admin/reports/${report._id || report.id}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]" aria-label={`Open details for ${report.title}`} title="Open details">
+                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
+                            </svg>
+                          </Link>
                         </div>
                         <select
                           id={`status-${report._id || report.id}`}
@@ -213,7 +212,6 @@ const AdminReportsPage = () => {
                           className={`rounded-lg border px-2 py-1.5 text-xs focus:border-[#3b82f6] focus:outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
                         >
                           <option value="Pending">Pending</option>
-                          
                           <option value="In Progress">In Progress</option>
                           <option value="Resolved">Resolved</option>
                           <option value="Closed">Closed</option>

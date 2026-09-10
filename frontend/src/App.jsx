@@ -23,6 +23,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminMapPage from './pages/admin/AdminMapPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import MyReportsPage from './pages/public/MyReportsPage';
+import ReportDetailPage from './pages/public/ReportDetailPage';
 import ProfilePage from './pages/public/ProfilePage';
 import HelpPage from './pages/public/HelpPage';
 import BarangayLayout from './components/layout/BarangayLayout';
@@ -55,6 +56,7 @@ const pageTitles = [
   { match: (pathname) => pathname === '/about', title: 'About HazardWatch | Dagupan Community Safety' },
   { match: (pathname) => pathname === '/help', title: 'Help & FAQ | HazardWatch' },
   { match: (pathname) => pathname === '/my-reports', title: 'My Reports | HazardWatch' },
+  { match: (pathname) => pathname.startsWith('/reports/'), title: 'Report Detail | HazardWatch' },
   { match: (pathname) => pathname === '/profile', title: 'Profile & Settings | HazardWatch' },
   { match: (pathname) => pathname === '/submit', title: 'Submit Hazard Report | HazardWatch' },
   { match: (pathname) => pathname === '/map', title: 'Hazard Map | HazardWatch' },
@@ -105,6 +107,7 @@ function App() {
             <Route path="/about" element={<PublicPage><AboutPage /></PublicPage>} />
             <Route path="/help" element={<PublicPage><HelpPage /></PublicPage>} />
             <Route path="/my-reports" element={<PublicPage><MyReportsPage /></PublicPage>} />
+            <Route path="/reports/:id" element={<PublicPage><ReportDetailPage /></PublicPage>} />
             <Route path="/profile" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff', 'barangay', 'user']}><PublicPage><ProfilePage /></PublicPage></ProtectedRoute>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />

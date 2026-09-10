@@ -21,19 +21,11 @@ const priorityStyles = {
   Urgent: 'bg-red-500/10 text-red-300 border-red-500/30',
 };
 
-const normalizePhotoUrl = (photo) => {
-  if (!photo) return null;
-  if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
-  if (photo.startsWith('/')) return `https://hazardwatch-dagupan.onrender.com${photo}`;
-  return `https://hazardwatch-dagupan.onrender.com/uploads/${photo}`;
-};
-
 const MyReportsPage = () => {
   const { token, user, isAuthenticated, loading: authLoading } = useAuth();
   const [reports, setReports] = useState([]);
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -141,63 +133,31 @@ const MyReportsPage = () => {
           <div data-aos="fade-up" data-aos-delay="150" className="space-y-3">
             {filteredReports.map((report) => {
               const reportId = report._id || report.id;
-              const isSelected = selectedId === reportId;
-              const photoUrl = normalizePhotoUrl(report.photo);
               const reportTitle = report.title || report.description || `${report.category || 'Hazard'} report`;
               const formattedDate = report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown date';
 
               return (
-                <article key={reportId} data-aos="fade-up" className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-semibold text-white">{reportTitle}</h2>
-                        <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status || 'Pending'}</span>
-                        <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${priorityStyles[report.priority] || priorityStyles.Medium}`}>{report.priority || 'Medium'}</span>
-                      </div>
-
-                      <p className="mt-2 text-sm text-gray-400">{report.category || 'General hazard'} · {formattedDate}</p>
-                      <p className="mt-3 text-sm leading-6 text-gray-200">{report.description || 'No description provided.'}</p>
-
-                      {report.address && (
-                        <p className="mt-3 text-sm text-gray-400">Location: {report.address}</p>
-                      )}
+                <Link key={reportId} to={`/reports/${reportId}`} className="block rounded-2xl border border-[#2e303a] bg-[#14151d] transition hover:border-[#3b82f6]/40 hover:bg-[#171a22]">
+                  <article data-aos="fade-up" className="p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-semibold text-white">{reportTitle}</h2>
+                      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status || 'Pending'}</span>
+                      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${priorityStyles[report.priority] || priorityStyles.Medium}`}>{report.priority || 'Medium'}</span>
                     </div>
 
-                    <div className="w-full md:max-w-xs">
-                      {photoUrl ? (
-                        <img
-                          src={photoUrl}
-                          alt="Report evidence"
-                          className="max-h-48 w-full cursor-pointer rounded-lg border border-[#2e303a] object-contain hover:opacity-90 transition"
-                          onClick={() => window.open(photoUrl, '_blank', 'noopener,noreferrer')}
-                        />
-                      ) : (
-                        <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-[#2e303a] text-sm text-gray-500">
-                          No photo uploaded
-                        </div>
-                      )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.15em] text-gray-400">
+                      <span>{report.category || 'General hazard'}</span>
+                      <span>•</span>
+                      <span>{formattedDate}</span>
                     </div>
-                  </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-[#2e303a] pt-4">
-                    <button type="button" onClick={() => setSelectedId(isSelected ? null : reportId)} className="text-sm font-medium text-[#60a5fa] hover:text-white">
-                      {isSelected ? 'Hide details' : 'View details'}
-                    </button>
-                    <Link to={`/reports/${reportId}`} className="text-sm font-medium text-[#60a5fa] hover:text-white">
-                      Open report
-                    </Link>
-                  </div>
+                    <p className="mt-3 text-sm leading-6 text-gray-200">{report.description || 'No description provided.'}</p>
 
-                  {isSelected && (
-                    <div className="mt-4 space-y-2 border-t border-[#2e303a] pt-4 text-sm text-gray-300">
-                      <p><span className="font-medium text-white">Category:</span> {report.category || 'Unspecified'}</p>
-                      <p><span className="font-medium text-white">Status:</span> {report.status || 'Pending'}</p>
-                      <p><span className="font-medium text-white">Priority:</span> {report.priority || 'Medium'}</p>
-                      <p><span className="font-medium text-white">Date:</span> {formattedDate}</p>
-                    </div>
-                  )}
-                </article>
+                    {report.address && (
+                      <p className="mt-3 text-sm text-gray-400">Location: {report.address}</p>
+                    )}
+                  </article>
+                </Link>
               );
             })}
           </div>

@@ -56,7 +56,8 @@
         }, [canFetchReports, fetchReports]);
 
         const addReport = async (newReport, token) => {
-            if (!newReport?.photoFile) {
+            const photoFile = newReport?.photoFile || newReport?.photo;
+            if (!photoFile) {
             throw new Error('Photo evidence is required.');
             }
 
@@ -80,7 +81,7 @@
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));
             payload.append('barangay', String(newReport.barangay || ''));
-            payload.append('photo', newReport.photoFile);
+            payload.append('photo', photoFile, photoFile.name || 'photo.jpg');
 
             try {
             const response = await api.post('/reports', payload, {
