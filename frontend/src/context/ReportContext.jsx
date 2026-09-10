@@ -81,8 +81,13 @@
             }
 
             fetchReports().catch(() => {});
+
+            if (!token || !user) {
+                return undefined;
+            }
+
             const interval = window.setInterval(() => {
-                if (isTokenValid) fetchReports().catch(() => {});
+                if (isTokenValid && token && user) fetchReports().catch(() => {});
             }, 30000);
             const handleFocus = () => fetchReports().catch(() => {});
             window.addEventListener('focus', handleFocus);
@@ -90,7 +95,7 @@
             window.clearInterval(interval);
             window.removeEventListener('focus', handleFocus);
             };
-        }, [fetchReports, isTokenValid, user?.role, token]);
+        }, [fetchReports, isTokenValid, token, user?._id, user?.role]);
 
         const addReport = async (newReport, token) => {
             const photoFile = newReport?.photoFile || newReport?.photo;

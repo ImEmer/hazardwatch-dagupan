@@ -33,56 +33,64 @@ const request = async (path, options = {}, token = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem(USER_KEY);
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [loading, setLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY)));
+  const [loading, setLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token')));
+
+  const clearSession = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('token');
+    window.__hw_redirecting = false;
+  }, []);
 
   const persistSession = useCallback((session) => {
     const nextToken = session.token;
     const nextUser = session.user;
+    window.__hw_redirecting = false;
     setToken(nextToken);
     setUser(nextUser);
     localStorage.setItem(TOKEN_KEY, nextToken);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    localStorage.setItem('token', nextToken);
   }, []);
 
   const logout = useCallback(async () => {
-    const currentToken = localStorage.getItem(TOKEN_KEY);
+    const currentToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
     try {
       if (currentToken) {
         await request('/auth/logout', { method: 'POST' }, currentToken);
       }
     } finally {
-      setToken(null);
-      setUser(null);
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
+      clearSession();
     }
-  }, []);
+  }, [clearSession]);
 
   const getCurrentUser = useCallback(async () => {
-    const currentToken = localStorage.getItem(TOKEN_KEY);
+    const currentToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
     if (!currentToken) {
       setLoading(false);
       return null;
     }
 
     try {
-      const response = await request('/auth/me', {}, currentToken);  
+      const response = await request('/auth/me', {}, currentToken);
       const nextUser = response.user || response;
       setUser(nextUser);
       localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
       return nextUser;
     } catch (error) {
-      await logout();
+      clearSession();
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [logout]);
+  }, [clearSession]);
 
   useEffect(() => {
     if (token) {
@@ -90,7 +98,18 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
-  }, [getCurrentUser, token]);
+  }, [token]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      logout().catch(() => {});
+    };
+
+    window.addEventListener('hw:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('hw:session-expired', handleSessionExpired);
+    };
+  }, [logout]);
 
   const login = useCallback(async (email, password) => {
     const response = await request('/auth/login', { 
