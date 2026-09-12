@@ -68,7 +68,7 @@ export const getReport = async (req, res, next) => {
 export const createReport = async (req, res, next) => {
   try {
     const photoValue = req.file
-      ? `/uploads/${req.file.filename}`
+      ? (req.file.path || req.file.secure_url)
       : (typeof req.body.photo === 'string' ? req.body.photo : '');
 
     const report = await Report.create({

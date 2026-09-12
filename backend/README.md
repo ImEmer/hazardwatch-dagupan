@@ -3,7 +3,7 @@
 ## Setup
 
 1. Install MongoDB and start it locally.
-2. Copy `.env.example` to `.env` and set a long random `JWT_SECRET`.
+2. Create `backend/.env` and set `MONGO_URI`, a long random `JWT_SECRET`, and the Cloudinary variables `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`.
 3. Install dependencies and seed optional development users:
 
 ```powershell

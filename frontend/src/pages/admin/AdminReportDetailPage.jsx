@@ -32,10 +32,7 @@ const AdminReportDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [photoLoadError, setPhotoLoadError] = useState(false);
   const report = reports.find((item) => String(item._id || item.id) === id) || fetchedReport;
-  const photoPath = typeof report?.photo === 'string' ? report.photo.trim() : '';
-  const photoUrl = photoPath
-    ? (/^https?:\/\//i.test(photoPath) ? photoPath : `https://hazardwatch-dagupan.onrender.com${photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`}`)
-    : null;
+  const photoUrl = typeof report?.photo === 'string' && report.photo.trim() ? report.photo.trim() : null;
 
   useEffect(() => {
     setPhotoLoadError(false);

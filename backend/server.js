@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -15,8 +14,6 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
-fs.mkdirSync('uploads', { recursive: true });
-
 app.use(helmet());
 
 
@@ -32,11 +29,6 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '2mb' }));
-app.use('/uploads', (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  next();
-}, express.static('uploads'));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }), authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);

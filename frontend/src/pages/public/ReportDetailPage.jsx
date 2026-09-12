@@ -18,13 +18,6 @@ const priorityStyles = {
   Urgent: 'bg-red-500/10 text-red-300 border-red-500/30',
 };
 
-const normalizePhotoUrl = (photo) => {
-  const photoPath = typeof photo === 'string' ? photo.trim() : '';
-  if (!photoPath) return null;
-  if (/^https?:\/\//i.test(photoPath)) return photoPath;
-  return `https://hazardwatch-dagupan.onrender.com${photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`}`;
-};
-
 const ReportDetailPage = () => {
   const { id } = useParams();
   const { token } = useAuth();
@@ -98,7 +91,7 @@ const ReportDetailPage = () => {
     );
   }
 
-  const photoUrl = normalizePhotoUrl(report.photo);
+  const photoUrl = typeof report.photo === 'string' && report.photo.trim() ? report.photo.trim() : null;
   const formattedDate = report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown date';
 
   return (
