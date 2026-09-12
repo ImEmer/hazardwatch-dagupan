@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { showError } from '../../services/alerts';
+import { HAZARD_CATEGORY_COLORS } from '../../services/reportOptions';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { SkeletonReportCard } from '../../components/common/Skeleton';
@@ -146,7 +147,7 @@ const MyReportsPage = () => {
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.15em] text-gray-400">
-                      <span>{report.category || 'General hazard'}</span>
+                      <span className="rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category || 'General hazard'}</span>
                       <span>•</span>
                       <span>{formattedDate}</span>
                     </div>

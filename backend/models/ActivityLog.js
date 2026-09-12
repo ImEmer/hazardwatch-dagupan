@@ -4,6 +4,11 @@ const activityLogSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   actorName: { type: String, trim: true, default: '' },
+  actorRole: {
+    type: String,
+    enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'],
+    default: 'user',
+  },
   role: {
     type: String,
     enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'],

@@ -4,7 +4,7 @@ import { useReports } from '../../context/ReportContext';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
-import { REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
+import { HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
 import { showError } from '../../services/alerts';
 
 const priorityColors = {
@@ -179,7 +179,7 @@ const AdminReportDetailPage = () => {
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <div className={`rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
               <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Category</p>
-              <p className={`mt-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.category}</p>
+              <p className="mt-2 inline-flex rounded-full px-2 py-1 text-sm font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category}</p>
             </div>
             <div className={`rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
               <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Location</p>

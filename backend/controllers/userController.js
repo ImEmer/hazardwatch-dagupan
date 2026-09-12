@@ -40,13 +40,14 @@ export const updateUser = async (req, res, next) => {
     }
 
     const user = await User.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select(fields);
-    await logActivity({ actor: req.user, action: 'user_updated', message: `${req.user.name} updated user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {});
+    const action = nextRole && nextRole !== targetUser.role ? 'user_role_changed' : 'user_updated';
+    await logActivity({ actor: req.user, action, message: `${req.user.name} ${action === 'user_role_changed' ? `changed ${user.name}'s role to ${user.role}` : `updated user ${user.name}`}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {});
     res.json({ success: true, user });
   } catch (e) {
     next(e);
   }
 };
-export const toggleUserStatus = async (req, res, next) => { try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); if (req.user.role === 'admin' && user.role === 'superadmin') return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' }); user.isActive = !user.isActive; await user.save(); res.json({ success: true, user: user.toJSON() }); } catch (e) { next(e); } };
+export const toggleUserStatus = async (req, res, next) => { try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); if (req.user.role === 'admin' && user.role === 'superadmin') return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' }); user.isActive = !user.isActive; await user.save(); await logActivity({ actor: req.user, action: user.isActive ? 'user_activated' : 'user_deactivated', message: `${req.user.name} ${user.isActive ? 'activated' : 'deactivated'} user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {}); res.json({ success: true, user: user.toJSON() }); } catch (e) { next(e); } };
 export const deleteUser = async (req, res, next) => {
   try {
     const userToDelete = await User.findById(req.params.id);

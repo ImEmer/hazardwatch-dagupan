@@ -6,6 +6,7 @@ import { showError, showSuccess, showWarning } from '../../services/alerts';
 import InteractiveMap from '../../components/InteractiveMap';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { HAZARD_CATEGORY_GROUPS } from '../../services/reportOptions';
 
 const SubmitReport = () => {
     const { addReport } = useReports();
@@ -158,13 +159,11 @@ const SubmitReport = () => {
                     className={`w-full px-4 py-2.5 bg-[#0a0b0f] border ${errors.category ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg focus:ring-2 focus:ring-[#3b82f6] focus:border-[#3b82f6] outline-none text-white transition appearance-none`}
                     >
                     <option value="">Select hazard type...</option>
-                    <option value="Pothole">Pothole</option>
-                    <option value="Streetlight">Broken Streetlight</option>
-                    <option value="Drainage">Clogged Drainage</option>
-                    <option value="Flooding">Flooding</option>
-                    <option value="Waste Disposal">Waste Disposal</option>
-                    <option value="Public Facility">Damaged Public Facility</option>
-                    <option value="Other">Other</option>
+                    {HAZARD_CATEGORY_GROUPS.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                        {group.options.map((category) => <option key={category} value={category}>{category}</option>)}
+                        </optgroup>
+                    ))}
                     </select>
                     {errors.category && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">

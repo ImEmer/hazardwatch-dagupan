@@ -5,6 +5,7 @@ export const logActivity = ({ actor, action, message, scope, entityType, entityI
   actorId: actor?._id || null,
   actorName: actor?.name || 'System',
   role: actor?.role || 'user',
+  actorRole: actor?.role || 'user',
   scope: scope || (actor?.role === 'barangay' ? 'barangay' : actor?.role === 'user' ? 'user' : 'admin'),
   action,
   message,

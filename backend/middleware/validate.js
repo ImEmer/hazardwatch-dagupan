@@ -14,7 +14,7 @@ export const validateRegister = [
 ];
 export const validateLogin = [body('email').isEmail().normalizeEmail(), body('password').notEmpty(), validate];
 export const validateReport = [
-  body('category').isIn(['Pothole', 'Streetlight', 'Drainage', 'Flooding', 'Waste Disposal', 'Public Facility', 'Other']),
+  body('category').isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
   body('description').trim().isLength({ min: 10 }),
   body('location').custom((value, { req }) => {
     const location = typeof value === 'string' ? JSON.parse(value) : value;

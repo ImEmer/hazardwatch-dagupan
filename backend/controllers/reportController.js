@@ -92,7 +92,7 @@ export const updateReport = async (req, res, next) => {
   try {
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, req.body, { new: true, runValidators: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
-    await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated report status to ${req.body.status}`, entityType: 'report', entityId: report._id }).catch(() => {});
+    await logActivity({ actor: req.user, action: 'report_updated', message: `${req.user.name} edited a report`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -101,7 +101,7 @@ export const updateStatus = async (req, res, next) => {
   try {
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { status: req.body.status }, { new: true, runValidators: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
-    await logActivity({ actor: req.user, action: 'report_priority_updated', message: `${req.user.name} updated report priority to ${req.body.priority}`, entityType: 'report', entityId: report._id }).catch(() => {});
+    await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated report status to ${req.body.status}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -109,6 +109,7 @@ export const updatePriority = async (req, res, next) => {
   try {
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { priority: req.body.priority }, { new: true, runValidators: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    await logActivity({ actor: req.user, action: 'report_priority_updated', message: `${req.user.name} updated report priority to ${req.body.priority}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -131,6 +132,7 @@ export const deleteReport = async (req, res, next) => {
   try {
     const report = await Report.findByIdAndDelete(req.params.id);
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    await logActivity({ actor: req.user, action: 'report_deleted', message: `${req.user.name} deleted report ${report._id}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, message: 'Report deleted.', report });
   } catch (error) { next(error); }
 };

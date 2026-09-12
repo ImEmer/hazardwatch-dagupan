@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useTheme from '../../hooks/useTheme';
-import { REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
+import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
 import { confirmAction, showError } from '../../services/alerts';
 import useAuth from '../../hooks/useAuth';
 
@@ -31,6 +31,7 @@ const AdminReportsPage = () => {
   const isLoading = reports.length === 0;
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [page, setPage] = useState(1);
 
   const filteredReports = useMemo(() => {
@@ -42,14 +43,15 @@ const AdminReportsPage = () => {
 
       const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || report.priority === priorityFilter;
+      const matchesCategory = categoryFilter === 'all' || report.category === categoryFilter;
 
-      return matchesSearch && matchesStatus && matchesPriority;
+      return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
     });
-  }, [reports, search, statusFilter, priorityFilter]);
+  }, [reports, search, statusFilter, priorityFilter, categoryFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, priorityFilter]);
+  }, [search, statusFilter, priorityFilter, categoryFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
   const visibleReports = filteredReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -91,7 +93,7 @@ const AdminReportsPage = () => {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1.7fr_1fr_1fr]">
+        <div className="mt-4 grid gap-3 md:grid-cols-[1.7fr_1fr_1fr_1fr]">
           <input
             id="reportSearch"
             name="reportSearch"
@@ -113,6 +115,17 @@ const AdminReportsPage = () => {
             <option value="Medium">Medium</option>
             <option value="High">High</option>
             <option value="Urgent">Urgent</option>
+          </select>
+
+          <select
+            id="categoryFilter"
+            name="categoryFilter"
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            className={`rounded-xl border px-3 py-2.5 text-sm focus:border-[#3b82f6] focus:outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
+          >
+            <option value="all">All categories</option>
+            {HAZARD_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
           </select>
 
           <div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
@@ -170,7 +183,7 @@ const AdminReportsPage = () => {
                         <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.reportedBy?.name || 'Citizen report'}</p>
                       </div>
                     </td>
-                    <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{report.category}</td>
+                    <td className="px-4 py-4"><span className="inline-flex rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category}</span></td>
                     <td className={`max-w-0 truncate px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`} title={report.address || 'Dagupan City'}>{report.address || 'Dagupan City'}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>

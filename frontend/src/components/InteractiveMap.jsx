@@ -2,15 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { HAZARD_CATEGORY_COLORS } from '../services/reportOptions';
 
 const CATEGORY_COLORS = {
-    'Pothole': '#EF4444',
-    'Streetlight': '#F59E0B',
-    'Drainage': '#3B82F6',
-    'Flooding': '#06B6D4',
-    'Waste Disposal': '#10B981',
-    'Public Facility': '#8B5CF6',
-    'Other': '#6B7280'
+    ...HAZARD_CATEGORY_COLORS,
 };
 
 const STATUS_COLORS = {

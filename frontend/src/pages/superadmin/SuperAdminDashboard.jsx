@@ -13,7 +13,7 @@ const SuperAdminDashboard = () => {
     const fetchActivities = async () => {
       if (!token) return;
       try {
-        const response = await api.get('/activity', { headers: { Authorization: `Bearer ${token}` } });
+        const response = await api.get('/activity/all', { headers: { Authorization: `Bearer ${token}` } });
         const body = response.data || { activities: [] };
         setActivities(body.activities || []);
       } catch (error) {
@@ -27,14 +27,6 @@ const SuperAdminDashboard = () => {
   return (
     <main className="min-h-screen px-4 pb-10 pt-24 text-white">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className={`rounded-2xl border p-8 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-          <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Super Admin</p>
-          <h1 className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>System overview</h1>
-          <p className={`mt-3 max-w-2xl ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-            Monitoring all admin activity, barangay updates, and platform-wide report changes.
-          </p>
-        </div>
-
         <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <h2 className={`mb-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>System-wide recent activity</h2>
           <div className="space-y-3">

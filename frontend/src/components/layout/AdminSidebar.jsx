@@ -8,7 +8,8 @@ const items = [
   { to: '/admin/dashboard', label: 'Dashboard' },
   { to: '/admin/reports', label: 'Reports' },
   { to: '/admin/map', label: 'Map View' },
-  { to: '/admin/activity', label: 'Activity', roles: ['superadmin', 'admin'] },
+  { to: '/admin/activity', label: 'Activity', roles: ['admin'] },
+  { to: '/superadmin/activity', label: 'Activity', roles: ['superadmin'] },
   { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'] },
   { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin', 'staff'] },
 ];

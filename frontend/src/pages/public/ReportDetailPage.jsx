@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { showError } from '../../services/alerts';
+import { HAZARD_CATEGORY_COLORS } from '../../services/reportOptions';
 
 const statusStyles = {
   Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
@@ -150,7 +151,7 @@ const ReportDetailPage = () => {
             <div className="space-y-3 rounded-2xl border border-[#2e303a] bg-[#0a0b0f] p-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Category</p>
-                <p className="mt-2 font-medium text-white">{report.category || 'General hazard'}</p>
+                <p className="mt-2 inline-flex rounded-full px-2 py-1 text-sm font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category || 'General hazard'}</p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Status</p>

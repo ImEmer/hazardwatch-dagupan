@@ -40,6 +40,7 @@ import TapuacReportDetail from './pages/barangay/tapuac/TapuacReportDetail';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
 import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
+import SuperAdminActivityPage from './pages/superadmin/SuperAdminActivityPage';
 const PublicPlaceholder = ({ title, description }) => (
   <div className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-28 text-white">
     <div className="mx-auto max-w-6xl rounded-2xl border border-[#2e303a] bg-[#14151d] p-8">
@@ -74,6 +75,7 @@ const pageTitles = [
   { match: (pathname) => pathname === '/superadmin/dashboard', title: 'Super Admin Dashboard | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/users', title: 'Super Admin Users | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/settings', title: 'Super Admin Settings | HazardWatch' },
+  { match: (pathname) => pathname === '/superadmin/activity', title: 'Super Admin Activity | HazardWatch' },
   { match: (pathname) => pathname === '/admin/dashboard', title: 'Admin Dashboard | HazardWatch' },
   { match: (pathname) => pathname === '/admin/reports', title: 'Reports Management | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/admin/reports/'), title: 'Report Details | HazardWatch' },
@@ -142,6 +144,7 @@ function App() {
               <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="users" element={<SuperAdminUsers />} />
               <Route path="settings" element={<SuperAdminSettings />} />
+              <Route path="activity" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminActivityPage /></ProtectedRoute>} />
             </Route>
 
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['superadmin', 'admin']}><AdminLayout /></ProtectedRoute>}> 

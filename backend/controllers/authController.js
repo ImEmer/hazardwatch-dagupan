@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import { generateToken } from '../utils/generateToken.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
+import { logActivity } from '../utils/logActivity.js';
 
 const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
 
@@ -15,6 +16,7 @@ export const register = async (req, res, next) => {
     const safeRole = isPrivilegedRole && ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
 
     const user = await User.create({ name, email, password, role: safeRole, barangay, phone });
+    await logActivity({ actor: user, action: 'user_registered', message: `${user.name} registered an account`, scope: user.role === 'barangay' ? 'barangay' : 'user', entityType: 'auth', entityId: user._id }).catch(() => {});
     res.status(201).json({ success: true, user: publicUser(user) });
   } catch (error) { next(error); }
 };
@@ -42,6 +44,7 @@ export const login = async (req, res, next) => {
     clearFailedLogins(req, email);
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
+    await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     res.json({ success: true, token: generateToken(user._id), user: publicUser(user) });
   } catch (error) { next(error); }
 };
@@ -68,6 +71,7 @@ export const updateProfile = async (req, res, next) => {
     req.user.name = name.trim();
     req.user.email = email.trim().toLowerCase();
     await req.user.save({ validateBeforeSave: false });
+    await logActivity({ actor: req.user, action: 'profile_updated', message: `${req.user.name} updated their profile`, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'user', entityId: req.user._id }).catch(() => {});
     res.json({ success: true, user: publicUser(req.user) });
   } catch (error) { next(error); }
 };
