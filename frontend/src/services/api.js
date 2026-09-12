@@ -15,11 +15,17 @@ const clearStoredSession = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem('token');
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem('token');
 };
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
+    const token = sessionStorage.getItem(TOKEN_KEY)
+      || sessionStorage.getItem('token')
+      || localStorage.getItem(TOKEN_KEY)
+      || localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,9 +43,9 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
 
-    if (status === 401 && !isAuthRoute(requestUrl)) {
+    if (status === 401) {
       clearStoredSession();
-      if (!window.__hw_redirecting) {
+      if (!isAuthRoute(requestUrl) && !window.__hw_redirecting) {
         window.__hw_redirecting = true;
         window.dispatchEvent(new Event('hw:session-expired'));
       }

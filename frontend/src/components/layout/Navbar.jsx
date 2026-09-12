@@ -12,13 +12,7 @@ const publicLinks = [
   { to: '/help', label: 'Help' },
 ];
 
-const adminLinks = [
-  { to: '/admin/dashboard', label: 'Dashboard', roles: ['superadmin', 'admin', 'staff'] },
-  { to: '/admin/reports', label: 'Reports', roles: ['superadmin', 'admin', 'staff'] },
-  { to: '/admin/map', label: 'Map View', roles: ['superadmin', 'admin', 'staff'] },
-  { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'] },
-  { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin', 'staff'] },
-];
+const PRIVILEGED_ROLES = ['superadmin', 'admin', 'barangay'];
 
 const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium transition ${
   isActive ? 'text-[#3b82f6]' : 'text-gray-300 hover:text-[#3b82f6]'
@@ -30,12 +24,17 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const navigate = useNavigate();
-  const canAccessAdmin = Boolean(isAuthenticated && ['superadmin', 'admin', 'staff'].includes(user?.role));
-
-  const authenticatedLinks = publicLinks.filter((item) => !item.authenticated || isAuthenticated);
-  const links = canAccessAdmin
-    ? [...authenticatedLinks, ...adminLinks.filter((item) => item.roles.includes(user?.role))]
-    : authenticatedLinks;
+  const authenticatedLinks = publicLinks.filter((item) => !item.authenticated || (isAuthenticated && user?.role === 'user'));
+  const links = authenticatedLinks;
+  const getDashboardPath = () => {
+    if (user?.role === 'superadmin') return '/superadmin/dashboard';
+    if (user?.role === 'admin') return '/admin/dashboard';
+    if (user?.role === 'barangay') {
+      const barangay = (user.barangay || '').trim().toLowerCase();
+      return ['/bonuan', '/lucao', '/tapuac'].includes(`/${barangay}`) ? `/barangay/${barangay}/dashboard` : '/barangay/bonuan/dashboard';
+    }
+    return '/';
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -68,6 +67,7 @@ const Navbar = () => {
         <div className="hidden items-center gap-3 md:flex">
           {isAuthenticated ? (
             <>
+              {PRIVILEGED_ROLES.includes(user?.role) && <Link to={getDashboardPath()} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">Go to Dashboard</Link>}
               <div className="relative">
                 <button onClick={() => setAccountOpen((open) => !open)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-gray-300 hover:text-white" aria-expanded={accountOpen}>
                   <span aria-hidden="true">{user?.name || 'Account'}</span><span aria-hidden="true" className="text-xs">&#9662;</span>
@@ -98,7 +98,7 @@ const Navbar = () => {
           <div className="flex flex-col gap-1">
             {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.label}</NavLink>)}
             {isAuthenticated ? (
-              <><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Go to My Profile ({user?.name || 'Account'})</NavLink><button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-red-500/10 hover:text-red-400">Logout</button></>
+              <><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Go to My Profile ({user?.name || 'Account'})</NavLink>{PRIVILEGED_ROLES.includes(user?.role) && <Link to={getDashboardPath()} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white" onClick={() => setMenuOpen(false)}>Go to Dashboard</Link>}<button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-red-500/10 hover:text-red-400">Logout</button></>
             ) : <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Login</NavLink>}
           </div>
       </nav>

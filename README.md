@@ -13,4 +13,6 @@ The React Compiler is not enabled on this template because of its impact on dev 
 
 ## Expanding the Oxlint configuration
 
+Privileged dashboard sessions (`admin`, `superadmin`, and `barangay`) use browser `sessionStorage` so closing their tab clears access. Regular citizen sessions use `localStorage` for a persistent sign-in experience.
+
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.

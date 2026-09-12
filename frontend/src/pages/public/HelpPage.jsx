@@ -45,7 +45,7 @@
                 <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400" aria-hidden="true"><svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v11H8l-4 3V5zM9 9h6M9 12h3" /></svg></div>
                 <h2 className="font-semibold">Contact support</h2>
                 <p className="mt-2 text-sm text-gray-400">Need help with a report or your account?</p>
-                <a href="mailto:hazardwatch@dagupan.gov.ph" className="mt-4 inline-block text-sm font-semibold text-[#60a5fa] hover:text-white">Email the team</a>
+                <Link to="/contact" className="mt-4 inline-block text-sm font-semibold text-[#60a5fa] hover:text-white">Contact the team</Link>
             </div>
         </section>
         <section data-aos="fade-up" data-aos-delay="150" className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6">

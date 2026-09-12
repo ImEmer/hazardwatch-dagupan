@@ -3,12 +3,22 @@ import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
 import { showError } from '../../services/alerts';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 const tabs = [
   { key: 'all', label: 'All', roles: ['barangay', 'user'] },
   { key: 'barangay', label: 'Barangay', roles: ['barangay'] },
   { key: 'user', label: 'User', roles: ['user'] },
 ];
+
+const relativeTime = (date) => {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+  return `${Math.floor(seconds / 86400)} days ago`;
+};
 
 const ActivityFeed = ({ activities, activeTab, search, dateFilter, isDark }) => {
   const cutoff = dateFilter === 'all' ? 0 : Date.now() - Number(dateFilter) * 24 * 60 * 60 * 1000;
@@ -23,9 +33,9 @@ const ActivityFeed = ({ activities, activeTab, search, dateFilter, isDark }) => 
   if (!filtered.length) return <p className={`p-8 text-center ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No activity recorded yet.</p>;
   return <div className={`divide-y ${isDark ? 'divide-[#2e303a]' : 'divide-slate-200'}`}>
     {filtered.map((activity) => (
-      <div key={activity._id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div key={activity._id} data-aos="fade-up" className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div><p className={isDark ? 'text-white' : 'text-slate-900'}>{activity.message || activity.action}</p><span className="mt-1 inline-flex rounded-full bg-blue-500/10 px-2 py-1 text-xs capitalize text-blue-400">{activity.actorRole || activity.role}</span></div>
-        <time dateTime={activity.createdAt} className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>{new Date(activity.createdAt).toLocaleString()}</time>
+        <time dateTime={activity.createdAt} title={new Date(activity.createdAt).toLocaleString()} className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>{relativeTime(activity.createdAt)}</time>
       </div>
     ))}
   </div>;
@@ -42,6 +52,7 @@ const AdminActivityPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    AOS.init({ duration: 500, once: true });
     let cancelled = false;
     api.get('/activity/public', { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => { if (!cancelled) setActivities(response.data?.activities || []); })

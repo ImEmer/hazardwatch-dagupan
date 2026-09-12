@@ -22,7 +22,8 @@ const InteractiveMap = ({
     height = '500px',
     colorBy = 'category',
     showClickInstruction = false,
-    showSelectedMarker = false
+    showSelectedMarker = false,
+    showHeatmap = false
 }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
@@ -159,6 +160,7 @@ const InteractiveMap = ({
 
         markersRef.current.forEach((marker) => marker.remove());
         markersRef.current = [];
+        if (showHeatmap) return;
 
         reports.forEach((report) => {
             if (!report.location || !report.location.coordinates) return;
@@ -235,7 +237,17 @@ const InteractiveMap = ({
 
             markersRef.current.push(marker);
         });
-    }, [mapReady, reports]);
+    }, [mapReady, reports, showHeatmap]);
+
+    useEffect(() => {
+        if (!map.current || !mapReady) return;
+        const features = reports.filter((report) => Array.isArray(report.location?.coordinates) && report.location.coordinates.length === 2 && report.location.coordinates.every((value) => typeof value === 'number' && !Number.isNaN(value))).map((report) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: report.location.coordinates }, properties: { weight: { Urgent: 1, High: 0.75, Medium: 0.5, Low: 0.25 }[report.priority] || 0.5 } }));
+        const data = { type: 'FeatureCollection', features };
+        if (!map.current.getSource('reports-heat')) map.current.addSource('reports-heat', { type: 'geojson', data });
+        else map.current.getSource('reports-heat').setData(data);
+        if (!map.current.getLayer('reports-heatmap')) map.current.addLayer({ id: 'reports-heatmap', type: 'heatmap', source: 'reports-heat', layout: { visibility: showHeatmap ? 'visible' : 'none' }, paint: { 'heatmap-weight': ['get', 'weight'], 'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 14, 2.5], 'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 20, 14, 32], 'heatmap-opacity': 0.85, 'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.2, '#3b82f6', 0.5, '#22c55e', 0.75, '#f59e0b', 1, '#ef4444'] } });
+        else map.current.setLayoutProperty('reports-heatmap', 'visibility', showHeatmap ? 'visible' : 'none');
+    }, [mapReady, reports, showHeatmap]);
 
     // SELECTED LOCATION MARKER
     useEffect(() => {

@@ -40,8 +40,13 @@ export const updateUser = async (req, res, next) => {
     }
 
     const user = await User.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select(fields);
-    const action = nextRole && nextRole !== targetUser.role ? 'user_role_changed' : 'user_updated';
-    await logActivity({ actor: req.user, action, message: `${req.user.name} ${action === 'user_role_changed' ? `changed ${user.name}'s role to ${user.role}` : `updated user ${user.name}`}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {});
+    const changes = [];
+    if (payload.name && payload.name !== targetUser.name) changes.push(['user_name_updated', `updated ${user.name}'s name`]);
+    if (payload.email && payload.email !== targetUser.email) changes.push(['user_email_updated', `updated ${user.name}'s email`]);
+    if (nextRole && nextRole !== targetUser.role) changes.push(['user_role_changed', `changed role of ${user.name} to ${user.role}`]);
+    if (payload.barangay !== undefined && payload.barangay !== (targetUser.barangay || '')) changes.push(['user_barangay_changed', `changed barangay of ${user.name} to ${user.barangay || 'none'}`]);
+    if (!changes.length) changes.push(['user_updated', `updated user ${user.name}`]);
+    await Promise.all(changes.map(([action, message]) => logActivity({ actor: req.user, action, message, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {})));
     res.json({ success: true, user });
   } catch (e) {
     next(e);

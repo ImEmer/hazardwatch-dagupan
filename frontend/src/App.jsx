@@ -16,6 +16,9 @@ import ResetPasswordPage from './pages/public/ResetPasswordPage';
 import AboutPage from './pages/public/AboutPage';
 import TrackReportPage from './pages/public/TrackReportPage';
 import HazardMapPage from './pages/public/HazardMapPage';
+import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/public/TermsOfServicePage';
+import ContactPage from './pages/public/ContactPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
 import AdminReportDetailPage from './pages/admin/AdminReportDetailPage';
@@ -37,6 +40,7 @@ import LucaoReportDetail from './pages/barangay/lucao/LucaoReportDetail';
 import TapuacDashboard from './pages/barangay/tapuac/TapuacDashboard';
 import TapuacReportsPage from './pages/barangay/tapuac/TapuacReportsPage';
 import TapuacReportDetail from './pages/barangay/tapuac/TapuacReportDetail';
+import BarangayActivityPage from './pages/barangay/BarangayActivityPage';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
 import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
@@ -58,6 +62,9 @@ const pageTitles = [
   { match: (pathname) => pathname === '/', title: 'Dagupan HazardWatch - Home' },
   { match: (pathname) => pathname === '/about', title: 'About HazardWatch | Dagupan Community Safety' },
   { match: (pathname) => pathname === '/help', title: 'Help & FAQ | HazardWatch' },
+  { match: (pathname) => pathname === '/privacy', title: 'Privacy Policy | HazardWatch' },
+  { match: (pathname) => pathname === '/terms', title: 'Terms of Service | HazardWatch' },
+  { match: (pathname) => pathname === '/contact', title: 'Contact | HazardWatch' },
   { match: (pathname) => pathname === '/my-reports', title: 'My Reports | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/reports/'), title: 'Report Detail | HazardWatch' },
   { match: (pathname) => pathname === '/profile', title: 'Profile & Settings | HazardWatch' },
@@ -112,6 +119,9 @@ function App() {
             <Route path="/track" element={<PublicPage><TrackReportPage /></PublicPage>} />
             <Route path="/about" element={<PublicPage><AboutPage /></PublicPage>} />
             <Route path="/help" element={<PublicPage><HelpPage /></PublicPage>} />
+            <Route path="/privacy" element={<PublicPage><PrivacyPolicyPage /></PublicPage>} />
+            <Route path="/terms" element={<PublicPage><TermsOfServicePage /></PublicPage>} />
+            <Route path="/contact" element={<PublicPage><ContactPage /></PublicPage>} />
             <Route path="/my-reports" element={<PublicPage><MyReportsPage /></PublicPage>} />
             <Route path="/reports/:id" element={<PublicPage><ReportDetailPage /></PublicPage>} />
             <Route path="/profile" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff', 'barangay', 'user']}><PublicPage><ProfilePage /></PublicPage></ProtectedRoute>} />
@@ -125,6 +135,7 @@ function App() {
               <Route path="dashboard" element={<BonuanDashboard />} />
               <Route path="reports" element={<BonuanReportsPage />} />
               <Route path="reports/:id" element={<BonuanReportDetail />} />
+              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/barangay/lucao" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Lucao']}><BarangayLayout /></ProtectedRoute>}>
@@ -132,6 +143,7 @@ function App() {
               <Route path="dashboard" element={<LucaoDashboard />} />
               <Route path="reports" element={<LucaoReportsPage />} />
               <Route path="reports/:id" element={<LucaoReportDetail />} />
+              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/barangay/tapuac" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Tapuac']}><BarangayLayout /></ProtectedRoute>}>
@@ -139,6 +151,7 @@ function App() {
               <Route path="dashboard" element={<TapuacDashboard />} />
               <Route path="reports" element={<TapuacReportsPage />} />
               <Route path="reports/:id" element={<TapuacReportDetail />} />
+              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><AdminLayout /></ProtectedRoute>}>

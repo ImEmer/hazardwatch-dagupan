@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useTheme from '../../hooks/useTheme';
 import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
-import { confirmAction, showError } from '../../services/alerts';
+import { confirmAction, showError, showSuccess } from '../../services/alerts';
+import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
 
 const PAGE_SIZE = 10;
@@ -25,13 +26,18 @@ const priorityColorsLight = {
 const AdminReportsPage = () => {
   const { reports, updateReportStatus, deleteReport } = useReports();
   const { token } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const isLoading = reports.length === 0;
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
+  const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
+  const [startDate, setStartDate] = useState(searchParams.get('startDate') || '');
+  const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
+  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [page, setPage] = useState(1);
 
   const filteredReports = useMemo(() => {
@@ -44,17 +50,38 @@ const AdminReportsPage = () => {
       const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || report.priority === priorityFilter;
       const matchesCategory = categoryFilter === 'all' || report.category === categoryFilter;
+      const matchesBarangay = barangayFilter === 'all' || (report.assignedBarangay || report.barangay) === barangayFilter;
+      const createdAt = new Date(report.createdAt).getTime();
+      const matchesStart = !startDate || createdAt >= new Date(startDate).getTime();
+      const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59`).getTime();
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+      return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesBarangay && matchesStart && matchesEnd;
     });
-  }, [reports, search, statusFilter, priorityFilter, categoryFilter]);
+  }, [reports, search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, priorityFilter, categoryFilter]);
+  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate, sortBy]);
+
+  useEffect(() => {
+    const next = {};
+    [['search', search], ['status', statusFilter], ['priority', priorityFilter], ['category', categoryFilter], ['barangay', barangayFilter], ['startDate', startDate], ['endDate', endDate], ['sortBy', sortBy]].forEach(([key, value]) => { if (value && value !== 'all' && value !== 'newest') next[key] = value; });
+    setSearchParams(next, { replace: true });
+  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate, sortBy, setSearchParams]);
 
   const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
-  const visibleReports = filteredReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const sortedReports = [...filteredReports].sort((a, b) => sortBy === 'oldest' ? new Date(a.createdAt) - new Date(b.createdAt) : sortBy === 'priority' ? String(b.priority).localeCompare(String(a.priority)) : sortBy === 'status' ? String(a.status).localeCompare(String(b.status)) : new Date(b.createdAt) - new Date(a.createdAt));
+  const visibleReports = sortedReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const barangays = [...new Set(reports.map((report) => report.assignedBarangay || report.barangay).filter(Boolean))].sort();
+
+  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); setStartDate(''); setEndDate(''); setSortBy('newest'); };
+  const exportCsv = async () => {
+    try {
+      const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, startDate: startDate || undefined, endDate: endDate || undefined };
+      const response = await api.get('/reports/export', { params, responseType: 'blob', headers: { Authorization: `Bearer ${token}` } });
+      const url = URL.createObjectURL(response.data); const link = document.createElement('a'); link.href = url; link.download = `hazardwatch-reports-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url); await showSuccess('Reports exported successfully.');
+    } catch (error) { await showError(error.response?.data?.message || 'Unable to export reports.'); }
+  };
 
   const handleDelete = async (report) => {
     const result = await confirmAction(`Delete "${report.title}"? This action cannot be undone.`, 'Delete');
@@ -75,6 +102,7 @@ const AdminReportsPage = () => {
             <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports management</h2>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
             {['all', ...REPORT_STATUSES].map((status) => (
               <button
                 key={status}
@@ -93,7 +121,7 @@ const AdminReportsPage = () => {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1.7fr_1fr_1fr_1fr]">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             id="reportSearch"
             name="reportSearch"
@@ -131,7 +159,13 @@ const AdminReportsPage = () => {
           <div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
             {filteredReports.length} results
           </div>
+          <select value={barangayFilter} onChange={(event) => setBarangayFilter(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="all">All barangays</option>{barangays.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
+          <label className="text-xs text-gray-400">From<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /></label>
+          <label className="text-xs text-gray-400">To<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /></label>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="priority">Priority</option><option value="status">Status</option></select>
+          <button type="button" onClick={resetFilters} className="rounded-xl border border-[#2e303a] px-3 py-2.5 text-sm text-gray-400 hover:text-white">Reset Filters</button>
         </div>
+        <div className="mt-3 flex flex-wrap gap-2">{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>

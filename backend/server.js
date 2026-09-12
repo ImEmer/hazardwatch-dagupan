@@ -10,6 +10,7 @@ import userRoutes from './routes/users.js';
 import statisticsRoutes from './routes/statistics.js';
 import notificationRoutes from './routes/notifications.js';
 import activityRoutes from './routes/activity.js';
+import contactRoutes from './routes/contact.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/contact', contactRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, service: 'hazardwatch-api' }));
 app.use(notFound);
 app.use(errorHandler);

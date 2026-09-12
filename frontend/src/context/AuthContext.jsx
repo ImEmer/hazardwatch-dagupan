@@ -4,6 +4,25 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
+const PRIVILEGED_ROLES = ['superadmin', 'admin', 'barangay'];
+
+const readStoredUser = (storage) => {
+  try {
+    const savedUser = storage.getItem(USER_KEY);
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getStoredSession = () => {
+  const sessionUser = readStoredUser(sessionStorage);
+  const sessionToken = sessionStorage.getItem(TOKEN_KEY) || sessionStorage.getItem('token');
+  if (sessionToken) return { token: sessionToken, user: sessionUser, storage: sessionStorage };
+  const localUser = readStoredUser(localStorage);
+  const localToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
+  return { token: localToken, user: localUser, storage: localStorage };
+};
 
 const request = async (path, options = {}, token = null) => {
   try {
@@ -33,12 +52,11 @@ const request = async (path, options = {}, token = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem(USER_KEY);
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [loading, setLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token')));
+  // localStorage keeps regular user sessions; sessionStorage scopes privileged sessions to one tab.
+  const [initialSession] = useState(getStoredSession);
+  const [token, setToken] = useState(initialSession.token);
+  const [user, setUser] = useState(initialSession.user);
+  const [loading, setLoading] = useState(Boolean(initialSession.token));
 
   const clearSession = useCallback(() => {
     setToken(null);
@@ -46,6 +64,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem('token');
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem('token');
     window.__hw_redirecting = false;
   }, []);
 
@@ -55,13 +76,18 @@ export const AuthProvider = ({ children }) => {
     window.__hw_redirecting = false;
     setToken(nextToken);
     setUser(nextUser);
-    localStorage.setItem(TOKEN_KEY, nextToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-    localStorage.setItem('token', nextToken);
+    const storage = PRIVILEGED_ROLES.includes(nextUser?.role) ? sessionStorage : localStorage;
+    const otherStorage = storage === sessionStorage ? localStorage : sessionStorage;
+    otherStorage.removeItem(TOKEN_KEY);
+    otherStorage.removeItem(USER_KEY);
+    otherStorage.removeItem('token');
+    storage.setItem(TOKEN_KEY, nextToken);
+    storage.setItem(USER_KEY, JSON.stringify(nextUser));
+    storage.setItem('token', nextToken);
   }, []);
 
   const logout = useCallback(async () => {
-    const currentToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
+    const currentToken = getStoredSession().token;
     try {
       if (currentToken) {
         await request('/auth/logout', { method: 'POST' }, currentToken);
@@ -72,7 +98,8 @@ export const AuthProvider = ({ children }) => {
   }, [clearSession]);
 
   const getCurrentUser = useCallback(async () => {
-    const currentToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
+    const storedSession = getStoredSession();
+    const currentToken = storedSession.token;
     if (!currentToken) {
       setLoading(false);
       return null;
@@ -82,7 +109,8 @@ export const AuthProvider = ({ children }) => {
       const response = await request('/auth/me', {}, currentToken);
       const nextUser = response.user || response;
       setUser(nextUser);
-      localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+      const storage = PRIVILEGED_ROLES.includes(nextUser?.role) ? sessionStorage : localStorage;
+      storage.setItem(USER_KEY, JSON.stringify(nextUser));
       return nextUser;
     } catch (error) {
       clearSession();
@@ -110,6 +138,18 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('hw:session-expired', handleSessionExpired);
     };
   }, [logout]);
+
+  useEffect(() => {
+    const clearPrivilegedTabSession = () => {
+      if (PRIVILEGED_ROLES.includes(user?.role)) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(USER_KEY);
+        sessionStorage.removeItem('token');
+      }
+    };
+    window.addEventListener('beforeunload', clearPrivilegedTabSession);
+    return () => window.removeEventListener('beforeunload', clearPrivilegedTabSession);
+  }, [user?.role]);
 
   const login = useCallback(async (email, password) => {
     const response = await request('/auth/login', { 
@@ -153,6 +193,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('token');
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem('token');
   }, [token]);
 
   const forgotPassword = useCallback(async (email) => {

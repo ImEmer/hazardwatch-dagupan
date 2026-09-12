@@ -22,11 +22,13 @@ const AdminMapPage = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
 
   const filteredReports = useMemo(() => {
     if (statusFilter === 'all') return reports;
     return reports.filter((report) => report.status === statusFilter);
   }, [reports, statusFilter]);
+  const toggleHeatmap = () => setShowHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
 
   return (
     <div className="space-y-6">
@@ -55,9 +57,10 @@ const AdminMapPage = () => {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <div className={`overflow-hidden rounded-2xl border p-2 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+        <div className={`relative overflow-hidden rounded-2xl border p-2 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <div className="h-[620px] overflow-hidden rounded-xl">
-            <InteractiveMap reports={filteredReports} height="100%" />
+            <button type="button" onClick={toggleHeatmap} className="absolute left-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
+            <InteractiveMap reports={filteredReports} height="100%" showHeatmap={showHeatmap} />
           </div>
         </div>
 
