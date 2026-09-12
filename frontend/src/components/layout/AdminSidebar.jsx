@@ -5,7 +5,8 @@ import useTheme from '../../hooks/useTheme';
 import { confirmAction } from '../../services/alerts';
 
 const items = [
-  { to: '/admin/dashboard', label: 'Dashboard' },
+  { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin', 'staff'] },
+  { to: '/superadmin/dashboard', label: 'Dashboard', roles: ['superadmin'] },
   { to: '/admin/reports', label: 'Reports' },
   { to: '/admin/map', label: 'Map View' },
   { to: '/admin/activity', label: 'Activity', roles: ['admin'] },
