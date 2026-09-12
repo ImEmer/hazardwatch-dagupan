@@ -63,7 +63,7 @@ const AdminSidebar = () => {
       </button>
     </div>
     <div className={`border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><p className="text-xs uppercase tracking-[0.2em] text-gray-400">Signed in as</p><p className="mt-2 font-semibold">{user?.name || 'User'}</p><p className={`text-xs capitalize ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>{user?.role || 'staff'}</p></div>
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">{visibleItems.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setIsOpen(false)} className={linkClass}>{item.label}</NavLink>)}</nav>
+    <nav className="flex-1 space-y-1 px-3 py-4">{visibleItems.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setIsOpen(false)} className={linkClass}>{item.label}</NavLink>)}</nav>
     <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><button type="button" onClick={handleLogout} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${isDark ? 'text-red-300 hover:bg-[#14151d]' : 'text-red-600 hover:bg-red-50'}`}><LogoutIcon />Logout</button></div>
   </aside>;
 

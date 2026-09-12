@@ -9,13 +9,13 @@ const users = [
   {
     name: 'Super Admin',
     email: 'superadmin@hazardwatch.com',
-    password: 'password123',
+    password: 'superadmin123',
     role: 'superadmin',
   },
   {
     name: 'Admin User',
     email: 'admin@hazardwatch.com',
-    password: 'password123',
+    password: 'admin123',
     role: 'admin',
   },
   {

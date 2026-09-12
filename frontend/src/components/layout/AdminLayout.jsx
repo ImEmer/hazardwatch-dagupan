@@ -10,10 +10,10 @@ const AdminLayout = () => {
 
   return (
     <ProtectedRoute roles={['superadmin', 'admin', 'staff']}>
-      <div className={`min-h-screen ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
-        <div className="min-h-screen">
+      <div className={`h-screen overflow-hidden ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
+        <div className="h-full">
           <AdminSidebar />
-          <main className={`min-h-screen overflow-auto p-6 pt-20 lg:ml-72 lg:pt-6 ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-100'}`}>
+          <main className={`h-screen overflow-y-auto overflow-x-hidden p-6 pt-20 lg:ml-72 lg:pt-6 ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-100'}`}>
             <div className="mx-auto max-w-7xl">
               <Outlet />
             </div>

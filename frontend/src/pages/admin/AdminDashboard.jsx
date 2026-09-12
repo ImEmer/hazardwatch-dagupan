@@ -20,7 +20,7 @@
     import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
     import { SkeletonCard, SkeletonChart, SkeletonTable } from '../../components/common/Skeleton';
 
-    const AdminDashboard = () => {
+    const AdminDashboard = ({ headingLabel = 'Admin Dashboard' }) => {
       const { reports } = useReports();
       const { theme } = useTheme();
       const isDark = theme === 'dark';
@@ -115,7 +115,7 @@
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Overview</p>
-              <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Admin Dashboard</h2>
+              <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{headingLabel}</h2>
             </div>
           </div>
 
