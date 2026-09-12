@@ -19,10 +19,10 @@ const priorityStyles = {
 };
 
 const normalizePhotoUrl = (photo) => {
-  if (!photo) return null;
-  if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
-  if (photo.startsWith('/')) return `https://hazardwatch-dagupan.onrender.com${photo}`;
-  return `https://hazardwatch-dagupan.onrender.com/uploads/${photo}`;
+  const photoPath = typeof photo === 'string' ? photo.trim() : '';
+  if (!photoPath) return null;
+  if (/^https?:\/\//i.test(photoPath)) return photoPath;
+  return `https://hazardwatch-dagupan.onrender.com${photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`}`;
 };
 
 const ReportDetailPage = () => {
@@ -144,13 +144,13 @@ const ReportDetailPage = () => {
                     <img
                       src={photoUrl}
                       alt="Report evidence"
-                      className="max-h-[200px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
+                      className="max-h-[180px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
                       onError={() => setPhotoLoadError(true)}
                     />
                   </button>
                 </div>
               ) : (
-                !photoUrl && <p className="mt-4 text-sm text-gray-500">No photo uploaded</p>
+                <p className="mt-4 text-sm text-gray-500">No photo uploaded</p>
               )}
             </div>
 

@@ -217,18 +217,28 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
                   <td className="px-4 py-4">
-                    <button
-                      type="button"
-                      onClick={() => openEditor(user)}
-                      disabled={currentUser?.role === 'admin' && user.role === 'superadmin'}
-                      title={currentUser?.role === 'admin' && user.role === 'superadmin' ? 'Only a SuperAdmin can modify another SuperAdmin.' : undefined}
-                      className="text-xs text-[#3b82f6] hover:text-[#60a5fa] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Edit
-                    </button>
-                    {user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'staff' && user.id !== (currentUser?._id || currentUser?.id) && (
-                      <button type="button" onClick={() => handleDelete(user)} className="ml-3 text-xs text-red-400 hover:text-red-300">Delete</button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditor(user)}
+                        disabled={currentUser?.role === 'admin' && user.role === 'superadmin'}
+                        title={currentUser?.role === 'admin' && user.role === 'superadmin' ? 'Only a SuperAdmin can modify another SuperAdmin.' : 'Edit user'}
+                        aria-label="Edit user"
+                        className="rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(user)}
+                        disabled={user.role === 'admin' || user.role === 'superadmin' || user.role === 'staff' || user.id === (currentUser?._id || currentUser?.id)}
+                        title="Delete user"
+                        aria-label="Delete user"
+                        className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 6V4h8v2m-9 0l1 14h8l1-14M10 10v6m4-6v6" /></svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 ))

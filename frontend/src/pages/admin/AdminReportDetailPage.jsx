@@ -32,13 +32,10 @@ const AdminReportDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [photoLoadError, setPhotoLoadError] = useState(false);
   const report = reports.find((item) => String(item._id || item.id) === id) || fetchedReport;
-  const photoUrl = report?.photo ? (
-    report.photo.startsWith('http://') || report.photo.startsWith('https://')
-      ? report.photo
-      : report.photo.startsWith('/')
-        ? `https://hazardwatch-dagupan.onrender.com${report.photo}`
-        : `https://hazardwatch-dagupan.onrender.com/uploads/${report.photo}`
-  ) : null;
+  const photoPath = typeof report?.photo === 'string' ? report.photo.trim() : '';
+  const photoUrl = photoPath
+    ? (/^https?:\/\//i.test(photoPath) ? photoPath : `https://hazardwatch-dagupan.onrender.com${photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`}`)
+    : null;
 
   useEffect(() => {
     setPhotoLoadError(false);
@@ -173,7 +170,7 @@ const AdminReportDetailPage = () => {
                 <img
                   src={photoUrl}
                   alt="Submitted evidence"
-                  className="max-h-[200px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
+                  className="max-h-[180px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
                   onError={() => setPhotoLoadError(true)}
                 />
               </button>

@@ -1,4 +1,4 @@
-    import React, { useEffect, useState } from 'react';
+    import React, { useState } from 'react';
     import {
       Area,
       AreaChart,
@@ -17,20 +17,16 @@
     } from 'recharts';
     import { useReports } from '../../context/ReportContext';
     import useTheme from '../../hooks/useTheme';
-    import useAuth from '../../hooks/useAuth';
-    import api from '../../services/api';
     import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
     import { SkeletonCard, SkeletonChart, SkeletonTable } from '../../components/common/Skeleton';
 
     const AdminDashboard = () => {
       const { reports } = useReports();
       const { theme } = useTheme();
-      const { token } = useAuth();
       const isDark = theme === 'dark';
       const currentDate = new Date();
       const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
       const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-      const [activities, setActivities] = useState([]);
       const isLoading = reports.length === 0;
 
       const totalReports = reports.length;
@@ -74,23 +70,6 @@
         count: reports.filter((report) => (report.priority || 'Medium') === level.name).length,
       }));
       const maxPriorityCount = Math.max(...priorityLevels.map((level) => level.count), 1);
-
-      useEffect(() => {
-        const fetchActivities = async () => {
-          if (!token) return;
-          try {
-            const response = await api.get('/activity', {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            const body = response.data || { activities: [] };
-            setActivities(body.activities || []);
-          } catch (error) {
-            setActivities([]);
-          }
-        };
-
-        fetchActivities();
-      }, [token]);
 
       if (isLoading) {
         return (
@@ -235,24 +214,6 @@
                 </ResponsiveContainer>
               ) : (
                 <p className={`py-16 text-center ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No barangay assignments available yet.</p>
-              )}
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-            <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>User activity</h3>
-            <div className="mt-4 space-y-3">
-              {activities.length === 0 ? (
-                <p className={isDark ? 'text-gray-400' : 'text-slate-500'}>No recent user activity.</p>
-              ) : (
-                activities.map((activity) => (
-                  <div key={activity._id || activity.id} className={`rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
-                    <p className={`text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{activity.message}</p>
-                    <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
-                      {activity.role} • {new Date(activity.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                ))
               )}
             </div>
           </div>
