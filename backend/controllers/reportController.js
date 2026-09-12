@@ -1,4 +1,5 @@
 import Report from '../models/Report.js';
+import { logActivity } from '../utils/logActivity.js';
 
 const scoped = (user) => user.role === 'barangay' ? { assignedBarangay: user.barangay || '__unassigned_barangay__' } : {};
 
@@ -82,6 +83,7 @@ export const createReport = async (req, res, next) => {
         phone: req.user.phone,
       },
     });
+    await logActivity({ actor: req.user, action: 'report_submitted', message: `${req.user.name} submitted a report`, scope: 'user', entityType: 'report', entityId: report._id }).catch(() => {});
     res.status(201).json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -90,6 +92,7 @@ export const updateReport = async (req, res, next) => {
   try {
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, req.body, { new: true, runValidators: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated report status to ${req.body.status}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -98,6 +101,7 @@ export const updateStatus = async (req, res, next) => {
   try {
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { status: req.body.status }, { new: true, runValidators: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    await logActivity({ actor: req.user, action: 'report_priority_updated', message: `${req.user.name} updated report priority to ${req.body.priority}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
 };
@@ -109,12 +113,17 @@ export const updatePriority = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 export const assignReport = async (req, res, next) => {
-  try { const report = await Report.findByIdAndUpdate(req.params.id, { assignedTo: req.body.assignedTo, assignedBarangay: req.body.assignedBarangay }, { new: true }); res.json({ success: true, report }); } catch (error) { next(error); }
+  try {
+    const report = await Report.findByIdAndUpdate(req.params.id, { assignedTo: req.body.assignedTo, assignedBarangay: req.body.assignedBarangay }, { new: true });
+    await logActivity({ actor: req.user, action: 'report_assigned', message: `${req.user.name} assigned a report to ${req.body.assignedBarangay || 'a staff member'}`, entityType: 'report', entityId: report?._id }).catch(() => {});
+    res.json({ success: true, report });
+  } catch (error) { next(error); }
 };
 export const addComment = async (req, res, next) => {
   try {
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { $push: { comments: { text: req.body.text, author: req.user._id, authorName: req.user.name } } }, { new: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    await logActivity({ actor: req.user, action: 'comment_added', message: `${req.user.name} added a comment`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
 };

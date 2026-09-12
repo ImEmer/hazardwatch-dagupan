@@ -179,7 +179,7 @@ const AdminReportDetailPage = () => {
               </button>
             </div>
           ) : (
-            !photoUrl && <p className={`mt-4 text-sm ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>No photo uploaded</p>
+            <p className={`mt-4 text-sm ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>No photo uploaded</p>
           )}
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">

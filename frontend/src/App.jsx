@@ -22,6 +22,7 @@ import AdminReportDetailPage from './pages/admin/AdminReportDetailPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminMapPage from './pages/admin/AdminMapPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminActivityPage from './pages/admin/AdminActivityPage';
 import MyReportsPage from './pages/public/MyReportsPage';
 import ReportDetailPage from './pages/public/ReportDetailPage';
 import ProfilePage from './pages/public/ProfilePage';
@@ -77,6 +78,7 @@ const pageTitles = [
   { match: (pathname) => pathname === '/admin/reports', title: 'Reports Management | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/admin/reports/'), title: 'Report Details | HazardWatch' },
   { match: (pathname) => pathname === '/admin/users', title: 'User Management | HazardWatch' },
+  { match: (pathname) => pathname === '/admin/activity', title: 'Activity | HazardWatch' },
   { match: (pathname) => pathname === '/admin/map', title: 'Hazard Map View | HazardWatch' },
   { match: (pathname) => pathname === '/admin/settings', title: 'Admin Settings | HazardWatch' },
 ];
@@ -148,6 +150,7 @@ function App() {
               <Route path="reports" element={<AdminReportsPage />} />
               <Route path="reports/:id" element={<AdminReportDetailPage />} />
               <Route path="map" element={<AdminMapPage />} />
+              <Route path="activity" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminActivityPage /></ProtectedRoute>} />
               <Route path="users" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminUsersPage /></ProtectedRoute>} />
               <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff']}><AdminSettingsPage /></ProtectedRoute>} />
             </Route>

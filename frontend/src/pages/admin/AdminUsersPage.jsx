@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
-import { showError, showSuccess } from '../../services/alerts';
+import { confirmAction, showError, showSuccess } from '../../services/alerts';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -18,15 +18,17 @@ const statusBadge = {
 };
 
 const PAGE_SIZE = 10;
-const EMPTY_FORM = { name: '', email: '', role: 'staff', barangay: '' };
+const EMPTY_FORM = { name: '', email: '', password: '', role: 'user', barangay: '' };
 
 const AdminUsersPage = () => {
   const { token, user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [search, setSearch] = useState('');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -68,6 +70,7 @@ const AdminUsersPage = () => {
     setForm({
       name: user.name || '',
       email: user.email || '',
+      password: '',
       role: user.role || 'staff',
       barangay: user.barangay || '',
     });
@@ -78,6 +81,17 @@ const AdminUsersPage = () => {
     setSelectedUser(null);
     setForm(EMPTY_FORM);
     setIsEditing(false);
+  };
+
+  const openCreator = () => {
+    setSelectedUser(null);
+    setForm(EMPTY_FORM);
+    setIsCreating(true);
+  };
+
+  const closeCreator = () => {
+    setForm(EMPTY_FORM);
+    setIsCreating(false);
   };
 
   const handleSave = async () => {
@@ -109,8 +123,46 @@ const AdminUsersPage = () => {
     }
   };
 
+  const handleCreate = async () => {
+    if (!form.name.trim() || !form.email.trim() || !form.password) {
+      await showError('Name, email, and password are required.');
+      return;
+    }
+
+    try {
+      await api.post('/users', {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+        barangay: form.role === 'barangay' ? form.barangay.trim() : '',
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchUsers();
+      closeCreator();
+      await showSuccess('User created successfully.');
+    } catch (error) {
+      await showError(error.response?.data?.message || error.message || 'Failed to create user.');
+    }
+  };
+
+  const handleDelete = async (user) => {
+    if (user.role === 'superadmin' || user.role === 'admin' || user.role === 'staff' || user.id === currentUser?._id) return;
+    const result = await confirmAction(`Deactivate ${user.name}'s account?`, 'Delete user');
+    if (!result.isConfirmed) return;
+    try {
+      await api.delete(`/users/${user.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchUsers();
+      await showSuccess('User deactivated successfully.');
+    } catch (error) {
+      await showError(error.response?.data?.message || error.message || 'Failed to delete user.');
+    }
+  };
+
   const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
-  const visibleUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filteredUsers = users.filter((user) => [user.name, user.email, user.role, user.barangay]
+    .some((value) => String(value || '').toLowerCase().includes(search.toLowerCase())));
+  const filteredPageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const visibleUsers = filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -120,13 +172,17 @@ const AdminUsersPage = () => {
             <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Staff access</p>
             <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>User management</h2>
           </div>
-          <button className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-[#3b82f6]/20 hover:bg-[#2563eb]">
+          <button type="button" onClick={openCreator} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-[#3b82f6]/20 hover:bg-[#2563eb]">
             + Add user
           </button>
         </div>
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+        <div className={`border-b p-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+          <label htmlFor="user-search" className={`sr-only ${isDark ? 'text-white' : 'text-slate-900'}`}>Search users</label>
+          <input id="user-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search by name, email, role, or barangay" className={`w-full rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm text-gray-200">
             <thead className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-500'}`}>
@@ -164,10 +220,15 @@ const AdminUsersPage = () => {
                     <button
                       type="button"
                       onClick={() => openEditor(user)}
-                      className="text-xs text-[#3b82f6] hover:text-[#60a5fa]"
+                      disabled={currentUser?.role === 'admin' && user.role === 'superadmin'}
+                      title={currentUser?.role === 'admin' && user.role === 'superadmin' ? 'Only a SuperAdmin can modify another SuperAdmin.' : undefined}
+                      className="text-xs text-[#3b82f6] hover:text-[#60a5fa] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Edit
                     </button>
+                    {user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'staff' && user.id !== (currentUser?._id || currentUser?.id) && (
+                      <button type="button" onClick={() => handleDelete(user)} className="ml-3 text-xs text-red-400 hover:text-red-300">Delete</button>
+                    )}
                   </td>
                 </tr>
                 ))
@@ -177,22 +238,22 @@ const AdminUsersPage = () => {
         </div>
       </div>
       <div className="flex items-center justify-between px-1 py-3">
-        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {pageCount}</p>
+        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {filteredPageCount}</p>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Previous page">&lt;</button>
           {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
             <button type="button" key={pageNumber} onClick={() => setPage(pageNumber)} className={`px-2 py-1.5 text-sm ${page === pageNumber ? 'font-bold text-[#3b82f6]' : isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`}>{pageNumber}</button>
           ))}
-          <button type="button" onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page === pageCount} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Next page">&gt;</button>
+          <button type="button" onClick={() => setPage((current) => Math.min(filteredPageCount, current + 1))} disabled={page === filteredPageCount} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Next page">&gt;</button>
         </div>
       </div>
 
-      {isEditing && selectedUser && (
+      {(isEditing && selectedUser || isCreating) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className={`w-full max-w-lg rounded-2xl border p-6 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Edit user</h3>
-              <button type="button" onClick={closeEditor} className="text-sm text-gray-400 hover:text-white">Close</button>
+              <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{isCreating ? 'Add user' : 'Edit user'}</h3>
+              <button type="button" onClick={isCreating ? closeCreator : closeEditor} className="text-sm text-gray-400 hover:text-white">Close</button>
             </div>
 
             <div className="space-y-4">
@@ -204,6 +265,13 @@ const AdminUsersPage = () => {
                   className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
                 />
               </label>
+
+              {isCreating && (
+                <label className="block text-sm">
+                  <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Password</span>
+                  <input type="password" value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} />
+                </label>
+              )}
 
               <label className="block text-sm">
                 <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Email</span>
@@ -223,9 +291,9 @@ const AdminUsersPage = () => {
                   disabled={currentUser?.role === 'admin' && selectedUser.role === 'superadmin'}
                   className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
                 >
-                  <option value="staff">Staff</option>
                   <option value="barangay">Barangay</option>
                   <option value="user">Citizen</option>
+                  {!isCreating && <option value="staff">Staff</option>}
                   {currentUser?.role === 'superadmin' && <option value="admin">Admin</option>}
                   {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
                 </select>
@@ -245,8 +313,8 @@ const AdminUsersPage = () => {
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closeEditor} className="rounded-lg border border-[#2e303a] px-4 py-2 text-sm text-gray-300 hover:text-white">Cancel</button>
-              <button type="button" onClick={handleSave} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">Save changes</button>
+              <button type="button" onClick={isCreating ? closeCreator : closeEditor} className="rounded-lg border border-[#2e303a] px-4 py-2 text-sm text-gray-300 hover:text-white">Cancel</button>
+              <button type="button" onClick={isCreating ? handleCreate : handleSave} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">{isCreating ? 'Create user' : 'Save changes'}</button>
             </div>
           </div>
         </div>

@@ -3,9 +3,8 @@ import ActivityLog from '../models/ActivityLog.js';
 const getActivityScope = (role) => {
   switch (role) {
     case 'superadmin':
-      return { $or: [{ scope: 'system' }, { scope: 'admin' }, { scope: 'barangay' }, { scope: 'user' }] };
     case 'admin':
-      return { $or: [{ scope: 'admin' }, { scope: 'user' }] };
+      return {};
     case 'barangay':
       return { $or: [{ scope: 'barangay' }, { role: 'barangay' }] };
     default:
@@ -15,7 +14,7 @@ const getActivityScope = (role) => {
 
 export const getActivityLogs = async (req, res, next) => {
   try {
-    const logs = await ActivityLog.find(getActivityScope(req.user.role)).sort({ createdAt: -1 }).limit(12);
+    const logs = await ActivityLog.find(getActivityScope(req.user.role)).sort({ createdAt: -1 }).limit(100);
     res.json({ success: true, activities: logs });
   } catch (error) {
     next(error);
