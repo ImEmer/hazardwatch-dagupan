@@ -41,6 +41,7 @@ import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
 import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
 import SuperAdminActivityPage from './pages/superadmin/SuperAdminActivityPage';
+import ScrollToTop from './components/common/ScrollToTop';
 const PublicPlaceholder = ({ title, description }) => (
   <div className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-28 text-white">
     <div className="mx-auto max-w-6xl rounded-2xl border border-[#2e303a] bg-[#14151d] p-8">
@@ -102,6 +103,7 @@ function App() {
       <AuthProvider>
         <ReportProvider>
           <Router>
+            <ScrollToTop />
             <PageTitle />
             <Routes>
             <Route path="/" element={<PublicPage><HomePage /></PublicPage>} />

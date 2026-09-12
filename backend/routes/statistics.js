@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { getBarangays, getCategories, getOverview, getStatuses, getTimeline } from '../controllers/statisticsController.js';
+import { getBarangays, getCategories, getOverview, getPublicStats, getStatuses, getTimeline } from '../controllers/statisticsController.js';
 import { isStaff, protect } from '../middleware/auth.js';
 
 const router = Router();
+router.get('/public', getPublicStats);
 router.use(protect, isStaff);
 router.get('/overview', getOverview);
 router.get('/categories', getCategories);

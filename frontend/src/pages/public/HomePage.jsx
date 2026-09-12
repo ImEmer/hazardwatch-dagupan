@@ -3,10 +3,28 @@
     import AOS from 'aos';
     import 'aos/dist/aos.css';
     import StaticMap from '../../components/StaticMap';
+    import api from '../../services/api';
+
+    const CATEGORY_GROUPS = {
+        Flooding: 'Flood', 'Clogged Drainage': 'Water and Drainage', 'Pothole': 'Road and Traffic',
+        'Damaged Road': 'Road and Traffic', 'Broken Streetlight': 'Road and Traffic',
+        'Waste Disposal': 'Waste and Sanitation', 'Illegal Dumping': 'Waste and Sanitation',
+        'Damaged Public Facility': 'Public Safety', 'Fallen Electrical Wire': 'Public Safety',
+    };
+
+    const CATEGORY_DESCRIPTIONS = {
+        Flooding: 'Flooding and rising water reports across Dagupan City.',
+        'Clogged Drainage': 'Drainage issues affecting roads and neighborhoods.',
+        Pothole: 'Road surface hazards reported by the community.',
+        'Damaged Road': 'Damaged roads and unsafe traffic routes.',
+        'Broken Streetlight': 'Streetlight outages and nighttime visibility concerns.',
+    };
 
     const HomePage = () => {
     const sectionRefs = useRef([]);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [publicStats, setPublicStats] = useState({ totalReports: 0, activeHazards: 0, resolvedCases: 0, areasCovered: 0, topCategories: [] });
+    const [statsLoading, setStatsLoading] = useState(true);
 
     // Initialize AOS
     useEffect(() => {
@@ -16,6 +34,21 @@
         once: false,
         mirror: true,
         });
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        api.get('/statistics/public')
+            .then((response) => {
+                if (!cancelled) setPublicStats(response.data || {});
+            })
+            .catch(() => {
+                if (!cancelled) setPublicStats({ totalReports: 0, activeHazards: 0, resolvedCases: 0, areasCovered: 0, topCategories: [] });
+            })
+            .finally(() => {
+                if (!cancelled) setStatsLoading(false);
+            });
+        return () => { cancelled = true; };
     }, []);
 
     // Mouse move handler for cursor glow
@@ -54,12 +87,11 @@
         }
     };
 
-    // Statistics data
     const stats = [
-        { value: '1,240+', label: 'Total Reports' },
-        { value: '86', label: 'Active Hazards' },
-        { value: '1,154', label: 'Resolved Cases' },
-        { value: '24', label: 'Areas Covered' }
+        { value: publicStats.totalReports, label: 'Total Reports' },
+        { value: publicStats.activeHazards, label: 'Active Hazards' },
+        { value: publicStats.resolvedCases, label: 'Resolved Cases' },
+        { value: publicStats.areasCovered, label: 'Areas Covered' }
     ];
 
     // How It Works steps
@@ -191,33 +223,14 @@
         }
     ];
 
-    // Most Hazard Reports with stats included
-    const topHazards = [
-        {
-        id: 1,
-        title: 'Flooding',
-        category: 'Flood',
-        reports: 342,
-        status: 'Most Reported',
-        description: 'Flooding is the most frequently reported hazard in Dagupan City.'
-        },
-        {
-        id: 2,
-        title: 'Damaged Roads',
-        category: 'Traffic / Road',
-        reports: 218,
-        status: 'High',
-        description: 'Road damage and potholes are a recurring issue across the city.'
-        },
-        {
-        id: 3,
-        title: 'Waste Disposal',
-        category: 'Waste / Sanitation',
-        reports: 156,
-        status: 'High',
-        description: 'Improper waste disposal is a major concern in several barangays.'
-        }
-    ];
+    const topHazards = publicStats.topCategories.map(({ category, count }, index) => ({
+        id: category,
+        title: category,
+        category: CATEGORY_GROUPS[category] || 'Community hazard',
+        reports: count,
+        status: index === 0 ? 'Most Reported' : 'High',
+        description: CATEGORY_DESCRIPTIONS[category] || `${count} reports recorded across Dagupan City.`,
+    }));
 
     // ===== FEATURES FOR "Built for Safer Communities" =====
     const communityFeatures = [
@@ -493,7 +506,12 @@
 
             {/* STATISTICS CARDS */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-                {stats.map((stat, index) => (
+                {statsLoading ? [1, 2, 3, 4].map((item) => (
+                <div key={item} className={`${getCardBgClass(3)} border ${getCardBorderClass(3)} rounded-xl p-6 text-center`}>
+                    <div className="mx-auto h-9 w-20 animate-pulse rounded-md bg-white/10" />
+                    <div className="mx-auto mt-2 h-4 w-24 animate-pulse rounded-md bg-white/10" />
+                </div>
+                )) : stats.map((stat, index) => (
                 <div 
                     key={index}
                     className={`${getCardBgClass(3)} border ${getCardBorderClass(3)} rounded-xl p-6 text-center hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`}
@@ -507,15 +525,20 @@
             </div>
 
             {/* TOP HAZARDS LIST */}
-            <div className="flex justify-between items-center mb-6" data-aos="fade-right" data-aos-delay="200">
+            <div className="flex items-center mb-6" data-aos="fade-right" data-aos-delay="200">
                 <h3 className="text-xl font-semibold text-white">Top Reported Hazards</h3>
-                <Link to="/reports" className="text-[#3b82f6] hover:text-[#2563eb] text-sm font-medium transition">
-                View All →
-                </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {topHazards.map((hazard, index) => (
-                <div key={hazard.id} className={`${getCardBgClass(3)} border ${getCardBorderClass(3)} rounded-xl p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`} data-aos="fade-up" data-aos-delay={100 + index * 150}>
+            <div className="relative overflow-hidden hazard-marquee-mask">
+            {statsLoading ? (
+                <div className="flex gap-6">
+                    {[1, 2, 3].map((item) => <div key={item} className={`${getCardBgClass(3)} h-48 min-w-[280px] flex-1 animate-pulse rounded-xl border ${getCardBorderClass(3)}`} />)}
+                </div>
+            ) : topHazards.length === 0 ? (
+                <p className="py-12 text-center text-gray-400">No data available yet.</p>
+            ) : (
+                <div className="hazard-marquee-track flex w-max gap-6 hover:[animation-play-state:paused]">
+                {[...topHazards, ...topHazards].map((hazard, index) => (
+                <div key={`${hazard.id}-${index}`} className={`${getCardBgClass(3)} w-[280px] flex-shrink-0 rounded-xl border p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5 md:w-[340px]`}>
                     <div className="flex justify-between items-start mb-2">
                     <h4 className="text-white font-semibold">{hazard.title}</h4>
                     <span className={`text-xs px-2 py-1 rounded-full ${
@@ -529,11 +552,13 @@
                     <div className="text-sm text-gray-300 mb-3">{hazard.description}</div>
                     <div className="flex justify-between items-center">
                     <span className="text-sm text-[#3b82f6] font-medium">{hazard.reports} reports</span>
-                    <button className="text-xs text-[#3b82f6] hover:text-[#2563eb] transition">View Details →</button>
                     </div>
                 </div>
                 ))}
+                </div>
+            )}
             </div>
+            <style>{`@keyframes hazard-marquee { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } } .hazard-marquee-track { animation: hazard-marquee 30s linear infinite; } .hazard-marquee-mask { mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent); } @media (max-width: 767px) { .hazard-marquee-track { animation-duration: 20s; } } @media (prefers-reduced-motion: reduce) { .hazard-marquee-track { animation: none; } }`}</style>
             </div>
         </section>
 
