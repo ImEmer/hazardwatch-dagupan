@@ -130,11 +130,11 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
-            {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10"><span aria-hidden="true">✓</span>View Resolved Cases</button>}
-            {['all', ...(resolvedOnly ? ['Resolved'] : REPORT_STATUSES.filter((status) => status !== 'Resolved'))].map((status) => (
+            {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} title="View resolved cases" aria-label="View resolved cases" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>}
+            {(resolvedOnly ? ['Resolved'] : REPORT_STATUSES).map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => status === 'Resolved' && !resolvedOnly ? navigate(`${basePath}/reports/resolved`) : setStatusFilter(status)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   statusFilter === status
                     ? 'bg-[#3b82f6] text-white'
@@ -143,13 +143,13 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                       : 'bg-slate-100 text-slate-700 hover:text-slate-900'
                 }`}
               >
-                {status === 'all' ? 'All statuses' : status}
+                {status}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
           <input
             id="reportSearch"
             name="reportSearch"
@@ -205,9 +205,9 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
             )}
           </div>
           <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="priority">Priority</option><option value="status">Status</option></select>
-          <button type="button" onClick={resetFilters} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}>Reset Filters</button>
+          <button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter !== 'Resolved' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
