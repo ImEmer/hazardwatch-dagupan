@@ -1,4 +1,3 @@
-          <button type="button" onClick={resetFilters} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}>Reset Filters</button>
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
