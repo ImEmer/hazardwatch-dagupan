@@ -18,7 +18,7 @@ const pageNumbers = (pages, page) => pages <= 7
   ? Array.from({ length: pages }, (_, index) => index + 1)
   : [1, ...(page > 3 ? ['...'] : []), ...Array.from({ length: Math.min(pages - 1, page + 1) - Math.max(2, page - 1) + 1 }, (_, index) => Math.max(2, page - 1) + index), ...(page < pages - 2 ? ['...'] : []), pages];
 
-const ActivityPage = ({ endpoint, tabs, title }) => {
+const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
   const { token } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -34,7 +34,7 @@ const ActivityPage = ({ endpoint, tabs, title }) => {
   useEffect(() => {
     AOS.init({ duration: 500, once: true });
     let cancelled = false;
-    const params = { page, limit: 5, role: activeTab === 'all' ? undefined : activeTab, search: search || undefined };
+    const params = { page, limit: 5, role: roleParam && activeTab !== 'all' ? activeTab : undefined, search: search || undefined };
     if (dateFilter !== 'all') params.startDate = new Date(Date.now() - Number(dateFilter) * 86400000).toISOString().slice(0, 10);
     setLoading(true);
     api.get(endpoint, { params, headers: { Authorization: `Bearer ${token}` } }).then((response) => {
@@ -43,7 +43,7 @@ const ActivityPage = ({ endpoint, tabs, title }) => {
       setPagination(response.data?.pagination || { page, limit: 5, total: 0, pages: 1 });
     }).catch((error) => { if (!cancelled) showError(error.response?.data?.message || 'Unable to load activity.'); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [activeTab, dateFilter, endpoint, page, search, token]);
+  }, [activeTab, dateFilter, endpoint, page, roleParam, search, token]);
 
   const totalPages = Math.max(1, pagination.pages || 1);
   const first = pagination.total ? (pagination.page - 1) * pagination.limit + 1 : 0;

@@ -29,8 +29,10 @@ const HazardMapPage = () => {
           <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} />
           {visibleReports.length === 0 && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
-              <div className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-200 shadow-lg">
-                No hazards reported yet.
+              <div className="rounded-2xl border border-slate-700 bg-slate-900/80 px-6 py-5 text-center text-slate-200 shadow-xl">
+                <div className="text-2xl" aria-hidden="true">⚠</div>
+                <h2 className="mt-2 font-semibold">No reports to show</h2>
+                <p className="mt-1 text-sm text-slate-400">There are no hazard reports yet.</p>
               </div>
             </div>
           )}
