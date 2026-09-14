@@ -18,7 +18,6 @@ export const HAZARD_CATEGORY_GROUPS = [
   { label: 'Public Safety', options: ['Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Bridge', 'Damaged Sidewalk', 'Public Safety Hazard', 'Vandalism', 'Animal Related'] },
   { label: 'Fire and Emergency', options: ['Blocked Fire Exit', 'Fire Hazard', 'Gas Leak', 'Smoke Report'] },
   { label: 'Environmental', options: ['Air Pollution', 'Deforestation', 'Noise Pollution', 'Oil Spill'] },
-  { label: 'Other', options: ['Other'] },
 ];
 
 export const HAZARD_CATEGORY_COLORS = {

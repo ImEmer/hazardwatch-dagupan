@@ -169,6 +169,7 @@ const SubmitReport = () => {
                         {group.options.map((category) => <option key={category} value={category}>{category}</option>)}
                         </optgroup>
                     ))}
+                    <option value="Other">Other</option>
                     </select>
                     {errors.category && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
