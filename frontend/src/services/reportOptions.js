@@ -12,14 +12,13 @@ export const HAZARD_CATEGORIES = [
 ];
 
 export const HAZARD_CATEGORY_GROUPS = [
-  { label: 'Most reported', options: HAZARD_CATEGORIES.slice(0, 9) },
-  { label: 'Road and Traffic', options: ['Broken Traffic Light', 'Fallen Tree', 'Missing Road Sign', 'Traffic Obstruction'] },
-  { label: 'Water and Drainage', options: ['Broken Water Pipe', 'Contaminated Water', 'Water Leak'] },
-  { label: 'Waste and Sanitation', options: ['Clogged Canal (Waste)', 'Overflowing Trash Bin', 'Public Toilet Issue'] },
-  { label: 'Public Safety', options: ['Damaged Bridge', 'Damaged Sidewalk', 'Public Safety Hazard'] },
+  { label: 'Road and Traffic', options: ['Pothole', 'Damaged Road', 'Broken Streetlight', 'Broken Traffic Light', 'Fallen Tree', 'Missing Road Sign', 'Traffic Obstruction'] },
+  { label: 'Water and Drainage', options: ['Flooding', 'Clogged Drainage', 'Broken Water Pipe', 'Contaminated Water', 'Water Leak', 'Clogged Canal (Waste)'] },
+  { label: 'Waste and Sanitation', options: ['Waste Disposal', 'Illegal Dumping', 'Overflowing Trash Bin', 'Public Toilet Issue'] },
+  { label: 'Public Safety', options: ['Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Bridge', 'Damaged Sidewalk', 'Public Safety Hazard', 'Vandalism', 'Animal Related'] },
   { label: 'Fire and Emergency', options: ['Blocked Fire Exit', 'Fire Hazard', 'Gas Leak', 'Smoke Report'] },
   { label: 'Environmental', options: ['Air Pollution', 'Deforestation', 'Noise Pollution', 'Oil Spill'] },
-  { label: 'Other', options: ['Animal Related', 'Other', 'Vandalism'] },
+  { label: 'Other', options: ['Other'] },
 ];
 
 export const HAZARD_CATEGORY_COLORS = {

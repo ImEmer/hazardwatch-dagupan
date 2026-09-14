@@ -473,6 +473,7 @@
                     className={`${getCardBgClass(2)} border ${getCardBorderClass(2)} rounded-xl p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`}
                     data-aos="zoom-in"
                     data-aos-delay={index * 80}
+                    data-aos-once="true"
                 >
                     <div className="w-12 h-12 bg-[#3b82f6]/10 rounded-lg flex items-center justify-center mb-3">
                     {category.icon}

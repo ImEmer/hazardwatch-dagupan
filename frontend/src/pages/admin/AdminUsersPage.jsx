@@ -1,3 +1,6 @@
+  const result = await confirmAction(`Delete ${user.name}'s account? This action cannot be undone.`, 'Delete user');
+  setUsers((currentUsers) => currentUsers.filter((currentUser) => currentUser.id !== user.id));
+  await showSuccess('User deleted successfully.');
 import React, { useCallback, useEffect, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';

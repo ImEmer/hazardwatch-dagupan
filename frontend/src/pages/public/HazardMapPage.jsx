@@ -24,9 +24,9 @@ const HazardMapPage = () => {
           <h1 className="mt-2 text-3xl font-bold">Hazard Map</h1>
           <p className="mt-2 text-gray-400">Explore reported hazards and their locations across the city.</p>
         </div>
-        <div data-aos="zoom-in" data-aos-delay="100" className="relative overflow-hidden rounded-2xl border border-[#2e303a] bg-[#14151d] p-2 shadow-xl">
+        <div data-aos="zoom-in" data-aos-delay="100" className="relative h-[calc(100vh-220px)] min-h-[480px] overflow-hidden rounded-2xl border border-[#2e303a] bg-[#14151d] p-2 shadow-xl">
           <button type="button" onClick={toggleHeatmap} className="absolute left-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={visibleReports} height="650px" colorBy="status" showHeatmap={showHeatmap} />
+          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} />
           {visibleReports.length === 0 && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
               <div className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-200 shadow-lg">

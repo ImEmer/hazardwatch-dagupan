@@ -3,7 +3,7 @@ import ActivityLog from '../models/ActivityLog.js';
 const legacyRoleFilter = (roles) => ({ $or: [{ actorRole: { $in: roles } }, { actorRole: { $exists: false }, role: { $in: roles } }] });
 
 const buildQuery = (req, baseFilter = {}) => {
-  const { page = 1, limit = 20, role, search, startDate, endDate, sort = 'desc' } = req.query;
+  const { page = 1, limit = 10, role, search, startDate, endDate, sort = 'desc' } = req.query;
   const filter = { ...baseFilter };
   if (role) filter.$and = [...(filter.$and || []), { $or: [{ actorRole: role }, { actorRole: { $exists: false }, role }] }];
   if (search) {

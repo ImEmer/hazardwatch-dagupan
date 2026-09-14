@@ -1,3 +1,4 @@
+          <button type="button" onClick={resetFilters} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}>Reset Filters</button>
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
@@ -203,7 +204,7 @@ const AdminReportsPage = () => {
             )}
           </div>
           <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="priority">Priority</option><option value="status">Status</option></select>
-          <button type="button" onClick={resetFilters} className="rounded-xl border border-[#2e303a] px-3 py-2.5 text-sm text-gray-400 hover:text-white">Reset Filters</button>
+          <button type="button" onClick={resetFilters} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}>Reset Filters</button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
       </div>
@@ -257,7 +258,7 @@ const AdminReportsPage = () => {
                         <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.reportedBy?.name || 'Citizen report'}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-4"><span className="inline-flex rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category === 'Other' && report.customCategory ? `Other - ${report.customCategory}` : report.category}</span></td>
+                    <td className="px-4 py-4"><span className="inline-flex rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category === 'Other' && report.customCategory ? `Other — ${report.customCategory}` : report.category}</span></td>
                     <td className={`max-w-0 truncate px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`} title={report.address || 'Dagupan City'}>{report.address || 'Dagupan City'}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>

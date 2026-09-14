@@ -1,3 +1,4 @@
+                        <input id="customCategory" name="customCategory" type="text" maxLength={60} required value={form.customCategory} onChange={handleChange} placeholder="e.g., Fallen billboard, Stray animal, Broken fence" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
@@ -181,7 +182,7 @@ const SubmitReport = () => {
                     {form.category === 'Other' && (
                     <div className="mt-3">
                         <label htmlFor="customCategory" className="mb-1.5 block text-sm font-medium text-gray-300">Please specify the hazard type <span className="text-red-400">*</span></label>
-                        <input id="customCategory" name="customCategory" type="text" maxLength="60" value={form.customCategory} onChange={handleChange} placeholder="Enter the hazard type" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
+                        <input id="customCategory" name="customCategory" type="text" maxLength={60} required value={form.customCategory} onChange={handleChange} placeholder="e.g., Fallen billboard, Stray animal, Broken fence" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
                         {errors.customCategory && <p className="mt-1 text-xs text-red-400">{errors.customCategory}</p>}
                     </div>
                     )}

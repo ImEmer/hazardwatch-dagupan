@@ -61,8 +61,8 @@ export const deleteUser = async (req, res, next) => {
     if (req.user.role === 'admin' && !['user', 'barangay'].includes(userToDelete.role)) return res.status(403).json({ success: false, message: 'Admins can only delete citizen or barangay accounts.' });
     if (!enforceUserManagementRules(req.user, userToDelete)) return res.status(403).json({ success: false, message: 'You are not allowed to delete this user.' });
     userToDelete.isActive = false;
-    await userToDelete.save();
-    await logActivity({ actor: req.user, action: 'user_deleted', message: `${req.user.name} deactivated user ${userToDelete.name}`, scope: 'admin', entityType: 'user', entityId: userToDelete._id }).catch(() => {});
-    res.json({ success: true, message: 'User deactivated.' });
+    await User.findByIdAndDelete(userToDelete._id);
+    await logActivity({ actor: req.user, action: 'user_deleted', message: `${req.user.name} deleted user ${userToDelete.name}`, scope: 'admin', entityType: 'user', entityId: userToDelete._id }).catch(() => {});
+    res.json({ success: true, message: 'User deleted.' });
   } catch (e) { next(e); }
 };

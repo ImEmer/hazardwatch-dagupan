@@ -31,7 +31,7 @@ const AdminMapPage = () => {
   const toggleHeatmap = () => setShowHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col gap-6 overflow-hidden">
       <div className={`rounded-2xl border p-4 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -56,16 +56,16 @@ const AdminMapPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <div className={`relative overflow-hidden rounded-2xl border p-2 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-          <div className="h-[620px] overflow-hidden rounded-xl">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-hidden xl:grid-cols-[2fr_1fr]">
+        <div className={`relative min-h-0 overflow-hidden rounded-2xl border p-2 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+          <div className="relative h-full min-h-0 overflow-hidden rounded-xl">
             <button type="button" onClick={toggleHeatmap} className="absolute left-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
             <InteractiveMap reports={filteredReports} height="100%" showHeatmap={showHeatmap} />
           </div>
         </div>
 
-        <div className="space-y-4">
-          {filteredReports.slice(0, 6).map((report) => (
+        <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
+          {filteredReports.map((report) => (
             <div key={report._id || report.id} className={`rounded-2xl border p-4 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
