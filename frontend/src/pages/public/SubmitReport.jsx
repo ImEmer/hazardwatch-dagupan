@@ -17,6 +17,7 @@ const SubmitReport = () => {
     const [selectedBarangay, setSelectedBarangay] = useState('');
     const [form, setForm] = useState({
         category: '',
+        customCategory: '',
         description: '',
     });
     const [photo, setPhoto] = useState(null);
@@ -42,7 +43,8 @@ const SubmitReport = () => {
     };
 
     const handleChange = (e) => {
-        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setForm((prev) => ({ ...prev, [name]: value, ...(name === 'category' && value !== 'Other' ? { customCategory: '' } : {}) }));
         if (errors[e.target.name]) {
             setErrors((prev) => ({ ...prev, [e.target.name]: '' }));
         }
@@ -62,7 +64,7 @@ const SubmitReport = () => {
     };
 
     const resetFormState = () => {
-        setForm({ category: '', description: '' });
+        setForm({ category: '', customCategory: '', description: '' });
         setSelectedLocation(null);
         setSelectedAddress('');
         setSelectedBarangay('');
@@ -81,6 +83,8 @@ const SubmitReport = () => {
     const validateForm = () => {
         const newErrors = {};
         if (!form.category) newErrors.category = 'Please select a hazard type.';
+        if (form.category === 'Other' && !form.customCategory.trim()) newErrors.customCategory = 'Please specify the hazard type.';
+        if (form.category === 'Other' && form.customCategory.trim() && (!/^[A-Za-z0-9 ]+$/.test(form.customCategory.trim()) || form.customCategory.trim().length > 60)) newErrors.customCategory = 'Use only letters, numbers, and spaces, up to 60 characters.';
         if (!form.description.trim()) {
             newErrors.description = 'Please describe the hazard.';
         } else if (form.description.trim().length < 10) {
@@ -114,6 +118,7 @@ const SubmitReport = () => {
         setErrors({});
         const newReport = {
             category: form.category,
+            customCategory: form.category === 'Other' ? form.customCategory.trim() : '',
             description: form.description.trim(),
             location: {
                 type: 'Point',
@@ -172,6 +177,13 @@ const SubmitReport = () => {
                         </svg>
                         {errors.category}
                     </p>
+                    )}
+                    {form.category === 'Other' && (
+                    <div className="mt-3">
+                        <label htmlFor="customCategory" className="mb-1.5 block text-sm font-medium text-gray-300">Please specify the hazard type <span className="text-red-400">*</span></label>
+                        <input id="customCategory" name="customCategory" type="text" maxLength="60" value={form.customCategory} onChange={handleChange} placeholder="Enter the hazard type" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
+                        {errors.customCategory && <p className="mt-1 text-xs text-red-400">{errors.customCategory}</p>}
+                    </div>
                     )}
                 </div>
 

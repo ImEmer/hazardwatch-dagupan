@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const reportSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 100 },
   category: { type: String, enum: ['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak'], required: true },
+  customCategory: { type: String, default: '', trim: true, maxlength: 60 },
   description: { type: String, required: true, minlength: 10, trim: true },
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
@@ -12,7 +13,7 @@ const reportSchema = new mongoose.Schema({
   barangay: String,
   photo: String,
   status: { type: String, enum: ['Pending', 'In Progress', 'Resolved', 'Closed'], default: 'Pending' },
-  priority: { type: String, enum: ['Low', 'Medium', 'High', 'Urgent'], default: 'Medium' },
+  priority: { type: String, enum: ['Low', 'Medium', 'High', 'Urgent'], default: 'Low' },
   reportedBy: { name: String, email: String, phone: String, isAnonymous: { type: Boolean, default: false } },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedBarangay: String,

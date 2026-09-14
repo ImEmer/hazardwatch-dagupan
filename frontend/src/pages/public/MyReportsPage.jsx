@@ -30,7 +30,7 @@ const MyReportsPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AOS.init({ duration: 800, easing: 'ease-in-out', once: true });
+    AOS.init({ duration: 600, easing: 'ease-out', once: true, offset: 40 });
     AOS.refresh();
   }, []);
 
@@ -138,8 +138,8 @@ const MyReportsPage = () => {
               const formattedDate = report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown date';
 
               return (
-                <Link key={reportId} to={`/reports/${reportId}`} className="block rounded-2xl border border-[#2e303a] bg-[#14151d] transition hover:border-[#3b82f6]/40 hover:bg-[#171a22]">
-                  <article data-aos="fade-up" className="p-5">
+                <Link key={reportId} to={`/reports/${reportId}`} data-aos="fade-up" data-aos-offset="40" data-aos-duration="600" className="block overflow-hidden rounded-2xl border border-[#2e303a] bg-[#14151d] transition hover:border-[#3b82f6]/40 hover:bg-[#171a22]">
+                  <article className="p-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-semibold text-white">{reportTitle}</h2>
                       <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status || 'Pending'}</span>

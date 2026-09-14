@@ -1,4 +1,5 @@
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 export const validateEmail = (email) => {
   if (!email.trim()) return 'Email is required.';
@@ -8,6 +9,6 @@ export const validateEmail = (email) => {
 
 export const validatePassword = (password) => {
   if (!password) return 'Password is required.';
-  if (password.length < 6) return 'Password must be at least 6 characters.';
+  if (!passwordPattern.test(password)) return 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.';
   return '';
 };

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/style.css';
 import { useReports } from '../../context/ReportContext';
 import useTheme from '../../hooks/useTheme';
 import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
@@ -8,6 +10,13 @@ import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
 
 const PAGE_SIZE = 10;
+const parseDate = (value) => value ? new Date(`${value}T00:00:00`) : undefined;
+const formatDateInput = (date) => date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
+const formatDateRange = (range) => {
+  if (!range?.from) return 'Select date range';
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return range.to ? `${formatter.format(range.from)} - ${formatter.format(range.to)}` : `${formatter.format(range.from)} - ...`;
+};
 
 const priorityColors = {
   Low: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
@@ -37,6 +46,8 @@ const AdminReportsPage = () => {
   const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
   const [startDate, setStartDate] = useState(searchParams.get('startDate') || '');
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
+  const [dateRange, setDateRange] = useState(() => ({ from: parseDate(searchParams.get('startDate')), to: parseDate(searchParams.get('endDate')) }));
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [page, setPage] = useState(1);
 
@@ -74,7 +85,22 @@ const AdminReportsPage = () => {
   const visibleReports = sortedReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const barangays = [...new Set(reports.map((report) => report.assignedBarangay || report.barangay).filter(Boolean))].sort();
 
-  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); setStartDate(''); setEndDate(''); setSortBy('newest'); };
+  const handleDateRangeChange = (range) => {
+    const nextRange = range || {};
+    setDateRange(nextRange);
+    setStartDate(formatDateInput(nextRange.from));
+    setEndDate(formatDateInput(nextRange.to));
+    setPage(1);
+    if (nextRange.from && nextRange.to) setIsDatePickerOpen(false);
+  };
+  const clearDateRange = () => {
+    setDateRange({});
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+    setIsDatePickerOpen(false);
+  };
+  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); clearDateRange(); setSortBy('newest'); };
   const exportCsv = async () => {
     try {
       const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, startDate: startDate || undefined, endDate: endDate || undefined };
@@ -160,8 +186,22 @@ const AdminReportsPage = () => {
             {filteredReports.length} results
           </div>
           <select value={barangayFilter} onChange={(event) => setBarangayFilter(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="all">All barangays</option>{barangays.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
-          <label className="text-xs text-gray-400">From<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /></label>
-          <label className="text-xs text-gray-400">To<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /></label>
+          <div className="relative md:col-span-2">
+            <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Date range</span>
+            <button type="button" onClick={() => setIsDatePickerOpen((open) => !open)} className={`mt-1 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} aria-expanded={isDatePickerOpen} aria-haspopup="dialog">
+              <span>{formatDateRange(dateRange)}</span>
+              <svg className="h-4 w-4 text-[#60a5fa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" /></svg>
+            </button>
+            {isDatePickerOpen && (
+              <div style={{ '--rdp-accent-color': '#3b82f6', '--rdp-accent-background-color': 'rgba(59, 130, 246, 0.2)', '--rdp-background-color': isDark ? '#14151d' : '#ffffff', '--rdp-color': isDark ? '#ffffff' : '#0f172a' }} className={`absolute left-0 top-full z-30 mt-2 rounded-xl border p-3 shadow-2xl ${isDark ? 'border-[#2e303a] bg-[#14151d] text-white' : 'border-slate-200 bg-white text-slate-900'}`} role="dialog" aria-label="Choose report date range">
+                <DayPicker mode="range" selected={dateRange} onSelect={handleDateRangeChange} numberOfMonths={2} showOutsideDays className={isDark ? 'hazard-date-picker-dark' : ''} />
+                <div className="flex items-center justify-between border-t border-[#2e303a] pt-3">
+                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{formatDateRange(dateRange)}</span>
+                  <button type="button" onClick={clearDateRange} className="text-xs font-semibold text-[#60a5fa] hover:text-[#3b82f6]">Clear</button>
+                </div>
+              </div>
+            )}
+          </div>
           <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="priority">Priority</option><option value="status">Status</option></select>
           <button type="button" onClick={resetFilters} className="rounded-xl border border-[#2e303a] px-3 py-2.5 text-sm text-gray-400 hover:text-white">Reset Filters</button>
         </div>
@@ -217,7 +257,7 @@ const AdminReportsPage = () => {
                         <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.reportedBy?.name || 'Citizen report'}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-4"><span className="inline-flex rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category}</span></td>
+                    <td className="px-4 py-4"><span className="inline-flex rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category === 'Other' && report.customCategory ? `Other - ${report.customCategory}` : report.category}</span></td>
                     <td className={`max-w-0 truncate px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`} title={report.address || 'Dagupan City'}>{report.address || 'Dagupan City'}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>

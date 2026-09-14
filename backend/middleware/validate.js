@@ -9,12 +9,20 @@ export const validate = (req, res, next) => {
 export const validateRegister = [
   body('name').trim().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
   body('email').isEmail().normalizeEmail().withMessage('A valid email is required.'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters.'),
+  body('password').matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/).withMessage('Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.'),
   validate,
 ];
 export const validateLogin = [body('email').isEmail().normalizeEmail(), body('password').notEmpty(), validate];
 export const validateReport = [
   body('category').isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
+  body('customCategory').custom((value, { req }) => {
+    const customCategory = typeof value === 'string' ? value.trim() : '';
+    if (req.body.category === 'Other' && customCategory.length < 3) throw new Error('Please specify the hazard type using at least 3 characters.');
+    if (req.body.category !== 'Other' && customCategory) throw new Error('Custom hazard type is only allowed when category is Other.');
+    if (customCategory.length > 60 || !/^[A-Za-z0-9 ]*$/.test(customCategory)) throw new Error('Custom hazard type must contain only letters, numbers, and spaces, up to 60 characters.');
+    req.body.customCategory = customCategory;
+    return true;
+  }),
   body('description').trim().isLength({ min: 10 }),
   body('location').custom((value, { req }) => {
     const location = typeof value === 'string' ? JSON.parse(value) : value;

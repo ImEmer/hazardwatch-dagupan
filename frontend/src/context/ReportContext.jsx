@@ -156,6 +156,7 @@
 
             const payload = new FormData();
             payload.append('category', String(newReport.category));
+            payload.append('customCategory', String(newReport.customCategory || ''));
             payload.append('description', String(newReport.description).trim());
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));

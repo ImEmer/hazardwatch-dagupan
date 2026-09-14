@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess, showWarning } from '../../services/alerts';
-import { validateEmail, validatePassword } from '../../services/validation';
+import { passwordPattern, validateEmail, validatePassword } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
 
 const RegisterPage = () => {
@@ -13,6 +13,14 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordCriteria = [
+    form.password.length >= 8,
+    /[a-z]/.test(form.password) && /[A-Z]/.test(form.password),
+    /\d/.test(form.password),
+    /[^A-Za-z\d]/.test(form.password),
+  ];
+  const passwordStrength = !form.password ? '' : passwordPattern.test(form.password) ? 'strong' : passwordCriteria.filter(Boolean).length >= 2 ? 'fair' : 'weak';
+  const passwordError = form.password ? validatePassword(form.password) : errors.password;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -55,14 +63,16 @@ const RegisterPage = () => {
         </label>
         <label className="block text-sm text-gray-300">Password
           <div className="relative mt-2">
-            <input minLength="6" type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="Password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${errors.password ? 'border-red-500' : ''}`} />
+            <input minLength="8" type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 symbol" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${passwordError ? 'border-red-500' : ''}`} />
             <PasswordToggle visible={showPassword} onToggle={() => setShowPassword((value) => !value)} label="password" />
           </div>
-          {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
+          {passwordStrength && <span className={`mt-1 block text-xs ${passwordStrength === 'strong' ? 'text-emerald-400' : passwordStrength === 'fair' ? 'text-amber-400' : 'text-red-400'}`}>Strength: {passwordStrength}</span>}
+          <span className="mt-1 block text-xs text-gray-400">At least 8 characters; uppercase and lowercase letters; one number; one special character.</span>
+          {passwordError && <span className="mt-1 block text-xs text-red-400">{passwordError}</span>}
         </label>
         <label className="block text-sm text-gray-300">Confirm Password
           <div className="relative mt-2">
-            <input minLength="6" type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+            <input minLength="8" type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input ${errors.confirmPassword ? 'border-red-500' : ''}`} />
             <PasswordToggle visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((value) => !value)} label="confirmed password" />
           </div>
           {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}

@@ -99,6 +99,8 @@ export const createReport = async (req, res, next) => {
     const report = await Report.create({
       ...req.body,
       title: `${req.body.category} report - ${new Date().toLocaleDateString('en-PH')}`,
+      priority: 'Low',
+      customCategory: req.body.category === 'Other' ? String(req.body.customCategory || '').trim() : '',
       location: typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location,
       barangay: req.body.barangay || '',
       photo: photoValue,
