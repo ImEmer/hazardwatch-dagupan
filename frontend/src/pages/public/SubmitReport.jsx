@@ -1,4 +1,3 @@
-                        <input id="customCategory" name="customCategory" type="text" maxLength={60} required value={form.customCategory} onChange={handleChange} placeholder="e.g., Fallen billboard, Stray animal, Broken fence" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
