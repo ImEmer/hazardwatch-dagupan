@@ -49,7 +49,6 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
   const [dateRange, setDateRange] = useState(() => ({ from: parseDate(searchParams.get('startDate')), to: parseDate(searchParams.get('endDate')) }));
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [page, setPage] = useState(1);
 
   const filteredReports = useMemo(() => {
@@ -73,16 +72,16 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate, sortBy]);
+  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate]);
 
   useEffect(() => {
     const next = {};
-    [['search', search], ['status', statusFilter], ['priority', priorityFilter], ['category', categoryFilter], ['barangay', barangayFilter], ['startDate', startDate], ['endDate', endDate], ['sortBy', sortBy]].forEach(([key, value]) => { if (value && value !== 'all' && value !== 'newest') next[key] = value; });
+    [['search', search], ['status', statusFilter], ['priority', priorityFilter], ['category', categoryFilter], ['barangay', barangayFilter], ['startDate', startDate], ['endDate', endDate]].forEach(([key, value]) => { if (value && value !== 'all') next[key] = value; });
     setSearchParams(next, { replace: true });
-  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate, sortBy, setSearchParams]);
+  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate, setSearchParams]);
 
   const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
-  const sortedReports = [...filteredReports].sort((a, b) => sortBy === 'oldest' ? new Date(a.createdAt) - new Date(b.createdAt) : sortBy === 'priority' ? String(b.priority).localeCompare(String(a.priority)) : sortBy === 'status' ? String(a.status).localeCompare(String(b.status)) : new Date(b.createdAt) - new Date(a.createdAt));
+  const sortedReports = [...filteredReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const visibleReports = sortedReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const barangays = [...new Set(reports.map((report) => report.assignedBarangay || report.barangay).filter(Boolean))].sort();
 
@@ -101,7 +100,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
     setPage(1);
     setIsDatePickerOpen(false);
   };
-  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); clearDateRange(); setSortBy('newest'); };
+  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); clearDateRange(); };
   const exportCsv = async () => {
     try {
       const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, startDate: startDate || undefined, endDate: endDate || undefined, includeResolved: resolvedOnly };
@@ -131,7 +130,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
             {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} title="View resolved cases" aria-label="View resolved cases" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>}
-            {(resolvedOnly ? ['Resolved'] : REPORT_STATUSES).map((status) => (
+            {(resolvedOnly ? ['Resolved'] : REPORT_STATUSES.filter((status) => status !== 'Resolved')).map((status) => (
               <button
                 key={status}
                 onClick={() => status === 'Resolved' && !resolvedOnly ? navigate(`${basePath}/reports/resolved`) : setStatusFilter(status)}
@@ -184,9 +183,6 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
             {HAZARD_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
           </select>
 
-          <div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
-            {filteredReports.length} results
-          </div>
           <select value={barangayFilter} onChange={(event) => setBarangayFilter(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="all">All barangays</option>{barangays.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
           <div className="relative md:col-span-2">
             <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Date range</span>
@@ -204,7 +200,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
               </div>
             )}
           </div>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="priority">Priority</option><option value="status">Status</option></select>
+          <div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{filteredReports.length} results</div>
           <button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter !== 'Resolved' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
