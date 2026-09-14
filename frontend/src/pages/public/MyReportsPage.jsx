@@ -35,6 +35,10 @@ const MyReportsPage = () => {
   }, []);
 
   useEffect(() => {
+    AOS.refresh();
+  }, [reports]);
+
+  useEffect(() => {
     if (!token) {
       return undefined;
     }
@@ -129,7 +133,15 @@ const MyReportsPage = () => {
             ))}
           </div>
         ) : filteredReports.length === 0 ? (
-          <div data-aos="fade-up" className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-10 text-center text-gray-400">No reports found.</div>
+          <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-10 text-center text-gray-400">
+            <svg className="mx-auto h-10 w-10 text-[#60a5fa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 3h9l3 3v15H6V3Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v4h4M9 12h6M9 16h4" />
+            </svg>
+            <h2 className="mt-4 text-xl font-semibold text-white">No reports found</h2>
+            <p className="mt-2">You have not submitted any reports yet.</p>
+            <Link to="/submit" className="mt-6 inline-flex rounded-lg bg-[#3b82f6] px-5 py-2.5 font-semibold text-white transition hover:bg-[#2563eb]">Submit a Report</Link>
+          </div>
         ) : (
           <div data-aos="fade-up" data-aos-delay="150" className="space-y-3">
             {filteredReports.map((report) => {

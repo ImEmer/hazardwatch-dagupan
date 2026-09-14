@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
-import { validateEmail, validatePassword } from '../../services/validation';
+import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
 
 const LoginPage = () => {
@@ -65,7 +65,7 @@ const LoginPage = () => {
     setError('');
     const nextErrors = {
       email: validateEmail(form.email),
-      password: validatePassword(form.password),
+      password: form.password.trim() ? '' : 'Please enter your password.',
     };
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) {
