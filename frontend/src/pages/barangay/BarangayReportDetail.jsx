@@ -1,207 +1,54 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
-import { useReports } from '../../context/ReportContext';
 import api from '../../services/api';
 import { showError, showSuccess } from '../../services/alerts';
 
-const statusOptions = ['Pending', 'In Progress', 'Resolved', 'Closed'];
+const statuses = ['Pending', 'In Progress', 'Resolved', 'Closed'];
 
 const BarangayReportDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const { theme } = useTheme();
-  const { reports, fetchReports, updateReportStatus } = useReports();
-  const [comment, setComment] = useState('');
-  const [savingComment, setSavingComment] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [fetchedReport, setFetchedReport] = useState(null);
-
-  const report = useMemo(
-    () => reports.find((item) => String(item._id || item.id) === id) || fetchedReport,
-    [fetchedReport, id, reports]
-  );
-
   const isDark = theme === 'dark';
-  const panelClass = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';
-  const headingClass = isDark ? 'text-white' : 'text-slate-900';
-  const mutedClass = isDark ? 'text-gray-400' : 'text-slate-500';
-  const fieldClass = isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400';
+  const [report, setReport] = useState(null);
+  const [comment, setComment] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const panel = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';
+  const heading = isDark ? 'text-white' : 'text-slate-900';
+  const muted = isDark ? 'text-gray-400' : 'text-slate-500';
+  const field = `mt-2 block w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`;
 
   useEffect(() => {
-    if (!id || (reports.length && reports.some((item) => String(item._id || item.id) === id))) {
-      setLoading(false);
-      return undefined;
-    }
+    if (!id || !token || !user?.barangay) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    api.get(`/reports/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => {
+      const next = response.data?.report;
+      const assigned = next?.assignedBarangay || next?.barangay;
+      if (!next || String(assigned || '').toLowerCase() !== String(user.barangay).toLowerCase()) throw new Error('Report not found.');
+      if (!cancelled) setReport(next);
+    }).catch((requestError) => { if (!cancelled) { setReport(null); setError(requestError.response?.data?.message || 'Report not found.'); } }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id, token, user?.barangay]);
 
-    let isMounted = true;
-
-    const loadReport = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get(`/reports/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const body = response.data || {};
-        if (isMounted) setFetchedReport(body.report || null);
-      } catch (error) {
-        if (isMounted) setFetchedReport(null);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadReport();
-    return () => {
-      isMounted = false;
-    };
-  }, [id, reports, token]);
-
-  const handleStatusChange = async (event) => {
-    try {
-      await updateReportStatus(id, event.target.value);
-      await showSuccess('Report status updated.');
-    } catch (error) {
-      await showError(error.message || 'Unable to update report status.');
-    }
+  const updateStatus = async (event) => {
+    try { const response = await api.patch(`/reports/${id}/status`, { status: event.target.value }, { headers: { Authorization: `Bearer ${token}` } }); setReport(response.data?.report || report); await showSuccess('Report status updated.'); } catch (requestError) { await showError(requestError.response?.data?.message || requestError.message); }
   };
-
-  const handleCommentSubmit = async () => {
+  const addComment = async (event) => {
+    event.preventDefault();
     if (!comment.trim()) return;
-
-    setSavingComment(true);
-    try {
-      const response = await api.post(`/reports/${id}/comments`, { text: comment.trim() }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const body = response.data || {};
-      if (!body) throw new Error(body.message || 'Unable to add comment.');
-
-      setComment('');
-      await fetchReports();
-      await showSuccess('Comment added.');
-    } catch (error) {
-      await showError(error.message || 'Unable to add comment.');
-    } finally {
-      setSavingComment(false);
-    }
+    setSaving(true);
+    try { const response = await api.post(`/reports/${id}/comments`, { text: comment.trim() }, { headers: { Authorization: `Bearer ${token}` } }); setReport(response.data?.report || report); setComment(''); await showSuccess('Comment added.'); } catch (requestError) { await showError(requestError.response?.data?.message || requestError.message); } finally { setSaving(false); }
   };
 
-  if (loading) {
-    return <div className={`min-h-screen px-4 py-8 text-center ${isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-500'}`}>Loading report...</div>;
-  }
+  if (loading) return <div className={`p-8 text-center ${muted}`}>Loading report...</div>;
+  if (!report) return <div className={`rounded-2xl border border-red-500/30 bg-red-500/10 p-6 ${error ? 'text-red-300' : 'text-gray-300'}`}><h1 className="text-2xl font-bold">Report not found</h1><p className="mt-2 text-sm">{error || 'The requested barangay report could not be loaded.'}</p></div>;
 
-  if (!report) {
-    return (
-      <div className={`min-h-screen px-4 py-8 ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
-        <div className="mx-auto max-w-3xl rounded-2xl border border-red-500/40 bg-red-500/5 p-6 shadow-xl">
-          <h1 className="text-2xl font-bold">Report not found</h1>
-          <p className="mt-3 text-sm text-red-400">The requested barangay report could not be loaded.</p>
-          <Link to="/barangay/dashboard" className="mt-4 inline-block rounded-lg bg-[#3b82f6] px-4 py-2 text-white hover:bg-[#2563eb]">
-            Back to dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`min-h-screen ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 lg:px-6">
-        <div className="flex items-center justify-between">
-          <button type="button" onClick={() => navigate('/barangay/dashboard')} className={`text-sm font-medium ${mutedClass} hover:text-[#3b82f6]`}>
-            ← Back to dashboard
-          </button>
-          <span className="text-sm text-[#3b82f6]">Barangay report detail</span>
-        </div>
-
-        <section className={`rounded-2xl border p-6 shadow-xl ${panelClass}`}>
-          <p className="text-xs uppercase tracking-[0.25em] text-[#3b82f6]">{report.category || 'General'}</p>
-          <h1 className={`mt-3 text-3xl font-bold ${headingClass}`}>{report.title || 'Untitled report'}</h1>
-          <p className={`mt-4 leading-7 ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{report.description || 'No description provided.'}</p>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div>
-              <p className={`text-xs uppercase tracking-[0.2em] ${mutedClass}`}>Location</p>
-              <p className={`mt-2 ${headingClass}`}>{report.address || 'Dagupan City'}</p>
-            </div>
-            <div>
-              <p className={`text-xs uppercase tracking-[0.2em] ${mutedClass}`}>Submitted</p>
-              <p className={`mt-2 ${headingClass}`}>
-                {new Date(report.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
-            </div>
-          </div>
-
-          {report.photo && (
-            <div className="mt-6">
-              <img src={report.photo} alt="Evidence" className="max-h-96 w-full rounded-xl border border-slate-200 object-cover" />
-            </div>
-          )}
-        </section>
-
-        <section className={`rounded-2xl border p-6 shadow-xl ${panelClass}`}>
-          <h2 className={`text-xl font-semibold ${headingClass}`}>Update report</h2>
-
-          <div className="mt-4">
-            <label className={`block text-sm ${mutedClass}`}>
-              Status
-              <select value={report.status || 'Pending'} onChange={handleStatusChange} className={`mt-2 block w-full rounded-lg border px-3 py-2 ${fieldClass}`}>
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="mt-5">
-            <label className={`block text-sm ${mutedClass}`}>
-              Add comment
-              <textarea
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-                rows="4"
-                placeholder="Write an update for this report"
-                className={`mt-2 block w-full rounded-lg border px-3 py-2 ${fieldClass}`}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleCommentSubmit}
-              disabled={savingComment || !comment.trim()}
-              className="mt-3 rounded-lg bg-[#3b82f6] px-4 py-2 font-semibold text-white hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {savingComment ? 'Adding...' : 'Add comment'}
-            </button>
-          </div>
-        </section>
-
-        <section className={`rounded-2xl border p-6 shadow-xl ${panelClass}`}>
-          <h2 className={`text-xl font-semibold ${headingClass}`}>Comments</h2>
-          {report.comments?.length ? (
-            <div className="mt-4 space-y-3">
-              {report.comments.map((item, index) => (
-                <div key={item._id || `${item.authorName || 'staff'}-${index}`} className="rounded-xl border border-[#3b82f6]/30 bg-[#3b82f6]/5 p-4">
-                  <p className={isDark ? 'text-gray-200' : 'text-slate-700'}>{item.text}</p>
-                  <p className={`mt-2 text-xs ${mutedClass}`}>
-                    {item.authorName || 'Barangay staff'} · {new Date(item.createdAt || Date.now()).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className={`mt-4 text-sm ${mutedClass}`}>No comments yet.</p>
-          )}
-        </section>
-      </div>
-    </div>
-  );
+  return <div className="space-y-6"><header><p className="text-xs uppercase tracking-[0.25em] text-[#3b82f6]">{user.barangay} / Report</p><h1 className={`mt-2 text-3xl font-bold ${heading}`}>{report.title || `${report.category || 'Hazard'} report`}</h1></header><section className={`rounded-2xl border p-6 shadow-xl ${panel}`}><div className="flex flex-wrap gap-2"><span className="rounded-full bg-sky-500/20 px-2.5 py-1 text-xs text-sky-300">{report._id}</span><span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-xs text-amber-300">{report.status || 'Pending'}</span><span className="rounded-full bg-rose-500/20 px-2.5 py-1 text-xs text-rose-300">{report.priority || 'Medium'} priority</span></div><p className={`mt-5 leading-7 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{report.description || 'No description provided.'}</p><dl className="mt-6 grid gap-4 md:grid-cols-2"><div><dt className={`text-xs uppercase tracking-[0.2em] ${muted}`}>Location</dt><dd className={`mt-2 ${heading}`}>{report.address || 'Dagupan City'}</dd></div><div><dt className={`text-xs uppercase tracking-[0.2em] ${muted}`}>Submitted</dt><dd className={`mt-2 ${heading}`}>{new Date(report.createdAt).toLocaleDateString()}</dd></div></dl>{report.photo && <img src={report.photo} alt="Evidence" className="mt-6 max-h-96 w-full rounded-xl object-cover" />}</section><section className={`rounded-2xl border p-6 shadow-xl ${panel}`}><h2 className={`text-xl font-semibold ${heading}`}>Update report</h2><label className={`mt-4 block text-sm ${muted}`}>Status<select value={report.status || 'Pending'} onChange={updateStatus} className={field}>{statuses.map((status) => <option key={status}>{status}</option>)}</select></label><form onSubmit={addComment} className="mt-5"><label className={`block text-sm ${muted}`}>Add comment<textarea value={comment} onChange={(event) => setComment(event.target.value)} rows="4" className={field} /></label><button type="submit" disabled={saving || !comment.trim()} className="mt-3 rounded-lg bg-[#3b82f6] px-4 py-2 font-semibold text-white disabled:opacity-50">{saving ? 'Adding...' : 'Add comment'}</button></form></section><section className={`rounded-2xl border p-6 shadow-xl ${panel}`}><h2 className={`text-xl font-semibold ${heading}`}>Comments</h2>{report.comments?.length ? <div className="mt-4 space-y-3">{report.comments.map((item, index) => <div key={item._id || index} className="rounded-xl border border-[#3b82f6]/30 p-4"><p>{item.text}</p><p className={`mt-2 text-xs ${muted}`}>{item.authorName || 'Barangay staff'} · {new Date(item.createdAt || Date.now()).toLocaleString()}</p></div>)}</div> : <p className={`mt-4 text-sm ${muted}`}>No comments yet.</p>}</section></div>;
 };
 
 export default BarangayReportDetail;

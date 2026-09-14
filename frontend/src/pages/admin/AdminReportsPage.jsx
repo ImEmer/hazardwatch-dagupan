@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { useReports } from '../../context/ReportContext';
@@ -32,15 +32,16 @@ const priorityColorsLight = {
   Urgent: 'bg-red-50 text-red-700 border-red-200',
 };
 
-const AdminReportsPage = () => {
+const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const { reports, updateReportStatus, deleteReport } = useReports();
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const isLoading = reports.length === 0;
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : searchParams.get('status') || 'all');
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
@@ -66,9 +67,9 @@ const AdminReportsPage = () => {
       const matchesStart = !startDate || createdAt >= new Date(startDate).getTime();
       const matchesEnd = !endDate || createdAt <= new Date(`${endDate}T23:59:59`).getTime();
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesBarangay && matchesStart && matchesEnd;
+      return (resolvedOnly ? report.status === 'Resolved' : report.status !== 'Resolved') && matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesBarangay && matchesStart && matchesEnd;
     });
-  }, [reports, search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate]);
+  }, [reports, resolvedOnly, search, statusFilter, priorityFilter, categoryFilter, barangayFilter, startDate, endDate]);
 
   useEffect(() => {
     setPage(1);
@@ -103,7 +104,7 @@ const AdminReportsPage = () => {
   const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); clearDateRange(); setSortBy('newest'); };
   const exportCsv = async () => {
     try {
-      const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, startDate: startDate || undefined, endDate: endDate || undefined };
+      const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, startDate: startDate || undefined, endDate: endDate || undefined, includeResolved: resolvedOnly };
       const response = await api.get('/reports/export', { params, responseType: 'blob', headers: { Authorization: `Bearer ${token}` } });
       const url = URL.createObjectURL(response.data); const link = document.createElement('a'); link.href = url; link.download = `hazardwatch-reports-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url); await showSuccess('Reports exported successfully.');
     } catch (error) { await showError(error.response?.data?.message || 'Unable to export reports.'); }
@@ -129,7 +130,8 @@ const AdminReportsPage = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
-            {['all', ...REPORT_STATUSES].map((status) => (
+            {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10"><span aria-hidden="true">✓</span>View Resolved Cases</button>}
+            {['all', ...(resolvedOnly ? ['Resolved'] : REPORT_STATUSES.filter((status) => status !== 'Resolved'))].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}

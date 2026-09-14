@@ -3,6 +3,7 @@ import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
+import UserFormModal from '../../components/common/UserFormModal';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -26,6 +27,7 @@ const AdminUsersPage = () => {
   const [page, setPage] = useState(1);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState('');
@@ -129,6 +131,11 @@ const AdminUsersPage = () => {
       return;
     }
 
+    if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.');
+      return;
+    }
+    setSaving(true);
     try {
       await api.post('/users', {
         name: form.name.trim(),
@@ -142,7 +149,7 @@ const AdminUsersPage = () => {
       await showSuccess('User created successfully.');
     } catch (error) {
       await showError(error.response?.data?.message || error.message || 'Failed to create user.');
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async (targetUser) => {
@@ -258,7 +265,7 @@ const AdminUsersPage = () => {
         </div>
       </div>
 
-      {(isEditing && selectedUser || isCreating) && (
+      {isEditing && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className={`w-full max-w-lg rounded-2xl border p-6 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
             <div className="mb-4 flex items-center justify-between">
@@ -298,7 +305,7 @@ const AdminUsersPage = () => {
                 <select
                   value={form.role}
                   onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-                  disabled={currentUser?.role === 'admin' && selectedUser.role === 'superadmin'}
+                  disabled={currentUser?.role === 'admin' && selectedUser?.role === 'superadmin'}
                   className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
                 >
                   <option value="barangay">Barangay</option>
@@ -329,6 +336,7 @@ const AdminUsersPage = () => {
           </div>
         </div>
       )}
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating roleOptions={currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: 'Super Admin' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }] : [{ value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </div>
   );
 };

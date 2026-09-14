@@ -3,6 +3,7 @@ import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
+import UserFormModal from '../../components/common/UserFormModal';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -12,7 +13,7 @@ const roleBadge = {
   user: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
 };
 
-const EMPTY_FORM = { name: '', email: '', role: 'staff', barangay: '' };
+const EMPTY_FORM = { name: '', email: '', password: '', role: 'staff', barangay: '' };
 
 const SuperAdminUsers = () => {
   const { token } = useAuth();
@@ -22,6 +23,8 @@ const SuperAdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const isDark = theme === 'dark';
 
   const fetchUsers = useCallback(async () => {
@@ -61,6 +64,13 @@ const SuperAdminUsers = () => {
     setSelectedUser(null);
     setForm(EMPTY_FORM);
     setIsEditing(false);
+  };
+
+  const closeCreator = () => { setForm(EMPTY_FORM); setIsCreating(false); };
+  const handleCreate = async () => {
+    if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) { await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.'); return; }
+    setSaving(true);
+    try { await api.post('/users', { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role, barangay: form.role === 'barangay' ? form.barangay : '' }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); closeCreator(); await showSuccess('User created successfully.'); } catch (error) { await showError(error.response?.data?.message || error.message || 'Failed to create user.'); } finally { setSaving(false); }
   };
 
   const handleSave = async () => {
@@ -115,7 +125,7 @@ const SuperAdminUsers = () => {
               <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Super Admin</p>
               <h1 className={`mt-2 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>User management</h1>
             </div>
-            <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-200">All roles</span>
+            <button type="button" onClick={() => { setForm({ ...EMPTY_FORM, role: 'user' }); setIsCreating(true); }} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white">+ Add user</button>
           </div>
         </div>
 
@@ -220,6 +230,7 @@ const SuperAdminUsers = () => {
           </div>
         </div>
       )}
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} roleOptions={[{ value: 'superadmin', label: 'Super Admin' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </main>
   );
 };

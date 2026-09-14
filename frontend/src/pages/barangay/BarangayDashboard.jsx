@@ -1,89 +1,72 @@
-﻿import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
+import api from '../../services/api';
+import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
+import { SkeletonCard, SkeletonChart } from '../../components/common/Skeleton';
 
-const stats = [
-  { label: 'Open incidents', value: '12', tone: 'text-amber-400' },
-  { label: 'Resolved', value: '28', tone: 'text-emerald-400' },
-  { label: 'Critical alerts', value: '3', tone: 'text-rose-400' },
-  { label: 'This week', value: '7', tone: 'text-sky-400' },
+const priorities = [
+  { name: 'Urgent', color: '#ef4444' },
+  { name: 'High', color: '#f97316' },
+  { name: 'Medium', color: '#f59e0b' },
+  { name: 'Low', color: '#64748b' },
 ];
 
-const recentReports = [
-  { id: 'HR-2041', title: 'Flooded road near market', status: 'Monitoring', priority: 'High' },
-  { id: 'HR-2046', title: 'Fallen tree along main street', status: 'Assigned', priority: 'Medium' },
-  { id: 'HR-2052', title: 'Waste blockage near public lane', status: 'Queued', priority: 'Low' },
-];
-
-const alerts = [
-  'Heavy rainfall alert for the next 2 hours.',
-  'Road safety team requested for blocked route.',
-  'Two households flagged for drainage inspection.',
-];
+const toCounts = (items = []) => Object.fromEntries(items.map((item) => [item._id || item.name, item.count || item.value || 0]));
 
 const BarangayDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const barangayName = user?.barangay || 'Barangay';
+  const barangay = user?.barangay || '';
+  const [dashboard, setDashboard] = useState({ total: 0, status: [], priority: [], reports: [], timeline: [] });
+  const [month, setMonth] = useState(new Date().getMonth());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className={`text-xs uppercase tracking-[0.24em] ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{barangayName}</p>
-          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Barangay Operations Dashboard</h1>
-        </div>
-        <Link to="/my-reports" className="inline-flex items-center rounded-xl bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-[#2563eb]">
-          View reports
-        </Link>
-      </div>
+  useEffect(() => {
+    if (!token || !barangay) return undefined;
+    let cancelled = false;
+    const encodedBarangay = encodeURIComponent(barangay);
+    setLoading(true);
+    setError('');
+    Promise.all([
+      api.get(`/statistics/barangay/${encodedBarangay}`, { headers: { Authorization: `Bearer ${token}` } }),
+      api.get('/reports', { params: { barangay, page: 1, limit: 5 }, headers: { Authorization: `Bearer ${token}` } }),
+      api.get(`/statistics/barangay/${encodedBarangay}/timeline`, { params: { month }, headers: { Authorization: `Bearer ${token}` } }),
+    ]).then(([overview, reports, timeline]) => {
+      if (cancelled) return;
+      setDashboard({ total: overview.data?.total || 0, status: overview.data?.status || [], priority: overview.data?.priority || [], reports: reports.data?.reports || [], timeline: timeline.data?.data || [] });
+    }).catch((requestError) => {
+      if (!cancelled) setError(requestError.response?.data?.message || 'Unable to load barangay dashboard.');
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [barangay, month, token]);
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item) => (
-          <div key={item.label} className={`rounded-2xl border p-5 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-            <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{item.label}</p>
-            <p className={`mt-3 text-3xl font-bold ${item.tone}`}>{item.value}</p>
-          </div>
-        ))}
-      </div>
+  const statusCounts = toCounts(dashboard.status);
+  const priorityCounts = toCounts(dashboard.priority);
+  const statusData = REPORT_STATUSES.map((name) => ({ name, value: statusCounts[name] || 0 }));
+  const priorityData = priorities.map((item) => ({ ...item, count: priorityCounts[item.name] || 0 }));
+  const maxPriority = Math.max(...priorityData.map((item) => item.count), 1);
+  const chartText = isDark ? '#d1d5db' : '#475569';
+  const chartGrid = isDark ? '#2e303a' : '#e2e8f0';
+  const tooltipStyle = { backgroundColor: isDark ? '#14151d' : '#fff', border: `1px solid ${chartGrid}`, color: isDark ? '#fff' : '#1e293b' };
+  const timelineData = dashboard.timeline.map((item) => ({ date: item._id?.slice(5) || item.date, reports: item.count || 0 }));
 
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Recent incidents</h2>
-            <span className={`text-xs ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>Updated 10 min ago</span>
-          </div>
-          <div className="space-y-3">
-            {recentReports.map((report) => (
-              <div key={report.id} className={`flex items-center justify-between rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
-                <div>
-                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.id}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-xs font-medium ${report.priority === 'High' ? 'text-rose-400' : report.priority === 'Medium' ? 'text-amber-400' : 'text-emerald-400'}`}>{report.priority}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.status}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  if (loading) return <div className="space-y-6"><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <SkeletonCard key={index} className="h-28 w-full" />)}</div><div className="grid gap-6 xl:grid-cols-2"><SkeletonChart className="h-[280px] w-full" /><SkeletonChart className="h-[280px] w-full" /><SkeletonChart className="h-[280px] w-full xl:col-span-2" /></div></div>;
+  if (error) return <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">{error}</div>;
 
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Priority snapshot</h2>
-          <ul className="mt-4 space-y-3">
-            {alerts.map((alert) => (
-              <li key={alert} className={`rounded-xl border border-dashed p-3 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
-                {alert}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+  return <div className="space-y-6">
+    <header><p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{barangay}</p><h1 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Barangay Operations Dashboard</h1></header>
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{[['Total reports', dashboard.total, 'border-blue-500'], ['Pending', statusCounts.Pending || 0, 'border-amber-500'], ['In progress', statusCounts['In Progress'] || 0, 'border-violet-500'], ['Resolved', statusCounts.Resolved || 0, 'border-emerald-500']].map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{value}</p></div>)}</div>
+    <div className="grid gap-6 xl:grid-cols-2">
+      <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}><h2 className={`mb-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by status</h2><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value">{statusData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}</Pie><Tooltip contentStyle={tooltipStyle} /><Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} /></PieChart></ResponsiveContainer></div>
+      <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}><h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Priority queue</h2><p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Reports needing attention first</p><div className="mt-5 space-y-4">{priorityData.map((item) => <div key={item.name}><div className={`mb-1.5 flex justify-between text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}><span>{item.name}</span><strong className={isDark ? 'text-white' : 'text-slate-900'}>{item.count}</strong></div><div className={`h-2 rounded-full ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-100'}`}><div className="h-full rounded-full" style={{ width: `${Math.max((item.count / maxPriority) * 100, item.count ? 8 : 0)}%`, backgroundColor: item.color }} /></div></div>)}</div></div>
+      <div className={`rounded-2xl border p-5 shadow-xl xl:col-span-2 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports over time</h2><p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Daily submissions for the selected month</p></div><div className="flex flex-wrap gap-1.5">{Array.from({ length: 12 }, (_, index) => <button type="button" key={index} onClick={() => setMonth(index)} className={`rounded-lg px-2.5 py-1 text-xs font-medium ${month === index ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-600'}`}>{new Date(2020, index, 1).toLocaleDateString('en-US', { month: 'short' })}</button>)}</div></div><ResponsiveContainer width="100%" height={280}><AreaChart data={timelineData}><CartesianGrid strokeDasharray="3 3" stroke={chartGrid} /><XAxis dataKey="date" stroke={chartText} /><YAxis allowDecimals={false} stroke={chartText} /><Tooltip contentStyle={tooltipStyle} /><Area type="monotone" dataKey="reports" stroke="#3b82f6" fill="#3b82f633" strokeWidth={2} /></AreaChart></ResponsiveContainer></div>
     </div>
-  );
+    <section className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}><h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Recent reports</h2><div className="mt-4 space-y-3">{dashboard.reports.map((report) => <div key={report._id} className={`flex items-center justify-between rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}><div><p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category || 'Hazard'} report`}</p><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report._id}</p></div><div className="text-right"><p className="text-xs font-medium text-[#60a5fa]">{report.priority || 'Medium'}</p><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.status || 'Pending'}</p></div></div>)}{!dashboard.reports.length && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No reports found.</p>}</div></section>
+  </div>;
 };
 
 export default BarangayDashboard;

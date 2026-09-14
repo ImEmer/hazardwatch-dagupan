@@ -164,13 +164,11 @@ const SubmitReport = () => {
                     className={`w-full px-4 py-2.5 bg-[#0a0b0f] border ${errors.category ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg focus:ring-2 focus:ring-[#3b82f6] focus:border-[#3b82f6] outline-none text-white transition appearance-none`}
                     >
                     <option value="">Select hazard type...</option>
-                    {HAZARD_CATEGORY_GROUPS
-                        .filter((group) => group.label !== 'Other')
-                        .flatMap((group) => group.options)
-                        .map((category) => (
-                            <option key={category} value={category}>{category}</option>
-                        ))
-                    }
+                    {HAZARD_CATEGORY_GROUPS.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                        {group.options.map((category) => <option key={category} value={category}>{category}</option>)}
+                        </optgroup>
+                    ))}
                     <option value="Other">Other</option>
                     </select>
                     {errors.category && (

@@ -6,12 +6,14 @@ const scoped = (user) => user.role === 'barangay' ? { assignedBarangay: user.bar
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const reportFilter = (req) => {
-  const { search, status, category, priority, barangay, startDate, endDate } = req.query;
+  const { search, status, category, priority, barangay, startDate, endDate, includeResolved } = req.query;
   const filter = { deletedAt: null, ...scoped(req.user) };
   if (status) filter.status = status;
+  if (includeResolved !== 'true') filter.status = { $ne: 'Resolved' };
   if (category) filter.category = category;
   if (priority) filter.priority = priority;
-  if (barangay) filter.assignedBarangay = barangay;
+  if (req.user.role === 'barangay') filter.assignedBarangay = req.user.barangay || '__unassigned_barangay__';
+  else if (barangay) filter.assignedBarangay = barangay;
   if (search) { const pattern = new RegExp(escapeRegex(search), 'i'); filter.$or = [{ title: pattern }, { description: pattern }, { address: pattern }]; }
   if (startDate || endDate) filter.createdAt = { ...(startDate ? { $gte: new Date(startDate) } : {}), ...(endDate ? { $lte: new Date(`${endDate}T23:59:59.999Z`) } : {}) };
   return filter;

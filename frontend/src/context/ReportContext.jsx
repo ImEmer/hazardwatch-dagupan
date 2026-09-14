@@ -71,7 +71,7 @@
             if (canAccessStaffReports) {
                 try {
                     const response = await api.get('/reports', {
-                        params: { page: 1, limit: 100 },
+                        params: { page: 1, limit: 100, includeResolved: true },
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     const nextReports = response.data?.reports || [];
