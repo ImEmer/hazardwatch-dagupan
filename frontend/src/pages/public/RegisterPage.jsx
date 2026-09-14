@@ -63,7 +63,7 @@ const RegisterPage = () => {
         </label>
         <label className="block text-sm text-gray-300">Password
           <div className="relative mt-2">
-            <input minLength="8" type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 symbol" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${passwordError ? 'border-red-500' : ''}`} />
+            <input minLength="8" type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${passwordError ? 'border-red-500' : ''}`} />
             <PasswordToggle visible={showPassword} onToggle={() => setShowPassword((value) => !value)} label="password" />
           </div>
           {passwordStrength && <span className={`mt-1 block text-xs ${passwordStrength === 'strong' ? 'text-emerald-400' : passwordStrength === 'fair' ? 'text-amber-400' : 'text-red-400'}`}>Strength: {passwordStrength}</span>}
