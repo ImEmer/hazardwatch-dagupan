@@ -14,8 +14,8 @@ const BarangaySidebar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const isDark = theme === 'dark';
-  const normalized = (user?.barangay || '').trim().toLowerCase();
-  const barangayPath = '/barangay';
+  const legacyBarangay = ['bonuan', 'lucao', 'tapuac'].find((name) => pathname.startsWith(`/barangay/${name}`));
+  const barangayPath = legacyBarangay ? `/barangay/${legacyBarangay}` : '/barangay';
 
   useEffect(() => setIsOpen(false), [pathname]);
   useEffect(() => {

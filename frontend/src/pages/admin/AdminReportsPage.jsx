@@ -41,7 +41,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const isDark = theme === 'dark';
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const isLoading = reports.length === 0;
-  const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : searchParams.get('status') || 'all');
+  const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : 'all');
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
@@ -130,6 +130,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
             {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} title="View resolved cases" aria-label="View resolved cases" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>}
+            {!resolvedOnly && <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${statusFilter === 'all' ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-slate-900'}`}>All</button>}
             {(resolvedOnly ? ['Resolved'] : REPORT_STATUSES.filter((status) => status !== 'Resolved')).map((status) => (
               <button
                 key={status}
@@ -148,7 +149,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <input
             id="reportSearch"
             name="reportSearch"
@@ -184,9 +185,8 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </select>
 
           <select value={barangayFilter} onChange={(event) => setBarangayFilter(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="all">All barangays</option>{barangays.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
-          <div className="relative md:col-span-2">
-            <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Date range</span>
-            <button type="button" onClick={() => setIsDatePickerOpen((open) => !open)} className={`mt-1 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} aria-expanded={isDatePickerOpen} aria-haspopup="dialog">
+          <div className="relative md:col-span-2 xl:col-span-1">
+            <button type="button" onClick={() => setIsDatePickerOpen((open) => !open)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} aria-expanded={isDatePickerOpen} aria-haspopup="dialog">
               <span>{formatDateRange(dateRange)}</span>
               <svg className="h-4 w-4 text-[#60a5fa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" /></svg>
             </button>
@@ -200,10 +200,8 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
               </div>
             )}
           </div>
-          <div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{filteredReports.length} results</div>
-          <button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter !== 'Resolved' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{filteredReports.length} results</div>{[[search, `Search: ${search}`, () => setSearch('')], [statusFilter !== 'all' && statusFilter !== 'Resolved', statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')], [startDate, `From: ${startDate}`, () => setStartDate('')], [endDate, `To: ${endDate}`, () => setEndDate('')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}<button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className={`ml-auto inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button></div>
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
