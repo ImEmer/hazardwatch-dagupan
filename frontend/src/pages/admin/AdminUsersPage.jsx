@@ -1,6 +1,3 @@
-  const result = await confirmAction(`Delete ${user.name}'s account? This action cannot be undone.`, 'Delete user');
-  setUsers((currentUsers) => currentUsers.filter((currentUser) => currentUser.id !== user.id));
-  await showSuccess('User deleted successfully.');
 import React, { useCallback, useEffect, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
@@ -148,14 +145,14 @@ const AdminUsersPage = () => {
     }
   };
 
-  const handleDelete = async (user) => {
-    if (user.role === 'superadmin' || user.role === 'admin' || user.role === 'staff' || user.id === currentUser?._id) return;
-    const result = await confirmAction(`Deactivate ${user.name}'s account?`, 'Delete user');
+  const handleDelete = async (targetUser) => {
+    if (targetUser.role === 'superadmin' || targetUser.role === 'admin' || targetUser.role === 'staff' || targetUser.id === currentUser?._id) return;
+    const result = await confirmAction(`Delete ${targetUser.name}'s account? This action cannot be undone.`, 'Delete user');
     if (!result.isConfirmed) return;
     try {
-      await api.delete(`/users/${user.id}`, { headers: { Authorization: `Bearer ${token}` } });
-      await fetchUsers();
-      await showSuccess('User deactivated successfully.');
+      await api.delete(`/users/${targetUser.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setUsers((currentUsers) => currentUsers.filter((rowUser) => rowUser.id !== targetUser.id));
+      await showSuccess('User deleted successfully.');
     } catch (error) {
       await showError(error.response?.data?.message || error.message || 'Failed to delete user.');
     }
