@@ -1,5 +1,13 @@
 export const REPORT_STATUSES = ['Pending', 'In Progress', 'Resolved', 'Closed'];
 
+export const DAGUPAN_BARANGAYS = [
+  'Bacayao Norte', 'Bacayao Sur', 'Banaoang', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV',
+  'Bolosan', 'Bonuan Binloc', 'Bonuan Boquig', 'Bonuan Gueset', 'Calmay', 'Carael', 'Caranglaan',
+  'Herrero', 'Herrero-Perez', 'Lasip Chico', 'Lasip Grande', 'Lomboy', 'Lucao', 'Malued', 'Mamalingling',
+  'Mangin', 'Mayombo', 'Pantal', 'Pogo Chico', 'Pogo Grande', 'Salapingao', 'San Fabian', 'Sapanglang',
+  'Tambac', 'Tapuac', 'Tebeng', 'Tondaligan',
+].sort((left, right) => left.localeCompare(right));
+
 export const HAZARD_CATEGORIES = [
   'Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal',
   'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping',

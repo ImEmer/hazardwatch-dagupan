@@ -52,25 +52,23 @@ const SuperAdminSettings = () => {
           <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Super Admin</p>
           <h1 className="mt-3 text-3xl font-bold">Account settings</h1>
         </div>
-        <form onSubmit={saveProfile} className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6 shadow-xl">
+        <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6 shadow-xl">
           <h2 className="text-xl font-semibold">Profile</h2>
-          <div className="mt-5 space-y-4">
+          <form onSubmit={saveProfile} className="mt-5 space-y-4">
             <label className="block text-sm text-gray-300">Full name<input value={profile.name} onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))} className={`${inputClass} mt-2`} /></label>
             <label className="block text-sm text-gray-300">Email<input type="email" value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} className={`${inputClass} mt-2`} /></label>
             <button type="submit" disabled={saving} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold disabled:opacity-50">Save profile</button>
-          </div>
-        </form>
-        <form onSubmit={savePassword} className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6 shadow-xl">
-          <h2 className="text-xl font-semibold">Change password</h2>
-          <div className="mt-5 space-y-4">
+          </form>
+          <form onSubmit={savePassword} className="mt-8 space-y-4 border-t border-[#2e303a] pt-6">
+            <h2 className="text-xl font-semibold">Change password</h2>
             {[
               ['current', 'Current password'],
               ['next', 'New password'],
               ['confirm', 'Confirm new password'],
             ].map(([key, label]) => <input key={key} type="password" placeholder={label} value={passwords[key]} onChange={(event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))} className={inputClass} />)}
             <button type="submit" disabled={saving} className="rounded-lg border border-[#3b82f6] px-4 py-2 text-sm font-semibold text-[#60a5fa] disabled:opacity-50">Change password</button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </main>
   );

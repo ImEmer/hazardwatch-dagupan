@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/style.css';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
@@ -11,9 +9,6 @@ import { showError, showSuccess } from '../../services/alerts';
 const PAGE_SIZE = 10;
 const STATUSES = ['Pending', 'In Progress', 'Closed'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
-const formatDate = (date) => date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
-const formatRange = (range) => !range?.from ? 'Select date range' : range.to ? `${range.from.toLocaleDateString()} - ${range.to.toLocaleDateString()}` : `${range.from.toLocaleDateString()} - ...`;
-
 const BarangayReportsPage = ({ resolvedOnly = false }) => {
   const { user, token } = useAuth();
   const { theme } = useTheme();
@@ -26,10 +21,6 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
   const [status, setStatus] = useState(resolvedOnly ? 'Resolved' : 'all');
   const [priority, setPriority] = useState('all');
   const [category, setCategory] = useState('all');
-  const [dateRange, setDateRange] = useState({});
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [dateOpen, setDateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -45,8 +36,6 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       priority: priority === 'all' ? undefined : priority,
       category: category === 'all' ? undefined : category,
       search: search || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
     };
     setLoading(true);
     api.get('/reports', { params, headers: { Authorization: `Bearer ${token}` } })
@@ -58,15 +47,14 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       .catch((requestError) => { if (!cancelled) setError(requestError.response?.data?.message || 'Unable to load reports.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [category, endDate, page, priority, resolvedOnly, search, startDate, status, token, user?.barangay]);
+  }, [category, page, priority, resolvedOnly, search, status, token, user?.barangay]);
 
   const isVisible = (report) => resolvedOnly ? report.status === 'Resolved' : report.status !== 'Resolved';
   const updateFilter = (setter, value) => { setter(value); setPage(1); };
-  const clearDateRange = () => { setDateRange({}); setStartDate(''); setEndDate(''); setPage(1); setDateOpen(false); };
-  const resetFilters = () => { setSearch(''); setStatus(resolvedOnly ? 'Resolved' : 'all'); setPriority('all'); setCategory('all'); clearDateRange(); };
+  const resetFilters = () => { setSearch(''); setStatus(resolvedOnly ? 'Resolved' : 'all'); setPriority('all'); setCategory('all'); setPage(1); };
   const exportCsv = async () => {
     try {
-      const response = await api.get('/reports/export', { params: { barangay: user.barangay, includeResolved: resolvedOnly, status: resolvedOnly ? 'Resolved' : status === 'all' ? undefined : status, priority: priority === 'all' ? undefined : priority, category: category === 'all' ? undefined : category, search: search || undefined, startDate: startDate || undefined, endDate: endDate || undefined }, responseType: 'blob', headers: { Authorization: `Bearer ${token}` } });
+      const response = await api.get('/reports/export', { params: { barangay: user.barangay, includeResolved: resolvedOnly, status: resolvedOnly ? 'Resolved' : status === 'all' ? undefined : status, priority: priority === 'all' ? undefined : priority, category: category === 'all' ? undefined : category, search: search || undefined }, responseType: 'blob', headers: { Authorization: `Bearer ${token}` } });
       const url = URL.createObjectURL(response.data); const link = document.createElement('a'); link.href = url; link.download = 'barangay-reports.csv'; link.click(); URL.revokeObjectURL(url); await showSuccess('Reports exported successfully.');
     } catch (requestError) { await showError(requestError.response?.data?.message || 'Unable to export reports.'); }
   };
@@ -93,18 +81,14 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <input value={search} onChange={(event) => updateFilter(setSearch, event.target.value)} placeholder="Search report title, address, category..." className={field} />
           <select value={priority} onChange={(event) => updateFilter(setPriority, event.target.value)} className={field}><option value="all">All priorities</option>{PRIORITIES.map((item) => <option key={item}>{item}</option>)}</select>
           <select value={category} onChange={(event) => updateFilter(setCategory, event.target.value)} className={field}><option value="all">All categories</option>{HAZARD_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select>
           <select value={user.barangay} disabled className={`${field} disabled:opacity-70`}><option>{user.barangay}</option></select>
-          <div className="relative xl:col-span-1">
-            <button type="button" onClick={() => setDateOpen((open) => !open)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} aria-expanded={dateOpen} aria-haspopup="dialog"><span>{formatRange(dateRange)}</span><svg className="h-4 w-4 text-[#60a5fa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" /></svg></button>
-            {dateOpen && <div className={`absolute left-0 top-full z-30 mt-2 rounded-xl border p-3 shadow-2xl ${panel}`} role="dialog" aria-label="Choose report date range"><DayPicker mode="range" selected={dateRange} onSelect={(range) => { const next = range || {}; setDateRange(next); setStartDate(formatDate(next.from)); setEndDate(formatDate(next.to)); setPage(1); if (next.from && next.to) setDateOpen(false); }} numberOfMonths={2} showOutsideDays className={isDark ? 'hazard-date-picker-dark' : ''} /><div className="flex items-center justify-between border-t border-[#2e303a] pt-3"><span className={`text-xs ${muted}`}>{formatRange(dateRange)}</span><button type="button" onClick={clearDateRange} className="text-xs font-semibold text-[#60a5fa]">Clear</button></div></div>}
-          </div>
           <button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm xl:ml-auto"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2"><div className={`rounded-xl border px-3 py-2.5 text-sm ${panel}`}>{reports.filter(isVisible).length} results</div>{[[search, `Search: ${search}`, () => updateFilter(setSearch, '')], [priority !== 'all' && priority, priority, () => updateFilter(setPriority, 'all')], [category !== 'all' && category, category, () => updateFilter(setCategory, 'all')], [startDate, `From: ${startDate}`, clearDateRange], [endDate, `To: ${endDate}`, clearDateRange]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><div className={`rounded-xl border px-3 py-2.5 text-sm ${panel}`}>{reports.filter(isVisible).length} results</div>{[[search, `Search: ${search}`, () => updateFilter(setSearch, '')], [priority !== 'all' && priority, priority, () => updateFilter(setPriority, 'all')], [category !== 'all' && category, category, () => updateFilter(setCategory, 'all')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
       </section>
 
       <section className={`overflow-hidden rounded-2xl border shadow-xl ${panel}`}><div className="overflow-x-auto"><table className="min-w-full table-fixed text-left text-sm"><colgroup><col className="w-[22%]" /><col className="w-[12%]" /><col className="w-[18%]" /><col className="w-[13%]" /><col className="w-[12%]" /><col className="w-[12%]" /><col className="w-[11%]" /></colgroup><thead className={isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-500'}><tr><th className="px-4 py-3">Report</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Priority</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{loading ? <tr><td colSpan="7" className={`p-10 text-center ${muted}`}>Loading reports...</td></tr> : error ? <tr><td colSpan="7" className="p-10 text-center text-red-400">{error}</td></tr> : !reports.filter(isVisible).length ? <tr><td colSpan="7" className={`p-10 text-center ${muted}`}>No matching reports found.</td></tr> : reports.filter(isVisible).map((report) => <tr key={report._id} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><td className="px-4 py-4"><p className={isDark ? 'text-white' : 'text-slate-900'}>{report.title || `${report.category} report`}</p><p className={`mt-1 text-xs ${muted}`}>{report.reportedBy?.name || 'Citizen report'}</p></td><td className="px-4 py-4"><span className="rounded-full px-2 py-1 text-xs text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category}</span></td><td className={`max-w-0 truncate px-4 py-4 ${muted}`}>{report.address || 'Dagupan City'}</td><td className="px-4 py-4"><select value={report.status} onChange={(event) => updateStatus(report, event.target.value)} className={`rounded-lg border px-2 py-1.5 text-xs ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || ''}`}><option>Pending</option><option>In Progress</option><option>Resolved</option><option>Closed</option></select></td><td className="px-4 py-4">{report.priority || 'Medium'}</td><td className={`whitespace-nowrap px-4 py-4 ${muted}`}>{new Date(report.createdAt).toLocaleDateString()}</td><td className="px-4 py-4"><Link to={`/barangay/reports/${report._id}`} className="text-[#3b82f6]" aria-label="Open report">↗</Link></td></tr>)}</tbody></table></div></section>

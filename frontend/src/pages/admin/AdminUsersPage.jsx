@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import UserFormModal from '../../components/common/UserFormModal';
+import { DAGUPAN_BARANGAYS } from '../../services/reportOptions';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -133,6 +134,10 @@ const AdminUsersPage = () => {
 
     if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
       await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.');
+      return;
+    }
+    if (form.role === 'barangay' && !form.barangay) {
+      await showError('Barangay is required for Barangay users.');
       return;
     }
     setSaving(true);
@@ -319,12 +324,12 @@ const AdminUsersPage = () => {
               {form.role === 'barangay' && (
                 <label className="block text-sm">
                   <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Barangay</span>
-                  <input
+                  <select
                     value={form.barangay}
                     onChange={(event) => setForm((prev) => ({ ...prev, barangay: event.target.value }))}
                     className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
-                    placeholder="Bonuan"
-                  />
+                    required
+                  ><option value="">Select barangay</option>{DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
                 </label>
               )}
             </div>
@@ -336,7 +341,7 @@ const AdminUsersPage = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating roleOptions={currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: 'Super Admin' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }] : [{ value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: 'Super Admin' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }] : [{ value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </div>
   );
 };
