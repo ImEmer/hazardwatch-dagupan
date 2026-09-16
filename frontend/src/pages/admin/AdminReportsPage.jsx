@@ -110,7 +110,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
             {!resolvedOnly && <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${statusFilter === 'all' ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-slate-900'}`}>All</button>}
-            {(resolvedOnly ? ['Resolved'] : ['Pending', 'In Progress']).map((status) => (
+            {(resolvedOnly ? ['Resolved'] : ['Pending', 'In Progress', 'Resolved']).map((status) => (
               <button
                 key={status}
                 onClick={() => status === 'Resolved' && !resolvedOnly ? navigate(`${basePath}/reports/resolved`) : setStatusFilter(status)}

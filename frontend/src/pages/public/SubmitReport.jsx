@@ -80,8 +80,14 @@ const SubmitReport = () => {
     };
 
     const handleRemovePhoto = (index) => {
-        setImages((current) => current.filter((_, imageIndex) => imageIndex !== index));
-        setErrors((prev) => ({ ...prev, photo: 'Photo evidence is required.' }));
+        setImages((current) => {
+            const nextImages = current.filter((_, imageIndex) => imageIndex !== index);
+            setErrors((prev) => ({
+                ...prev,
+                photo: nextImages.length > 0 ? '' : 'Photo evidence is required.',
+            }));
+            return nextImages;
+        });
     };
 
     const validateForm = () => {
@@ -242,7 +248,7 @@ const SubmitReport = () => {
                         Photo / Evidence <span className="text-red-400">*</span>
                     </span>
                     </label>
-                    <div className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg p-4 hover:border-[#3b82f6]/50 transition`}>
+                    <div className={`border-2 border-dashed ${errors.photo && images.length === 0 ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg p-4 hover:border-[#3b82f6]/50 transition`}>
                     {images.length ? (
                         <div>
                         <div className="flex flex-wrap gap-3">
@@ -283,7 +289,7 @@ const SubmitReport = () => {
                         </div>
                     )}
                     </div>
-                    {errors.photo && (
+                    {errors.photo && images.length === 0 && (
                     <p className="mt-1 flex items-center gap-1 text-xs text-red-400">
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

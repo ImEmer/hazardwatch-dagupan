@@ -176,11 +176,11 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
                 All
               </button>
             )}
-            {(resolvedOnly ? ["Resolved"] : ["Pending", "In Progress"]).map((item) => (
+            {(resolvedOnly ? ["Resolved"] : ["Pending", "In Progress", "Resolved"]).map((item) => (
               <button
                 type="button"
                 key={item}
-                onClick={() => updateFilter(setStatus, item)}
+                onClick={() => item === "Resolved" && !resolvedOnly ? navigate("/barangay/reports/resolved") : updateFilter(setStatus, item)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium ${status === item ? "bg-[#3b82f6] text-white" : isDark ? "bg-[#0a0b0f] text-gray-300" : "bg-slate-100 text-slate-700"}`}
               >
                 {item}

@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import UserFormModal from '../../components/common/UserFormModal';
+import SuspendUserModal from '../../components/SuspendUserModal';
 import { DAGUPAN_BARANGAYS } from '../../services/reportOptions';
 
 const roleBadge = {
@@ -42,6 +43,8 @@ const AdminUsersPage = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [suspendingUser, setSuspendingUser] = useState(null);
+  const [suspensionSaving, setSuspensionSaving] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -55,7 +58,8 @@ const AdminUsersPage = () => {
       setUsers((body.users || []).map((user) => ({
         ...user,
         id: user._id || user.id,
-        status: user.status === 'suspended' ? 'Suspended' : user.status === 'banned' ? 'Banned' : user.status === 'deleted' ? 'Deleted' : user.isActive ? 'Active' : 'Inactive',
+        status: user.status || (user.isActive ? 'active' : 'inactive'),
+        statusLabel: user.status === 'suspended' ? 'Suspended' : user.status === 'banned' ? 'Banned' : user.status === 'deleted' ? 'Deleted' : user.isActive ? 'Active' : 'Inactive',
         lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
       })));
     } catch (error) {
@@ -191,12 +195,17 @@ const AdminUsersPage = () => {
     } catch (error) { await showError(error.response?.data?.message || 'Unable to delete selected users.'); }
   };
 
+  const confirmSuspension = async (details) => {
+    if (!suspendingUser) return;
+    setSuspensionSaving(true);
+    try { await api.post(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
+  };
+
   const changeRestriction = async (targetUser, action) => {
-    const reason = window.prompt(`${action === 'suspend' ? 'Suspension' : action === 'ban' ? 'Ban' : 'Unsuspension'} reason`, targetUser.suspensionReason || '');
-    if (reason === null) return;
-    const duration = action === 'suspend' ? window.prompt('Duration in days: 1, 3, 7, or 30', '7') : undefined;
-    if (action === 'suspend' && !['1', '3', '7', '30'].includes(duration)) return;
-    try { await api.post(`/users/${targetUser.id}/${action}`, { duration, reason }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await showSuccess(`User ${action}ed successfully.`); } catch (error) { await showError(error.response?.data?.message || `Unable to ${action} user.`); }
+    if (action === 'suspend') { setSuspendingUser(targetUser); return; }
+    const result = await confirmAction(`Unsuspend ${targetUser.name}'s account?`, 'Unsuspend user');
+    if (!result.isConfirmed) return;
+    try { await api.post(`/users/${targetUser.id}/unsuspend`, {}, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await showSuccess('User unsuspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to unsuspend user.'); }
   };
 
   const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
@@ -266,8 +275,8 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.barangay || '—'}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusBadge[user.status] || statusBadge.Inactive}`}>
-                      {user.status}
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusBadge[user.statusLabel] || statusBadge.Inactive}`}>
+                      {user.statusLabel}
                     </span>
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
@@ -314,6 +323,8 @@ const AdminUsersPage = () => {
           <button type="button" onClick={() => setPage((current) => Math.min(filteredPageCount, current + 1))} disabled={page === filteredPageCount} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Next page">&gt;</button>
         </div>
       </div>
+
+      <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
 
       {isEditing && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

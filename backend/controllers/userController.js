@@ -100,8 +100,9 @@ export const suspendUser = async (req, res, next) => {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     if (String(target._id) === String(req.user._id) || !enforceUserManagementRules(req.user, target)) return res.status(403).json({ success: false, message: 'You are not allowed to suspend this user.' });
-    const durationMs = getDurationMs(req.body.duration);
-    const until = req.body.duration === 'custom' ? new Date(req.body.suspendedUntil) : new Date(Date.now() + durationMs);
+    const requestedDuration = req.body.durationInDays ?? req.body.duration;
+    const durationMs = getDurationMs(requestedDuration);
+    const until = requestedDuration === 'custom' ? new Date(req.body.suspendedUntil) : new Date(Date.now() + durationMs);
     if (!Number.isFinite(until.getTime()) || until <= new Date()) return res.status(400).json({ success: false, message: 'A valid suspension duration is required.' });
     target.status = 'suspended'; target.isActive = false; target.suspendedUntil = until; target.suspensionReason = String(req.body.reason || 'Temporarily suspended by administrator').trim(); target.suspendedBy = req.user._id;
     await target.save({ validateBeforeSave: false });
