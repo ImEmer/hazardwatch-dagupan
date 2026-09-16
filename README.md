@@ -2,6 +2,16 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## Critical UI Rules - Do Not Revert
+
+### Hazard Type Dropdown (Submit Report)
+
+- Must remain a flat list of `<option>` elements.
+- Never wrap options in `<optgroup>`.
+- Never add bold group headers such as "Road and Traffic" or "Water and Drainage".
+- Add new categories to `HAZARD_CATEGORY_GROUPS` in `frontend/src/services/reportOptions.js`; the dropdown flattens them automatically.
+- If any developer or AI agent tries to reintroduce `<optgroup>`, reject the change.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)

@@ -57,6 +57,8 @@ export const HAZARD_CATEGORIES = [
   'Vandalism', 'Water Leak',
 ];
 
+// HAZARD_CATEGORY_GROUPS is a grouping helper only. It must never be rendered
+// directly with a native option-group wrapper; SubmitReport.jsx flattens it into plain options.
 export const HAZARD_CATEGORY_GROUPS = [
   { label: 'Road and Traffic', options: ['Pothole', 'Damaged Road', 'Broken Streetlight', 'Broken Traffic Light', 'Fallen Tree', 'Missing Road Sign', 'Traffic Obstruction'] },
   { label: 'Water and Drainage', options: ['Flooding', 'Clogged Drainage', 'Broken Water Pipe', 'Contaminated Water', 'Water Leak', 'Clogged Canal (Waste)'] },

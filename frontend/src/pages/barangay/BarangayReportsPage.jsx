@@ -25,7 +25,10 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!token || !user?.barangay) return undefined;
+    if (!token || !user?.barangay) {
+      setLoading(false);
+      return undefined;
+    }
     let cancelled = false;
     const params = {
       barangay: user.barangay,

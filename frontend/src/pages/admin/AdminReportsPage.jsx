@@ -6,6 +6,7 @@ import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADG
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
+import Skeleton from '../../components/common/Skeleton';
 
 const PAGE_SIZE = 10;
 const priorityColors = {
@@ -23,14 +24,14 @@ const priorityColorsLight = {
 };
 
 const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
-  const { reports, updateReportStatus, deleteReport } = useReports();
+  const { reports, reportsLoading, reportsError, updateReportStatus, deleteReport } = useReports();
   const { token } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const isLoading = reports.length === 0;
+  const isLoading = reportsLoading;
   const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : 'all');
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
@@ -186,11 +187,15 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                   <tr key={rowIndex} className={`border-t align-middle ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
                     {Array.from({ length: 7 }).map((__, colIndex) => (
                       <td key={`${rowIndex}-${colIndex}`} className="px-4 py-3">
-                        <div className="h-5 animate-pulse rounded-md bg-[#1a1a1f]" style={{ width: colIndex === 0 ? '80%' : colIndex === 1 ? '60%' : colIndex === 2 ? '90%' : colIndex === 3 ? '70%' : colIndex === 4 ? '70%' : colIndex === 5 ? '60%' : '50%' }} />
+                        <Skeleton className="h-5" style={{ width: colIndex === 0 ? '80%' : colIndex === 1 ? '60%' : colIndex === 2 ? '90%' : colIndex === 3 ? '70%' : colIndex === 4 ? '70%' : colIndex === 5 ? '60%' : '50%' }} />
                       </td>
                     ))}
                   </tr>
                 ))
+              ) : reportsError ? (
+                <tr>
+                  <td colSpan="7" className="p-10 text-center text-red-400">{reportsError}</td>
+                </tr>
               ) : filteredReports.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-4 py-10 text-center text-gray-400">

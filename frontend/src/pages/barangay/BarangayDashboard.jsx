@@ -26,7 +26,10 @@ const BarangayDashboard = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!token || !barangay) return undefined;
+    if (!token || !barangay) {
+      setLoading(false);
+      return undefined;
+    }
     let cancelled = false;
     const encodedBarangay = encodeURIComponent(barangay);
     setLoading(true);

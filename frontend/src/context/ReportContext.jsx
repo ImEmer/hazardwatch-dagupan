@@ -32,6 +32,8 @@
         const canAccessStaffReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
         const [reports, setReports] = useState(INITIAL_REPORTS);
         const [publicReports, setPublicReports] = useState(INITIAL_REPORTS);
+        const [reportsLoading, setReportsLoading] = useState(true);
+        const [reportsError, setReportsError] = useState('');
 
         useEffect(() => {
             localStorage.removeItem('hazardwatch_reports');
@@ -68,8 +70,10 @@
         }, [canAccessStaffReports]);
 
         const fetchReports = useCallback(async () => {
-            if (canAccessStaffReports) {
-                try {
+            setReportsLoading(true);
+            setReportsError('');
+            try {
+                if (canAccessStaffReports) {
                     const response = await api.get('/reports', {
                         params: { page: 1, limit: 100, includeResolved: true },
                         headers: { Authorization: `Bearer ${token}` },
@@ -77,27 +81,31 @@
                     const nextReports = response.data?.reports || [];
                     setReports(nextReports);
                     return nextReports;
-                } catch (error) {
-                    const status = error.response?.status;
-                    if (status === 401 || status === 403) {
-                        setReports([]);
-                        return [];
-                    }
-                    throw new Error(error.response?.data?.message || 'Unable to load reports.');
                 }
-            }
 
-            if (!token && !isTokenValid) {
+                if (!token && !isTokenValid) {
+                    return fetchPublicReports();
+                }
+
+                if (token && !isTokenValid) {
+                    setReports([]);
+                    setPublicReports([]);
+                    return [];
+                }
+
                 return fetchPublicReports();
+            } catch (error) {
+                const status = error.response?.status;
+                if (status === 401 || status === 403) {
+                    setReports([]);
+                    return [];
+                }
+                const message = error.response?.data?.message || error.message || 'Unable to load reports.';
+                setReportsError(message);
+                throw new Error(message);
+            } finally {
+                setReportsLoading(false);
             }
-
-            if (token && !isTokenValid) {
-                setReports([]);
-                setPublicReports([]);
-                return [];
-            }
-
-            return fetchPublicReports();
         }, [canAccessStaffReports, fetchPublicReports, isTokenValid, token]);
 
         useEffect(() => {
@@ -224,7 +232,7 @@
         };
 
         return (
-            <ReportContext.Provider value={{ reports, publicReports, addReport, updateReportStatus, updateReportPriority, deleteReport, fetchReports, fetchPublicReports }}>
+            <ReportContext.Provider value={{ reports, publicReports, reportsLoading, reportsError, addReport, updateReportStatus, updateReportPriority, deleteReport, fetchReports, fetchPublicReports }}>
             {children}
             </ReportContext.Provider>
         );

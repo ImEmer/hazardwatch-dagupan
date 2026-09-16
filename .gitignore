@@ -25,3 +25,8 @@ backend/uploads/*
 *.njsproj
 *.sln
 *.sw?
+
+# Local test credentials - DO NOT COMMIT
+ACCOUNTS.md
+credentials.local.md
+*.credentials.md

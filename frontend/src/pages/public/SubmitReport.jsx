@@ -144,7 +144,7 @@ const SubmitReport = () => {
         <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-12">
             {/* LEFT COLUMN - FORM */}
-            <div data-aos="fade-up" className="lg:col-span-2 bg-[#14151d] border border-[#2e303a] rounded-xl shadow-md p-6">
+            <div data-aos="fade-up" className="lg:col-span-2 lg:h-full bg-[#14151d] border border-[#2e303a] rounded-xl shadow-md p-6">
                 <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Hazard Type */}
                 <div>
@@ -156,7 +156,15 @@ const SubmitReport = () => {
                         Hazard Type <span className="text-red-400">*</span>
                     </span>
                     </label>
-                    <select
+                                        {/*
+                                              WARNING: DO NOT CHANGE THIS DROPDOWN TO USE a native option-group wrapper.
+                                            This dropdown must remain a FLAT LIST. Group headers such as
+                                            Road and Traffic or Water and Drainage are not allowed because
+                                            they render as bold, non-selectable labels that confuse users.
+                                            Add new categories to HAZARD_CATEGORY_GROUPS and keep the
+                                              flatMap below; do not add grouped-option wrappers.
+                                        */}
+                                        <select
                     id="category"
                     name="category"
                     value={form.category}
@@ -164,11 +172,12 @@ const SubmitReport = () => {
                     className={`w-full px-4 py-2.5 bg-[#0a0b0f] border ${errors.category ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg focus:ring-2 focus:ring-[#3b82f6] focus:border-[#3b82f6] outline-none text-white transition appearance-none`}
                     >
                     <option value="">Select hazard type...</option>
-                    {HAZARD_CATEGORY_GROUPS.map((group) => (
-                        <optgroup key={group.label} label={group.label}>
-                        {group.options.map((category) => <option key={category} value={category}>{category}</option>)}
-                        </optgroup>
-                    ))}
+                    {HAZARD_CATEGORY_GROUPS
+                        .filter((group) => group.label !== 'Other')
+                        .flatMap((group) => group.options)
+                        .map((category) => (
+                            <option key={category} value={category}>{category}</option>
+                        ))}
                     <option value="Other">Other</option>
                     </select>
                     {errors.category && (
@@ -312,11 +321,8 @@ const SubmitReport = () => {
             </div>
 
             {/* RIGHT COLUMN - MAP */}
-            <div data-aos="fade-left" data-aos-delay="150" className="lg:col-span-3">
-                <label className="mb-1.5 block text-sm font-medium text-gray-300">
-                    Location <span className="text-red-400">*</span>
-                </label>
-                <div className={`bg-[#14151d] border ${errors.location ? 'border-red-500' : 'border-[#2e303a]'} rounded-xl overflow-hidden h-full`}>
+            <div data-aos="fade-left" data-aos-delay="150" className="lg:col-span-3 lg:h-full">
+                <div className={`h-full bg-[#14151d] border ${errors.location ? 'border-red-500' : 'border-[#2e303a]'} rounded-xl overflow-hidden flex flex-col`}>
                 <div className="p-3 border-b border-[#2e303a] bg-[#0a0b0f]/50 flex items-center gap-2">
                     <svg className="w-4 h-4 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -325,14 +331,16 @@ const SubmitReport = () => {
                     Click the map to select the hazard location.
                     </p>
                 </div>
-                <InteractiveMap 
-                    reports={[]} 
-                    onMapClick={handleMapClick} 
-                    selectedLocation={selectedLocation} 
-                    height="520px" 
-                    showClickInstruction={false}
-                    showSelectedMarker={true}
-                />
+                <div className="flex-1 min-h-[400px]">
+                    <InteractiveMap
+                        reports={[]}
+                        onMapClick={handleMapClick}
+                        selectedLocation={selectedLocation}
+                        height="100%"
+                        showClickInstruction={false}
+                        showSelectedMarker={true}
+                    />
+                </div>
                 <div className="p-3 border-t border-[#2e303a] bg-[#0a0b0f]/50 flex items-center gap-2">
                     {selectedLocation ? (
                     <>
@@ -362,8 +370,8 @@ const SubmitReport = () => {
                         <span className="text-sm text-gray-400">No location selected yet.</span>
                     </>
                     )}
+                    {selectedLocation && <p className="mt-1 text-xs text-green-400">Location selected.</p>}
                 </div>
-                {selectedLocation && <p className="mt-1 text-xs text-green-400">Location selected.</p>}
                 </div>
             </div>
             </div>
