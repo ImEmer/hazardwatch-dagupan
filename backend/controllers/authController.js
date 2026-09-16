@@ -1,21 +1,24 @@
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { generateToken } from '../utils/generateToken.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
 
 const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
+const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
+const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 
 export const register = async (req, res, next) => {
   try {
     const { name, email, password, role, barangay, phone } = req.body;
-    const exists = await User.findOne({ email });
-    if (exists) return res.status(409).json({ success: false, message: 'Email already registered.' });
+    if (typeof email === 'string' && /\s/.test(email)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
+    if (typeof password === 'string' && /\s/.test(password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
 
-    const isPrivilegedRole = req.user && ['superadmin', 'admin'].includes(req.user.role);
-    const safeRole = isPrivilegedRole && ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
+    const exists = await User.findOne({ email: String(email || '').trim().toLowerCase() });
+    if (exists) return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
 
-    const user = await User.create({ name, email, password, role: safeRole, barangay, phone });
+    const safeRole = ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
+    const user = await User.create({ name, email: String(email).trim().toLowerCase(), password, role: safeRole, barangay, phone, status: 'active', isActive: true });
     await logActivity({ actor: user, action: 'registered', message: `${user.name} registered a new account`, scope: user.role === 'barangay' ? 'barangay' : 'user', entityType: 'auth', entityId: user._id }).catch(() => {});
     res.status(201).json({ success: true, user: publicUser(user) });
   } catch (error) { next(error); }
@@ -24,15 +27,16 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const lockout = getLoginLockout(req, email);
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const lockout = getLoginLockout(req, normalizedEmail);
     if (lockout) {
       res.set('Retry-After', String(lockout.retryAfter));
       return res.status(429).json({ success: false, message: `Too many failed login attempts. Please try again in ${Math.ceil(lockout.retryAfter / 60)} minutes.` });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
-      const failedLogin = recordFailedLogin(req, email);
+      const failedLogin = recordFailedLogin(req, normalizedEmail);
       if (failedLogin) {
         res.set('Retry-After', String(failedLogin.retryAfter));
         return res.status(429).json({ success: false, message: 'Too many failed login attempts. Please try again in 5 minutes.' });
@@ -40,13 +44,29 @@ export const login = async (req, res, next) => {
 
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
-    if (!user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
-    clearFailedLogins(req, email);
+    if (user.status === 'suspended' || user.status === 'banned') {
+      const reason = user.suspensionReason || 'Your account is restricted.';
+      return res.status(403).json({ success: false, message: reason });
+    }
+    if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
+    if (user.status === 'suspended' && user.suspendedUntil && new Date(user.suspendedUntil) < new Date()) {
+      user.status = 'active';
+      user.isActive = true;
+      user.suspendedUntil = undefined;
+      user.suspensionReason = undefined;
+      user.suspendedBy = undefined;
+      await user.save({ validateBeforeSave: false });
+    }
+    clearFailedLogins(req, normalizedEmail);
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
     await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
-    res.json({ success: true, token: generateToken(user._id), user: publicUser(user) });
+    res.json({ success: true, token: issueToken(user), user: publicUser(user) });
   } catch (error) { next(error); }
+};
+
+export const refresh = async (req, res) => {
+  res.json({ success: true, token: issueToken(req.user), user: publicUser(req.user) });
 };
 
 export const logout = async (req, res) => {
@@ -86,10 +106,19 @@ export const updateProfile = async (req, res, next) => {
 
 export const deleteAccount = async (req, res, next) => {
   try {
+    req.user.isActive = false;
+    req.user.status = 'deleted';
+    req.user.deletedAt = new Date();
+    await req.user.save({ validateBeforeSave: false });
     await logActivity({ actor: req.user, action: 'account_deleted', message: `${req.user.name} deleted their account`, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: req.user._id }).catch(() => {});
-    await User.findByIdAndDelete(req.user._id);
     res.json({ success: true, message: 'Account deleted successfully.' });
   } catch (error) { next(error); }
+};
+
+export const checkEmail = async (req, res) => {
+  const email = String(req.query.email || '').trim().toLowerCase();
+  const exists = Boolean(email) && Boolean(await User.findOne({ email }));
+  res.json({ success: true, exists });
 };
 
 export const forgotPassword = async (req, res) => {

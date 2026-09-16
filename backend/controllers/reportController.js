@@ -8,7 +8,7 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const reportFilter = (req) => {
   const { search, status, category, priority, barangay, startDate, endDate, includeResolved } = req.query;
-  const filter = { deletedAt: null };
+  const filter = { deletedAt: null, archived: { $ne: true } };
   if (status) filter.status = status;
   if (includeResolved !== 'true') filter.status = { $ne: 'Resolved' };
   if (category) filter.category = category;
@@ -95,19 +95,21 @@ export const getReport = async (req, res, next) => {
 
 export const createReport = async (req, res, next) => {
   try {
-    const photoValue = req.file
-      ? (req.file.path || req.file.secure_url)
-      : (typeof req.body.photo === 'string' ? req.body.photo : '');
-
+    const uploadedFiles = Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
+    const photoValue = uploadedFiles[0] ? (uploadedFiles[0].path || uploadedFiles[0].secure_url) : (typeof req.body.photo === 'string' ? req.body.photo : '');
+    const imageUrls = uploadedFiles.map((file) => file.path || file.secure_url).filter(Boolean);
+    const location = typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location;
     const report = await Report.create({
       ...req.body,
       title: `${req.body.category} report - ${new Date().toLocaleDateString('en-PH')}`,
       priority: 'Low',
       customCategory: req.body.category === 'Other' ? String(req.body.customCategory || '').trim() : '',
-      location: typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location,
+      location,
       barangay: req.body.barangay || '',
       photo: photoValue,
+      images: imageUrls.length ? imageUrls : (req.body.images ? (Array.isArray(req.body.images) ? req.body.images : [req.body.images]) : (photoValue ? [photoValue] : [])),
       reportedBy: {
+        userId: req.user._id,
         name: req.user.name,
         email: req.user.email,
         phone: req.user.phone,
@@ -120,8 +122,13 @@ export const createReport = async (req, res, next) => {
 
 export const updateReport = async (req, res, next) => {
   try {
-    const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, req.body, { new: true, runValidators: true });
-    if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    const existing = await Report.findOne({ _id: req.params.id, ...scoped(req.user) });
+    if (!existing) return res.status(404).json({ success: false, message: 'Report not found.' });
+    if (['Resolved', 'Closed'].includes(existing.status) && req.user.role !== 'superadmin') {
+      return res.status(400).json({ success: false, message: `This report is ${existing.status} and can no longer be edited.` });
+    }
+    const payload = { ...req.body };
+    const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, payload, { new: true, runValidators: true });
     await logActivity({ actor: req.user, action: 'report_updated', message: `${req.user.name} edited report ${report._id}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }
@@ -129,10 +136,20 @@ export const updateReport = async (req, res, next) => {
 
 export const updateStatus = async (req, res, next) => {
   try {
-    const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, { status: req.body.status }, { new: true, runValidators: true });
+    const report = await Report.findOne({ _id: req.params.id, ...scoped(req.user) });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
-    await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated status of report ${report._id} to ${req.body.status}`, entityType: 'report', entityId: report._id }).catch(() => {});
-    res.json({ success: true, report });
+    if (['Resolved', 'Closed'].includes(report.status) && req.user.role !== 'superadmin') {
+      return res.status(400).json({ success: false, message: `This report is ${report.status} and can no longer be edited.` });
+    }
+    const nextStatus = req.body.status;
+    const update = { status: nextStatus };
+    if (nextStatus === 'Closed') {
+      update.archived = true;
+      update.archivedAt = new Date();
+    }
+    const updated = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, update, { new: true, runValidators: true });
+    await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated status of report ${updated._id} to ${req.body.status}`, entityType: 'report', entityId: updated._id }).catch(() => {});
+    res.json({ success: true, report: updated });
   } catch (error) { next(error); }
 };
 export const updatePriority = async (req, res, next) => {

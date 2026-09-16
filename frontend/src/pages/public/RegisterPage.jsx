@@ -24,9 +24,10 @@ const RegisterPage = () => {
 
   const submit = async (event) => {
     event.preventDefault();
+    const trimmedEmail = form.email.trim();
     const nextErrors = {
       name: !form.name.trim() ? 'Full name is required.' : form.name.trim().length < 2 ? 'Name must be at least 2 characters.' : form.name.trim().length > 50 ? 'Name must be 50 characters or fewer.' : '',
-      email: validateEmail(form.email),
+      email: validateEmail(trimmedEmail),
       password: validatePassword(form.password),
       confirmPassword: !form.confirmPassword ? 'Please confirm your password.' : form.password !== form.confirmPassword ? 'Passwords do not match.' : '',
     };
@@ -37,11 +38,18 @@ const RegisterPage = () => {
     }
     setSubmitting(true);
     try {
-      await register({ name: form.name.trim(), email: form.email, password: form.password, role: 'user' });
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://hazardwatch-dagupan.onrender.com/api'}/auth/check-email?email=${encodeURIComponent(trimmedEmail)}`);
+      const emailCheck = await response.json();
+      if (emailCheck?.exists) {
+        setErrors((prev) => ({ ...prev, email: 'Email already registered. Please use a different email.' }));
+        await showError('Email already registered. Please use a different email.');
+        return;
+      }
+      await register({ name: form.name.trim(), email: trimmedEmail, password: form.password, role: 'user' });
       await showSuccess('Account created! Please login.');
       navigate('/login');
     } catch (error) {
-      const message = error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('exist')
+      const message = error.message && error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('exist')
         ? 'Email already registered. Please use a different email.'
         : error.message;
       await showError(message);
@@ -58,7 +66,7 @@ const RegisterPage = () => {
           {errors.name && <span className="mt-1 block text-xs text-red-400">{errors.name}</span>}
         </label>
         <label className="block text-sm text-gray-300">Email
-          <input type="email" id="email" name="email" autoComplete="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
+          <input type="email" id="email" name="email" autoComplete="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value.replace(/\s+/g, '') })} className={`auth-input mt-2 ${errors.email ? 'border-red-500' : ''}`} />
           {errors.email && <span className="mt-1 block text-xs text-red-400">{errors.email}</span>}
         </label>
         <label className="block text-sm text-gray-300">Password

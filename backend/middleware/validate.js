@@ -8,8 +8,14 @@ export const validate = (req, res, next) => {
 
 export const validateRegister = [
   body('name').trim().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
-  body('email').isEmail().normalizeEmail().withMessage('A valid email is required.'),
-  body('password').matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/).withMessage('Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.'),
+  body('email').custom((value) => {
+    if (typeof value !== 'string' || /\s/.test(value)) throw new Error('Email and password cannot contain spaces.');
+    return true;
+  }).isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  body('password').custom((value) => {
+    if (typeof value !== 'string' || /\s/.test(value)) throw new Error('Email and password cannot contain spaces.');
+    return true;
+  }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/).withMessage('Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.'),
   validate,
 ];
 export const validateLogin = [body('email').isEmail().normalizeEmail(), body('password').notEmpty(), validate];
@@ -33,7 +39,7 @@ export const validateReport = [
     return true;
   }),
   body('photo').custom((value, { req }) => {
-    if (!req.file && !value) throw new Error('Photo evidence is required.');
+    if (!req.files?.length && !req.file && !value) throw new Error('Photo evidence is required.');
     return true;
   }),
   validate,

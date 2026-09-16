@@ -22,6 +22,15 @@ const statusBadge = {
 const PAGE_SIZE = 10;
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'user', barangay: '' };
 
+const roleKeyword = (value) => {
+  const query = value.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (query.startsWith('superadmin') || query.startsWith('super admin')) return 'superadmin';
+  if (query.startsWith('cit') || query.startsWith('user')) return 'user';
+  if (query.startsWith('bar')) return 'barangay';
+  if (query.startsWith('admin')) return 'admin';
+  return '';
+};
+
 const AdminUsersPage = () => {
   const { token, user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
@@ -74,7 +83,7 @@ const AdminUsersPage = () => {
       name: user.name || '',
       email: user.email || '',
       password: '',
-      role: user.role || 'staff',
+      role: user.role || 'user',
       barangay: user.barangay || '',
     });
     setIsEditing(true);
@@ -171,10 +180,18 @@ const AdminUsersPage = () => {
   };
 
   const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
-  const filteredUsers = users.filter((user) => [user.name, user.email, user.role, user.barangay]
-    .some((value) => String(value || '').toLowerCase().includes(search.toLowerCase())));
+  const searchedRole = roleKeyword(search);
+  const filteredUsers = users.filter((user) => searchedRole
+    ? user.role === searchedRole
+    : [user.name, user.email, user.role, user.barangay].some((value) => String(value || '').toLowerCase().includes(search.trim().toLowerCase())));
   const filteredPageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const visibleUsers = filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const userStats = [
+    ['Total users', users.length, 'border-blue-500'],
+    ['Citizens', users.filter((user) => user.role === 'user').length, 'border-gray-500'],
+    ['Barangay accounts', users.filter((user) => user.role === 'barangay').length, 'border-emerald-500'],
+    ['Admins', users.filter((user) => ['admin', 'superadmin'].includes(user.role)).length, 'border-red-500'],
+  ];
 
   return (
     <div className="space-y-6">
@@ -188,6 +205,10 @@ const AdminUsersPage = () => {
             + Add user
           </button>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {userStats.map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{value}</p></div>)}
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
@@ -263,7 +284,7 @@ const AdminUsersPage = () => {
         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {filteredPageCount}</p>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Previous page">&lt;</button>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
+          {Array.from({ length: filteredPageCount }, (_, index) => index + 1).map((pageNumber) => (
             <button type="button" key={pageNumber} onClick={() => setPage(pageNumber)} className={`px-2 py-1.5 text-sm ${page === pageNumber ? 'font-bold text-[#3b82f6]' : isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`}>{pageNumber}</button>
           ))}
           <button type="button" onClick={() => setPage((current) => Math.min(filteredPageCount, current + 1))} disabled={page === filteredPageCount} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Next page">&gt;</button>
@@ -307,18 +328,7 @@ const AdminUsersPage = () => {
 
               <label className="block text-sm">
                 <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Role</span>
-                <select
-                  value={form.role}
-                  onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-                  disabled={currentUser?.role === 'admin' && selectedUser?.role === 'superadmin'}
-                  className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
-                >
-                  <option value="barangay">Barangay</option>
-                  <option value="user">Citizen</option>
-                  {!isCreating && <option value="staff">Staff</option>}
-                  {currentUser?.role === 'superadmin' && <option value="admin">Admin</option>}
-                  {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
-                </select>
+                <input value={form.role} readOnly className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white opacity-80' : 'border-slate-200 bg-white text-slate-900 opacity-80'}`} />
               </label>
 
               {form.role === 'barangay' && (
@@ -341,7 +351,7 @@ const AdminUsersPage = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: 'Super Admin' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }] : [{ value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={currentUser?.role === 'superadmin' ? [{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }] : [{ value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </div>
   );
 };

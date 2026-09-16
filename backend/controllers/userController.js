@@ -11,15 +11,31 @@ const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
   return true;
 };
 
-export const getUsers = async (req, res, next) => { try { const users = await User.find().select(fields).sort({ createdAt: -1 }); res.json({ success: true, users }); } catch (e) { next(e); } };
-export const getUser = async (req, res, next) => { try { const user = await User.findById(req.params.id).select(fields); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); res.json({ success: true, user }); } catch (e) { next(e); } };
+const normalizeUserStatus = (user) => {
+  if (user.status === 'suspended' && user.suspendedUntil && new Date(user.suspendedUntil) < new Date()) {
+    user.status = 'active';
+    user.isActive = true;
+    user.suspendedUntil = undefined;
+    user.suspensionReason = undefined;
+    user.suspendedBy = undefined;
+  }
+  return user;
+};
+
+export const getUsers = async (req, res, next) => { try { const users = await User.find().select(fields).sort({ createdAt: -1 }); res.json({ success: true, users: users.map((user) => normalizeUserStatus(user).toObject()) }); } catch (e) { next(e); } };
+export const getUser = async (req, res, next) => { try { const user = await User.findById(req.params.id).select(fields); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); normalizeUserStatus(user); res.json({ success: true, user }); } catch (e) { next(e); } };
 export const createUser = async (req, res, next) => {
   try {
     const role = req.body.role || 'user';
     if (req.user.role === 'admin' && !['user', 'barangay'].includes(role)) {
       return res.status(403).json({ success: false, message: 'Admins can only create citizen or barangay accounts.' });
     }
-    const user = await User.create({ ...req.body, role });
+    if (req.user.role === 'superadmin' && ['superadmin', 'staff'].includes(role)) {
+      return res.status(403).json({ success: false, message: 'SuperAdmin cannot create superadmin or staff accounts through the UI.' });
+    }
+    if (typeof req.body.email === 'string' && /\s/.test(req.body.email)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
+    if (typeof req.body.password === 'string' && /\s/.test(req.body.password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
+    const user = await User.create({ ...req.body, email: String(req.body.email || '').trim().toLowerCase(), role, status: 'active', isActive: true, deletedAt: undefined });
     await logActivity({ actor: req.user, action: 'user_created', message: `${req.user.name} created user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {});
     res.status(201).json({ success: true, user: user.toJSON() });
   } catch (e) { next(e); }
@@ -38,6 +54,12 @@ export const updateUser = async (req, res, next) => {
     if (req.user.role === 'admin') {
       delete payload.role;
     }
+    if (payload.role && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      delete payload.role;
+    }
+    if (payload.status && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
+      payload.isActive = payload.status !== 'banned' && payload.status !== 'deleted';
+    }
 
     const user = await User.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select(fields);
     const changes = [];
@@ -48,11 +70,9 @@ export const updateUser = async (req, res, next) => {
     if (!changes.length) changes.push(['user_updated', `updated user ${user.name}`]);
     await Promise.all(changes.map(([action, message]) => logActivity({ actor: req.user, action, message, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {})));
     res.json({ success: true, user });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 };
-export const toggleUserStatus = async (req, res, next) => { try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); if (req.user.role === 'admin' && user.role === 'superadmin') return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' }); user.isActive = !user.isActive; await user.save(); await logActivity({ actor: req.user, action: user.isActive ? 'user_activated' : 'user_deactivated', message: `${req.user.name} ${user.isActive ? 'activated' : 'deactivated'} user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {}); res.json({ success: true, user: user.toJSON() }); } catch (e) { next(e); } };
+export const toggleUserStatus = async (req, res, next) => { try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); if (req.user.role === 'admin' && user.role === 'superadmin') return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' }); user.status = user.status === 'active' ? 'suspended' : 'active'; user.isActive = user.status === 'active'; if (user.status === 'suspended') { user.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); user.suspensionReason = 'Temporarily suspended by admin'; } else { user.suspendedUntil = undefined; user.suspensionReason = undefined; } await user.save(); await logActivity({ actor: req.user, action: user.isActive ? 'user_activated' : 'user_deactivated', message: `${req.user.name} ${user.isActive ? 'activated' : 'deactivated'} user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {}); res.json({ success: true, user: user.toJSON() }); } catch (e) { next(e); } };
 export const deleteUser = async (req, res, next) => {
   try {
     const userToDelete = await User.findById(req.params.id);
@@ -60,8 +80,10 @@ export const deleteUser = async (req, res, next) => {
     if (String(userToDelete._id) === String(req.user._id)) return res.status(403).json({ success: false, message: 'You cannot delete your own account.' });
     if (req.user.role === 'admin' && !['user', 'barangay'].includes(userToDelete.role)) return res.status(403).json({ success: false, message: 'Admins can only delete citizen or barangay accounts.' });
     if (!enforceUserManagementRules(req.user, userToDelete)) return res.status(403).json({ success: false, message: 'You are not allowed to delete this user.' });
+    userToDelete.status = 'deleted';
     userToDelete.isActive = false;
-    await User.findByIdAndDelete(userToDelete._id);
+    userToDelete.deletedAt = new Date();
+    await userToDelete.save({ validateBeforeSave: false });
     await logActivity({ actor: req.user, action: 'user_deleted', message: `${req.user.name} deleted user ${userToDelete.name}`, scope: 'admin', entityType: 'user', entityId: userToDelete._id }).catch(() => {});
     res.json({ success: true, message: 'User deleted.' });
   } catch (e) { next(e); }

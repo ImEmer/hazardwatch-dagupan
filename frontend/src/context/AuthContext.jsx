@@ -4,24 +4,26 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
-const PRIVILEGED_ROLES = ['superadmin', 'admin', 'barangay'];
 
-const readStoredUser = (storage) => {
+const decodeToken = (value) => {
   try {
-    const savedUser = storage.getItem(USER_KEY);
-    return savedUser ? JSON.parse(savedUser) : null;
+    const payload = value.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(payload));
   } catch {
     return null;
   }
 };
 
 const getStoredSession = () => {
-  const sessionUser = readStoredUser(sessionStorage);
-  const sessionToken = sessionStorage.getItem(TOKEN_KEY) || sessionStorage.getItem('token');
-  if (sessionToken) return { token: sessionToken, user: sessionUser, storage: sessionStorage };
-  const localUser = readStoredUser(localStorage);
-  const localToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
-  return { token: localToken, user: localUser, storage: localStorage };
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const savedUser = localStorage.getItem(USER_KEY);
+    return { token, user: savedUser ? JSON.parse(savedUser) : null };
+  } catch {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    return { token: null, user: null };
+  }
 };
 
 const request = async (path, options = {}, token = null) => {
@@ -52,21 +54,18 @@ const request = async (path, options = {}, token = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // localStorage keeps regular user sessions; sessionStorage scopes privileged sessions to one tab.
-  const [initialSession] = useState(getStoredSession);
-  const [token, setToken] = useState(initialSession.token);
-  const [user, setUser] = useState(initialSession.user);
-  const [loading, setLoading] = useState(Boolean(initialSession.token));
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showExpiryWarning, setShowExpiryWarning] = useState(false);
 
   const clearSession = useCallback(() => {
     setToken(null);
     setUser(null);
+    setShowExpiryWarning(false);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem('token');
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem('token');
     window.__hw_redirecting = false;
   }, []);
 
@@ -76,26 +75,39 @@ export const AuthProvider = ({ children }) => {
     window.__hw_redirecting = false;
     setToken(nextToken);
     setUser(nextUser);
-    const storage = PRIVILEGED_ROLES.includes(nextUser?.role) ? sessionStorage : localStorage;
-    const otherStorage = storage === sessionStorage ? localStorage : sessionStorage;
-    otherStorage.removeItem(TOKEN_KEY);
-    otherStorage.removeItem(USER_KEY);
-    otherStorage.removeItem('token');
-    storage.setItem(TOKEN_KEY, nextToken);
-    storage.setItem(USER_KEY, JSON.stringify(nextUser));
-    storage.setItem('token', nextToken);
+    setShowExpiryWarning(false);
+    localStorage.setItem(TOKEN_KEY, nextToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    localStorage.setItem('token', nextToken);
   }, []);
 
   const logout = useCallback(async () => {
-    const currentToken = getStoredSession().token;
+    const currentToken = token || localStorage.getItem(TOKEN_KEY);
     try {
       if (currentToken) {
         await request('/auth/logout', { method: 'POST' }, currentToken);
       }
     } finally {
       clearSession();
+      window.location.href = '/login';
     }
-  }, [clearSession]);
+  }, [clearSession, token]);
+
+  useEffect(() => {
+    try {
+      const storedSession = getStoredSession();
+      if (storedSession.token && storedSession.user) {
+        setToken(storedSession.token);
+        setUser(storedSession.user);
+      } else if (storedSession.token || storedSession.user) {
+        clearSession();
+      }
+    } catch {
+      clearSession();
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const getCurrentUser = useCallback(async () => {
     const storedSession = getStoredSession();
@@ -109,8 +121,7 @@ export const AuthProvider = ({ children }) => {
       const response = await request('/auth/me', {}, currentToken);
       const nextUser = response.user || response;
       setUser(nextUser);
-      const storage = PRIVILEGED_ROLES.includes(nextUser?.role) ? sessionStorage : localStorage;
-      storage.setItem(USER_KEY, JSON.stringify(nextUser));
+      localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
       return nextUser;
     } catch (error) {
       clearSession();
@@ -140,16 +151,26 @@ export const AuthProvider = ({ children }) => {
   }, [logout]);
 
   useEffect(() => {
-    const clearPrivilegedTabSession = () => {
-      if (PRIVILEGED_ROLES.includes(user?.role)) {
-        sessionStorage.removeItem(TOKEN_KEY);
-        sessionStorage.removeItem(USER_KEY);
-        sessionStorage.removeItem('token');
-      }
+    if (!token) return undefined;
+
+    const decoded = decodeToken(token);
+    const expiresAt = decoded?.exp ? decoded.exp * 1000 : 0;
+    if (!expiresAt) return undefined;
+
+    const warningDelay = expiresAt - Date.now() - 5 * 60 * 1000;
+    const expiryDelay = expiresAt - Date.now();
+    if (expiryDelay <= 0) {
+      logout().catch(() => {});
+      return undefined;
+    }
+
+    const warningTimer = window.setTimeout(() => setShowExpiryWarning(true), Math.max(0, warningDelay));
+    const expiryTimer = window.setTimeout(() => logout().catch(() => {}), expiryDelay);
+    return () => {
+      window.clearTimeout(warningTimer);
+      window.clearTimeout(expiryTimer);
     };
-    window.addEventListener('beforeunload', clearPrivilegedTabSession);
-    return () => window.removeEventListener('beforeunload', clearPrivilegedTabSession);
-  }, [user?.role]);
+  }, [logout, token]);
 
   const login = useCallback(async (email, password) => {
     const response = await request('/auth/login', { 
@@ -160,6 +181,13 @@ export const AuthProvider = ({ children }) => {
     persistSession(session);
     return session.user;
   }, [persistSession]);
+
+  const refreshSession = useCallback(async () => {
+    const response = await request('/auth/refresh', { method: 'POST' }, token);
+    const session = response.token ? response : response.data;
+    persistSession(session);
+    return session.user;
+  }, [persistSession, token]);
 
   const register = useCallback(async (userData) => {
     const response = await request('/auth/register', { 
@@ -194,9 +222,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem('token');
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem('token');
+    setShowExpiryWarning(false);
   }, [token]);
 
   const forgotPassword = useCallback(async (email) => {
@@ -217,8 +243,10 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     loading,
+    showExpiryWarning,
     isAuthenticated: Boolean(user && token),
     login,
+    refreshSession,
     logout,
     register,
     getCurrentUser,
@@ -227,7 +255,7 @@ export const AuthProvider = ({ children }) => {
     deleteAccount,
     forgotPassword,
     resetPassword,
-  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, register, resetPassword, token, updateProfile, user]);
+  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updateProfile, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

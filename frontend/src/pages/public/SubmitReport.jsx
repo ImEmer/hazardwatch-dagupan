@@ -8,6 +8,13 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { HAZARD_CATEGORY_GROUPS } from '../../services/reportOptions';
 
+const withinDagupanBounds = ({ lat, lng }) => {
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
+    return latitude >= 16.02 && latitude <= 16.10 && longitude >= 120.30 && longitude <= 120.40;
+};
+
 const SubmitReport = () => {
     const { addReport } = useReports();
     const { isAuthenticated, token } = useAuth();
@@ -21,6 +28,7 @@ const SubmitReport = () => {
         description: '',
     });
     const [photo, setPhoto] = useState(null);
+    const [photos, setPhotos] = useState([]);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
@@ -51,16 +59,21 @@ const SubmitReport = () => {
     };
 
     const handlePhotoChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setPhoto(file);
-            setErrors((prev) => ({ ...prev, photo: '' }));
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhotoPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        const validFiles = files.filter((file) => /^image\/(jpeg|jpg|png|webp)$/.test(file.type));
+        if (!validFiles.length) {
+            setErrors((prev) => ({ ...prev, photo: 'Only JPG, PNG, or WebP images are allowed.' }));
+            return;
         }
+        setPhotos(validFiles);
+        setPhoto(validFiles[0]);
+        setErrors((prev) => ({ ...prev, photo: '' }));
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPhotoPreview(reader.result);
+        };
+        reader.readAsDataURL(validFiles[0]);
     };
 
     const resetFormState = () => {
@@ -69,6 +82,7 @@ const SubmitReport = () => {
         setSelectedAddress('');
         setSelectedBarangay('');
         setPhoto(null);
+        setPhotos([]);
         setPhotoPreview(null);
         setErrors({});
         if (photoInputRef.current) photoInputRef.current.value = '';
@@ -76,6 +90,7 @@ const SubmitReport = () => {
 
     const handleRemovePhoto = () => {
         setPhoto(null);
+        setPhotos([]);
         setPhotoPreview(null);
         setErrors((prev) => ({ ...prev, photo: 'Photo evidence is required.' }));
     };
@@ -92,6 +107,7 @@ const SubmitReport = () => {
         }
         if (!photo) newErrors.photo = 'Photo evidence is required.';
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
+        else if (!withinDagupanBounds(selectedLocation)) newErrors.location = 'Reports must be submitted within Dagupan City limits.';
         return newErrors;
     };
 
@@ -126,6 +142,7 @@ const SubmitReport = () => {
             },
             address: selectedAddress,
             photoFile: photo,
+            photos: photos.length ? photos : [photo],
             barangay: selectedBarangay,
         };
         try {
@@ -260,7 +277,8 @@ const SubmitReport = () => {
                             type="file"
                             id="photo"
                             name="photo"
-                            accept="image/*"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            multiple
                             ref={photoInputRef}
                             onChange={handlePhotoChange}
                             className="hidden"

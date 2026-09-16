@@ -12,14 +12,17 @@ const reportSchema = new mongoose.Schema({
   address: String,
   barangay: String,
   photo: String,
+  images: [{ type: String }],
   status: { type: String, enum: ['Pending', 'In Progress', 'Resolved', 'Closed'], default: 'Pending' },
   priority: { type: String, enum: ['Low', 'Medium', 'High', 'Urgent'], default: 'Low' },
-  reportedBy: { name: String, email: String, phone: String, isAnonymous: { type: Boolean, default: false } },
+  reportedBy: { userId: mongoose.Schema.Types.ObjectId, name: String, email: String, phone: String, isAnonymous: { type: Boolean, default: false } },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedBarangay: String,
   resolution: { notes: String, resolvedAt: Date, resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } },
   comments: [{ text: { type: String, required: true }, author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, authorName: String, createdAt: { type: Date, default: Date.now } }],
   views: { type: Number, default: 0 },
+  archived: { type: Boolean, default: false },
+  archivedAt: { type: Date },
   deletedAt: Date,
 }, { timestamps: true });
 

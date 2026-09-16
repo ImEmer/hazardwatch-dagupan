@@ -14,7 +14,16 @@ const roleBadge = {
   user: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
 };
 
-const EMPTY_FORM = { name: '', email: '', password: '', role: 'staff', barangay: '' };
+const EMPTY_FORM = { name: '', email: '', password: '', role: 'user', barangay: '' };
+
+const roleKeyword = (value) => {
+  const query = value.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (query.startsWith('superadmin') || query.startsWith('super admin')) return 'superadmin';
+  if (query.startsWith('cit') || query.startsWith('user')) return 'user';
+  if (query.startsWith('bar')) return 'barangay';
+  if (query.startsWith('admin')) return 'admin';
+  return '';
+};
 
 const SuperAdminUsers = () => {
   const { token } = useAuth();
@@ -26,6 +35,7 @@ const SuperAdminUsers = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
   const isDark = theme === 'dark';
 
   const fetchUsers = useCallback(async () => {
@@ -55,7 +65,7 @@ const SuperAdminUsers = () => {
     setForm({
       name: user.name || '',
       email: user.email || '',
-      role: user.role || 'staff',
+      role: user.role || 'user',
       barangay: user.barangay || '',
     });
     setIsEditing(true);
@@ -115,8 +125,18 @@ const SuperAdminUsers = () => {
     }
   };
 
-  const pageCount = Math.max(1, Math.ceil(users.length / 10));
-  const visibleUsers = users.slice((page - 1) * 10, page * 10);
+  const searchedRole = roleKeyword(search);
+  const filteredUsers = users.filter((user) => searchedRole
+    ? user.role === searchedRole
+    : [user.name, user.email, user.role, user.barangay].some((value) => String(value || '').toLowerCase().includes(search.trim().toLowerCase())));
+  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / 10));
+  const visibleUsers = filteredUsers.slice((page - 1) * 10, page * 10);
+  const userStats = [
+    ['Total users', users.length, 'border-blue-500'],
+    ['Citizens', users.filter((user) => user.role === 'user').length, 'border-gray-500'],
+    ['Barangay accounts', users.filter((user) => user.role === 'barangay').length, 'border-emerald-500'],
+    ['Admins', users.filter((user) => ['admin', 'superadmin'].includes(user.role)).length, 'border-red-500'],
+  ];
 
   return (
     <main className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-24 text-white">
@@ -131,7 +151,15 @@ const SuperAdminUsers = () => {
           </div>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {userStats.map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{value}</p></div>)}
+        </div>
+
         <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+          <div className={`border-b p-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+            <label htmlFor="superadmin-user-search" className="sr-only">Search users</label>
+            <input id="superadmin-user-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search by name, email, role, or barangay" className={`w-full rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className={isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-50 text-slate-500'}>
@@ -208,13 +236,7 @@ const SuperAdminUsers = () => {
 
               <label className="block text-sm">
                 <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Role</span>
-                <select value={form.role} onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))} className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
-                  <option value="superadmin">Super Admin</option>
-                  <option value="admin">Admin</option>
-                  <option value="staff">Staff</option>
-                  <option value="barangay">Barangay</option>
-                  <option value="user">Citizen</option>
-                </select>
+                <input value={form.role} readOnly className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white opacity-80' : 'border-slate-200 bg-white text-slate-900 opacity-80'}`} />
               </label>
 
               {form.role === 'barangay' && (
@@ -232,7 +254,7 @@ const SuperAdminUsers = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'superadmin', label: 'Super Admin' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </main>
   );
 };

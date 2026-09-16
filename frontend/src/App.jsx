@@ -53,6 +53,7 @@ import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
 import SuperAdminActivityPage from './pages/superadmin/SuperAdminActivityPage';
 import SuperAdminReportsPage from './pages/superadmin/SuperAdminReportsPage';
 import ScrollToTop from './components/common/ScrollToTop';
+import SessionExpiryModal from './components/SessionExpiryModal';
 const PublicPlaceholder = ({ title, description }) => (
   <div className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-28 text-white">
     <div className="mx-auto max-w-6xl rounded-2xl border border-[#2e303a] bg-[#14151d] p-8">
@@ -118,6 +119,7 @@ function App() {
       <AuthProvider>
         <ReportProvider>
           <Router>
+            <SessionExpiryModal />
             <ScrollToTop />
             <PageTitle />
             <Routes>

@@ -143,8 +143,8 @@
         }, [canAccessStaffReports, fetchPublicReports, fetchReports, isTokenValid, token, user?._id, user?.role]);
 
         const addReport = async (newReport, token) => {
-            const photoFile = newReport?.photoFile || newReport?.photo;
-            if (!photoFile) {
+            const selectedFiles = Array.from(newReport?.photos || (newReport?.photoFile ? [newReport.photoFile] : []));
+            if (!selectedFiles.length) {
             throw new Error('Photo evidence is required.');
             }
 
@@ -162,6 +162,12 @@
             throw new Error('Please select a valid location on the map.');
             }
 
+            const latitude = Number(normalizedLocation.coordinates[1]);
+            const longitude = Number(normalizedLocation.coordinates[0]);
+            if (latitude < 16.02 || latitude > 16.10 || longitude < 120.30 || longitude > 120.40) {
+            throw new Error('Reports must be submitted within Dagupan City limits.');
+            }
+
             const payload = new FormData();
             payload.append('category', String(newReport.category));
             payload.append('customCategory', String(newReport.customCategory || ''));
@@ -169,7 +175,9 @@
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));
             payload.append('barangay', String(newReport.barangay || ''));
-            payload.append('photo', photoFile, photoFile.name || 'photo.jpg');
+            selectedFiles.forEach((file, index) => {
+            payload.append(index === 0 ? 'photo' : 'images', file, file.name || `photo-${index + 1}.jpg`);
+            });
 
             try {
             const response = await api.post('/reports', payload, {
