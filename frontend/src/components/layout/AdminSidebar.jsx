@@ -8,6 +8,7 @@ const items = [
   { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin', 'staff'] },
   { to: '/superadmin/dashboard', label: 'Dashboard', roles: ['superadmin'] },
   { to: '/admin/reports', label: 'Reports' },
+  { to: '/admin/archived', label: 'Archived' },
   { to: '/admin/map', label: 'Map View' },
   { to: '/admin/activity', label: 'Activity', roles: ['admin'] },
   { to: '/superadmin/activity', label: 'Activity', roles: ['superadmin'] },

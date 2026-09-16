@@ -36,6 +36,7 @@ const SuperAdminUsers = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
   const isDark = theme === 'dark';
 
   const fetchUsers = useCallback(async () => {
@@ -48,7 +49,7 @@ const SuperAdminUsers = () => {
       setUsers((body.users || []).map((user) => ({
         ...user,
         id: user._id || user.id,
-        status: user.isActive ? 'Active' : 'Inactive',
+        status: user.status === 'suspended' ? 'Suspended' : user.status === 'banned' ? 'Banned' : user.status === 'deleted' ? 'Deleted' : user.isActive ? 'Active' : 'Inactive',
         lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
       })));
     } catch (error) {
@@ -125,6 +126,25 @@ const SuperAdminUsers = () => {
     }
   };
 
+  const deleteSelected = async () => {
+    const result = await confirmAction(`Delete ${selectedIds.length} selected users?`, 'Delete users');
+    if (!result.isConfirmed) return;
+    try {
+      await api.delete('/users/bulk', { data: { ids: selectedIds }, headers: { Authorization: `Bearer ${token}` } });
+      setSelectedIds([]);
+      await fetchUsers();
+      await showSuccess('Selected users deleted successfully.');
+    } catch (error) { await showError(error.response?.data?.message || 'Unable to delete selected users.'); }
+  };
+
+  const changeRestriction = async (targetUser, action) => {
+    const reason = window.prompt(`${action === 'suspend' ? 'Suspension' : action === 'ban' ? 'Ban' : 'Unsuspension'} reason`, targetUser.suspensionReason || '');
+    if (reason === null) return;
+    const duration = action === 'suspend' ? window.prompt('Duration in days: 1, 3, 7, or 30', '7') : undefined;
+    if (action === 'suspend' && !['1', '3', '7', '30'].includes(duration)) return;
+    try { await api.post(`/users/${targetUser.id}/${action}`, { duration, reason }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await showSuccess(`User ${action}ed successfully.`); } catch (error) { await showError(error.response?.data?.message || `Unable to ${action} user.`); }
+  };
+
   const searchedRole = roleKeyword(search);
   const filteredUsers = users.filter((user) => searchedRole
     ? user.role === searchedRole
@@ -164,6 +184,7 @@ const SuperAdminUsers = () => {
             <table className="min-w-full text-left text-sm">
               <thead className={isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-50 text-slate-500'}>
                 <tr>
+                  <th className="px-4 py-3"><input type="checkbox" aria-label="Select all users" checked={visibleUsers.length > 0 && visibleUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? visibleUsers.map((user) => user.id) : [])} /></th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Role</th>
@@ -177,6 +198,7 @@ const SuperAdminUsers = () => {
                 ) : (
                   visibleUsers.map((user) => (
                     <tr key={user.id} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+                      <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onChange={() => setSelectedIds((current) => current.includes(user.id) ? current.filter((id) => id !== user.id) : [...current, user.id])} /></td>
                       <td className={`px-4 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{user.name}</td>
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.email}</td>
                       <td className="px-4 py-4">
@@ -193,6 +215,8 @@ const SuperAdminUsers = () => {
                           <button type="button" onClick={() => handleDelete(user)} title="Delete user" aria-label="Delete user" className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 hover:text-red-300">
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 6V4h8v2m-9 0l1 14h8l1-14M10 10v6m4-6v6" /></svg>
                           </button>
+                          {['suspended', 'banned'].includes(user.status) ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user">↻</button> : <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user">⏸</button>}
+                          {user.status !== 'banned' && <button type="button" onClick={() => changeRestriction(user, 'ban')} className="rounded-lg p-2 text-red-400 hover:bg-red-500/10" title="Ban user" aria-label="Ban user">⊘</button>}
                         </div>
                       </td>
                     </tr>
@@ -203,6 +227,7 @@ const SuperAdminUsers = () => {
           </div>
         </div>
 
+        {selectedIds.length > 0 && <div className="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-[#2e303a] bg-[#14151d] px-4 py-3 text-sm text-white shadow-2xl"><span>{selectedIds.length} selected</span><button type="button" onClick={deleteSelected} className="rounded-lg bg-red-600 px-3 py-2 font-semibold text-white">Delete Selected</button><button type="button" onClick={() => setSelectedIds([])} className="rounded-lg border border-[#2e303a] px-3 py-2 text-gray-300">Cancel</button></div>}
         <div className="flex items-center justify-between px-1 py-3">
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {pageCount}</p>
           <div className="flex items-center gap-1">

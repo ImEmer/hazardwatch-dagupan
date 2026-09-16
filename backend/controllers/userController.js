@@ -1,7 +1,7 @@
 import User from '../models/User.js';
 import { logActivity } from '../utils/logActivity.js';
 
-const fields = 'name email role barangay phone isActive lastLogin profileImage createdAt';
+const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
 
 const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
   if (actor.role === 'superadmin') return true;
@@ -87,4 +87,46 @@ export const deleteUser = async (req, res, next) => {
     await logActivity({ actor: req.user, action: 'user_deleted', message: `${req.user.name} deleted user ${userToDelete.name}`, scope: 'admin', entityType: 'user', entityId: userToDelete._id }).catch(() => {});
     res.json({ success: true, message: 'User deleted.' });
   } catch (e) { next(e); }
+};
+
+const getDurationMs = (duration) => {
+  if (duration === 'custom') return null;
+  const days = Number(duration);
+  return [1, 3, 7, 30].includes(days) ? days * 24 * 60 * 60 * 1000 : null;
+};
+
+export const suspendUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (String(target._id) === String(req.user._id) || !enforceUserManagementRules(req.user, target)) return res.status(403).json({ success: false, message: 'You are not allowed to suspend this user.' });
+    const durationMs = getDurationMs(req.body.duration);
+    const until = req.body.duration === 'custom' ? new Date(req.body.suspendedUntil) : new Date(Date.now() + durationMs);
+    if (!Number.isFinite(until.getTime()) || until <= new Date()) return res.status(400).json({ success: false, message: 'A valid suspension duration is required.' });
+    target.status = 'suspended'; target.isActive = false; target.suspendedUntil = until; target.suspensionReason = String(req.body.reason || 'Temporarily suspended by administrator').trim(); target.suspendedBy = req.user._id;
+    await target.save({ validateBeforeSave: false });
+    res.json({ success: true, user: target.toJSON() });
+  } catch (error) { next(error); }
+};
+
+export const banUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (String(target._id) === String(req.user._id) || !enforceUserManagementRules(req.user, target)) return res.status(403).json({ success: false, message: 'You are not allowed to ban this user.' });
+    target.status = 'banned'; target.isActive = false; target.suspendedUntil = undefined; target.suspensionReason = String(req.body.reason || 'Account permanently banned.').trim(); target.suspendedBy = req.user._id;
+    await target.save({ validateBeforeSave: false });
+    res.json({ success: true, user: target.toJSON() });
+  } catch (error) { next(error); }
+};
+
+export const unsuspendUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!enforceUserManagementRules(req.user, target)) return res.status(403).json({ success: false, message: 'You are not allowed to unsuspend this user.' });
+    target.status = 'active'; target.isActive = true; target.suspendedUntil = undefined; target.suspensionReason = undefined; target.suspendedBy = undefined;
+    await target.save({ validateBeforeSave: false });
+    res.json({ success: true, user: target.toJSON() });
+  } catch (error) { next(error); }
 };

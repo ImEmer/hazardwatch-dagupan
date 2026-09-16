@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addComment, assignReport, createReport, deleteReport, exportReportsCsv, getMyReports, getPublicReports, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
+import { addComment, assignReport, createReport, deleteReport, exportReportsCsv, getArchivedReports, getMyReports, getPublicReports, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
 import { allowRoles, isStaff, protect } from '../middleware/auth.js';
 import { uploadPhoto } from '../middleware/upload.js';
 import { validateId, validatePagination, validateReport } from '../middleware/validate.js';
@@ -9,15 +9,9 @@ router.get('/public', validatePagination, getPublicReports);
 router.get('/export', protect, allowRoles('admin', 'superadmin'), exportReportsCsv);
 router.get('/', protect, isStaff, validatePagination, getReports);
 router.get('/mine', protect, getMyReports);
-router.get('/archived', protect, isStaff, async (req, res) => {
-  const Report = (await import('../models/Report.js')).default;
-  const filter = { archived: true, deletedAt: null };
-  if (req.user.role === 'barangay') filter.barangay = req.user.barangay;
-  const reports = await Report.find(filter).sort({ archivedAt: -1 });
-  res.json({ success: true, reports });
-});
+router.get('/archived', protect, isStaff, getArchivedReports);
 router.get('/:id', protect, isStaff, validateId, getReport);
-router.post('/', protect, uploadPhoto.array('images', 5), validateReport, createReport);
+router.post('/', protect, uploadPhoto.array('images', 3), validateReport, createReport);
 router.put('/:id', protect, isStaff, validateId, updateReport);
 router.patch('/:id/status', protect, isStaff, validateId, updateStatus);
 router.patch('/:id/priority', protect, isStaff, validateId, updatePriority);

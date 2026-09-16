@@ -23,6 +23,7 @@ const reportSchema = new mongoose.Schema({
   views: { type: Number, default: 0 },
   archived: { type: Boolean, default: false },
   archivedAt: { type: Date },
+  isActive: { type: Boolean, default: true },
   deletedAt: Date,
 }, { timestamps: true });
 

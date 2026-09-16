@@ -175,8 +175,8 @@
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));
             payload.append('barangay', String(newReport.barangay || ''));
-            selectedFiles.forEach((file, index) => {
-            payload.append(index === 0 ? 'photo' : 'images', file, file.name || `photo-${index + 1}.jpg`);
+            selectedFiles.slice(0, 3).forEach((file, index) => {
+            payload.append('images', file, file.name || `photo-${index + 1}.jpg`);
             });
 
             try {

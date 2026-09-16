@@ -132,7 +132,7 @@ const AdminReportDetailPage = () => {
           <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</h2>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate('/admin/reports')} className={`text-sm transition ${isDark ? 'text-gray-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>Back to Reports</button>
+          <button type="button" onClick={() => navigate('/admin/reports')} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">Back to Reports</button>
           <div className="flex gap-2">
           <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>
             {report.status}
@@ -199,6 +199,8 @@ const AdminReportDetailPage = () => {
         <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Actions</p>
           <div className="mt-4 space-y-3">
+            {['Resolved', 'Closed'].includes(report.status) && <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">This report is {report.status} and can no longer be edited.</div>}
+            {!['Resolved', 'Closed'].includes(report.status) && <>
             <label className={`block text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>
               Status
               <select
@@ -227,6 +229,7 @@ const AdminReportDetailPage = () => {
                 <option value="Urgent">Urgent</option>
               </select>
             </label>
+            </>}
           </div>
         </div>
       </div>

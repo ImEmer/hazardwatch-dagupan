@@ -25,7 +25,7 @@ const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 export const getPublicReports = async (req, res, next) => {
   try {
     const { page = 1, limit = 100, status, category, priority, barangay } = req.query;
-    const filter = { deletedAt: null };
+    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false } };
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
@@ -61,6 +61,15 @@ export const getReports = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const getArchivedReports = async (req, res, next) => {
+  try {
+    const filter = { archived: true, deletedAt: null };
+    if (req.user.role === 'barangay') Object.assign(filter, barangayScope(req.user.barangay || '__unassigned_barangay__'));
+    const reports = await Report.find(filter).populate('assignedTo', 'name email').sort({ archivedAt: -1, createdAt: -1 });
+    res.json({ success: true, reports });
+  } catch (error) { next(error); }
+};
+
 export const exportReportsCsv = async (req, res, next) => {
   try {
     const reports = await Report.find(reportFilter(req)).sort({ createdAt: -1 }).lean();
@@ -85,7 +94,7 @@ export const getMyReports = async (req, res, next) => {
 
 export const getReport = async (req, res, next) => {
   try {
-    const report = await Report.findOne({ _id: req.params.id, deletedAt: null }).populate('assignedTo', 'name email');
+    const report = await Report.findOne({ _id: req.params.id, deletedAt: null, isActive: { $ne: false } }).populate('assignedTo', 'name email');
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
     report.views += 1;
     await report.save({ validateBeforeSave: false });
@@ -177,7 +186,7 @@ export const addComment = async (req, res, next) => {
 };
 export const deleteReport = async (req, res, next) => {
   try {
-    const report = await Report.findByIdAndDelete(req.params.id);
+    const report = await Report.findByIdAndUpdate(req.params.id, { isActive: false, deletedAt: new Date() }, { new: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
     await logActivity({ actor: req.user, action: 'report_deleted', message: `${req.user.name} deleted report ${report._id}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, message: 'Report deleted.', report });

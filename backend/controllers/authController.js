@@ -44,11 +44,6 @@ export const login = async (req, res, next) => {
 
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
-    if (user.status === 'suspended' || user.status === 'banned') {
-      const reason = user.suspensionReason || 'Your account is restricted.';
-      return res.status(403).json({ success: false, message: reason });
-    }
-    if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     if (user.status === 'suspended' && user.suspendedUntil && new Date(user.suspendedUntil) < new Date()) {
       user.status = 'active';
       user.isActive = true;
@@ -57,6 +52,11 @@ export const login = async (req, res, next) => {
       user.suspendedBy = undefined;
       await user.save({ validateBeforeSave: false });
     }
+    if (user.status === 'suspended' || user.status === 'banned') {
+      const reason = user.suspensionReason || 'Your account is restricted.';
+      return res.status(403).json({ success: false, message: reason });
+    }
+    if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     clearFailedLogins(req, normalizedEmail);
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });

@@ -24,7 +24,7 @@ const priorityColorsLight = {
 };
 
 const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
-  const { reports, reportsLoading, reportsError, updateReportStatus, deleteReport } = useReports();
+  const { reports, reportsLoading, reportsError, deleteReport } = useReports();
   const { token } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,6 +37,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -85,6 +86,17 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
     } catch (error) {
       await showError(error.message || 'Unable to delete the report.');
     }
+  };
+
+  const toggleSelected = (id) => setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const deleteSelected = async () => {
+    const result = await confirmAction(`Delete ${selectedIds.length} selected reports?`, 'Delete reports');
+    if (!result.isConfirmed) return;
+    try {
+      await api.delete('/reports/bulk', { data: { ids: selectedIds }, headers: { Authorization: `Bearer ${token}` } });
+      setSelectedIds([]);
+      window.dispatchEvent(new Event('hw:reports-updated'));
+    } catch (error) { await showError(error.response?.data?.message || 'Unable to delete selected reports.'); }
   };
 
   return (
@@ -172,6 +184,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
             </colgroup>
             <thead className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-500'}`}>
               <tr>
+                <th className="px-4 py-3"><input type="checkbox" aria-label="Select all reports" checked={visibleReports.length > 0 && visibleReports.every((report) => selectedIds.includes(report._id || report.id))} onChange={(event) => setSelectedIds(event.target.checked ? visibleReports.map((report) => report._id || report.id) : [])} /></th>
                 <th className="px-4 py-3">Report</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Location</th>
@@ -205,6 +218,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
               ) : (
                 visibleReports.map((report) => (
                   <tr key={report._id || report.id} className={`border-t align-top ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+                    <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${report.title}`} checked={selectedIds.includes(report._id || report.id)} onChange={() => toggleSelected(report._id || report.id)} /></td>
                     <td className="px-4 py-4">
                       <div>
                         <p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</p>
@@ -245,18 +259,6 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                             </svg>
                           </Link>
                         </div>
-                        <select
-                          id={`status-${report._id || report.id}`}
-                          name={`status-${report._id || report.id}`}
-                          value={report.status}
-                          onChange={(event) => updateReportStatus(report.id || report._id, event.target.value).catch((error) => showError(error.message || 'Unable to update report status.'))}
-                          className={`rounded-lg border px-2 py-1.5 text-xs focus:border-[#3b82f6] focus:outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Resolved">Resolved</option>
-                          <option value="Closed">Closed</option>
-                        </select>
                       </div>
                     </td>
                   </tr>
@@ -266,6 +268,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </table>
         </div>
       </div>
+      {selectedIds.length > 0 && <div className="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-[#2e303a] bg-[#14151d] px-4 py-3 text-sm text-white shadow-2xl"><span>{selectedIds.length} selected</span><button type="button" onClick={deleteSelected} className="rounded-lg bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-500">Delete Selected</button><button type="button" onClick={() => setSelectedIds([])} className="rounded-lg border border-[#2e303a] px-3 py-2 text-gray-300">Cancel</button></div>}
       <div className="flex items-center justify-between px-1 py-3">
         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {pageCount}</p>
         <div className="flex items-center gap-1">

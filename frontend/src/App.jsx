@@ -27,6 +27,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminMapPage from './pages/admin/AdminMapPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminActivityPage from './pages/admin/AdminActivityPage';
+import AdminArchivedPage from './pages/admin/AdminArchivedPage';
 import MyReportsPage from './pages/public/MyReportsPage';
 import ReportDetailPage from './pages/public/ReportDetailPage';
 import ProfilePage from './pages/public/ProfilePage';
@@ -47,6 +48,7 @@ import BarangayReportsPage from './pages/barangay/BarangayReportsPage';
 import BarangayReportDetail from './pages/barangay/BarangayReportDetail';
 import BarangayMapPage from './pages/barangay/BarangayMapPage';
 import BarangaySettingsPage from './pages/barangay/BarangaySettingsPage';
+import BarangayArchivedPage from './pages/barangay/BarangayArchivedPage';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
 import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
@@ -144,6 +146,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<BarangayDashboard />} />
               <Route path="reports" element={<BarangayReportsPage />} />
+              <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="map" element={<BarangayMapPage />} />
@@ -155,6 +158,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<BarangayDashboard />} />
               <Route path="reports" element={<BarangayReportsPage />} />
+              <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="activity" element={<BarangayActivityPage />} />
@@ -164,6 +168,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<BarangayDashboard />} />
               <Route path="reports" element={<BarangayReportsPage />} />
+              <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="activity" element={<BarangayActivityPage />} />
@@ -173,6 +178,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<BarangayDashboard />} />
               <Route path="reports" element={<BarangayReportsPage />} />
+              <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="activity" element={<BarangayActivityPage />} />
@@ -182,6 +188,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="reports" element={<SuperAdminReportsPage />} />
+              <Route path="archived" element={<AdminArchivedPage basePath="/superadmin" />} />
               <Route path="reports/resolved" element={<AdminResolvedReportsPage basePath="/superadmin" />} />
               <Route path="users" element={<SuperAdminUsers />} />
               <Route path="settings" element={<SuperAdminSettings />} />
@@ -192,6 +199,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="archived" element={<AdminArchivedPage />} />
               <Route path="reports/resolved" element={<AdminResolvedReportsPage />} />
               <Route path="reports/:id" element={<AdminReportDetailPage />} />
               <Route path="map" element={<AdminMapPage />} />

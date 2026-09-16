@@ -135,25 +135,6 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       );
     }
   };
-  const updateStatus = async (report, nextStatus) => {
-    try {
-      await api.patch(
-        `/reports/${report._id}/status`,
-        { status: nextStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      setReports((current) =>
-        current.map((item) =>
-          item._id === report._id ? { ...item, status: nextStatus } : item,
-        ),
-      );
-    } catch (requestError) {
-      await showError(
-        requestError.response?.data?.message ||
-          "Unable to update report status.",
-      );
-    }
-  };
   const panel = isDark
     ? "border-[#2e303a] bg-[#14151d]"
     : "border-slate-200 bg-white";
@@ -401,18 +382,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
                       {report.address || "Dagupan City"}
                     </td>
                     <td className="px-4 py-4">
-                      <select
-                        value={report.status}
-                        onChange={(event) =>
-                          updateStatus(report, event.target.value)
-                        }
-                        className={`rounded-lg border px-2 py-1.5 text-xs ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || ""}`}
-                      >
-                        <option>Pending</option>
-                        <option>In Progress</option>
-                        <option>Resolved</option>
-                        <option>Closed</option>
-                      </select>
+                      <span className={`inline-flex rounded-full border px-2 py-1 text-xs ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || ""}`}>{report.status}</span>
                     </td>
                     <td className="px-4 py-4">{report.priority || "Medium"}</td>
                     <td className={`whitespace-nowrap px-4 py-4 ${muted}`}>
