@@ -42,11 +42,12 @@ const LoginPage = () => {
   };
 
   if (isAuthenticated) {
-    const targetRoute = user?.role === 'barangay'
+    const role = user?.role?.toLowerCase();
+    const targetRoute = role === 'barangay'
       ? '/barangay/dashboard'
-      : user?.role === 'superadmin'
+      : role === 'superadmin'
         ? '/superadmin/dashboard'
-        : ['admin'].includes(user?.role)
+        : role === 'admin'
           ? '/admin/dashboard'
           : '/';
     return <Navigate to={targetRoute} replace />;
@@ -67,14 +68,15 @@ const LoginPage = () => {
     setSubmitting(true);
     try {
       const loggedInUser = await login(form.email, form.password);
+      const role = loggedInUser?.role?.toLowerCase();
       const name = form.email.split('@')[0];
       await showSuccess(`Welcome back, ${name}!`);
 
-      const targetRoute = loggedInUser?.role === 'barangay'
+      const targetRoute = role === 'barangay'
         ? '/barangay/dashboard'
-        : loggedInUser?.role === 'superadmin'
+        : role === 'superadmin'
           ? '/superadmin/dashboard'
-          : ['admin'].includes(loggedInUser?.role)
+          : role === 'admin'
             ? '/admin/dashboard'
             : '/';
       navigate(targetRoute, { replace: true });

@@ -205,7 +205,9 @@
                 throw new Error(error.response?.data?.message || 'Unable to update report status.');
             }
             }
-            setReports((prev) => prev.map((report) => String(report.id || report._id) === reportId ? { ...report, status: newStatus } : report));
+            setReports((prev) => newStatus === 'Closed'
+                ? prev.filter((report) => String(report.id || report._id) !== reportId)
+                : prev.map((report) => String(report.id || report._id) === reportId ? { ...report, status: newStatus } : report));
             fetchReports().catch(() => {});
         };
 

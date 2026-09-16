@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
@@ -10,6 +10,7 @@ const statuses = ['Pending', 'In Progress', 'Resolved', 'Closed'];
 const BarangayReportDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, token } = useAuth();
   const { theme } = useTheme();
   const [report, setReport] = useState(null);
@@ -23,6 +24,7 @@ const BarangayReportDetail = () => {
   const muted = isDark ? 'text-gray-400' : 'text-slate-500';
   const field = `mt-2 block w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`;
   const readOnly = ['Resolved', 'Closed'].includes(report?.status);
+  const reportSource = location.state?.from || (report?.archived ? 'archived' : report?.status === 'Resolved' ? 'resolved' : 'reports');
 
   useEffect(() => {
     if (!id || !token || !user?.barangay) return undefined;
@@ -68,7 +70,7 @@ const BarangayReportDetail = () => {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-xs uppercase tracking-[0.25em] text-[#3b82f6]">{user.barangay} / Report</p><h1 className={`mt-2 text-3xl font-bold ${heading}`}>{report.title || `${report.category || 'Hazard'} report`}</h1></div>
-        <button type="button" onClick={() => navigate(report.archived ? '/barangay/archived' : '/barangay/reports')} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{report.archived ? 'Back to Archived' : 'Back to Reports'}</button>
+        <button type="button" onClick={() => navigate(reportSource === 'archived' ? '/barangay/archived' : reportSource === 'resolved' ? '/barangay/reports/resolved' : '/barangay/reports')} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{reportSource === 'archived' ? 'Back to Archived' : reportSource === 'resolved' ? 'Back to Resolved Cases' : 'Back to Reports'}</button>
       </header>
       <section className={`rounded-2xl border p-6 shadow-xl ${panel}`}>
         <div className="flex flex-wrap gap-2"><span className="rounded-full bg-sky-500/20 px-2.5 py-1 text-xs text-sky-300">{report._id}</span><span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-xs text-amber-300">{report.status || 'Pending'}</span><span className="rounded-full bg-rose-500/20 px-2.5 py-1 text-xs text-rose-300">{report.priority || 'Medium'} priority</span></div>

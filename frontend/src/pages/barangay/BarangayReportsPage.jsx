@@ -91,8 +91,10 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     user?.barangay,
   ]);
 
-  const isVisible = (report) =>
-    resolvedOnly ? report.status === "Resolved" : report.status !== "Resolved";
+  const isVisible = (report) => {
+    const isArchived = report.archived === true || report.status === "Closed";
+    return resolvedOnly ? report.status === "Resolved" && !isArchived : !isArchived;
+  };
   const updateFilter = (setter, value) => {
     setter(value);
     setPage(1);
@@ -168,7 +170,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
               Export CSV
             </button>
             {!resolvedOnly && (
-              <button type="button" onClick={() => navigate("/barangay/reports/resolved")} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10">
+              <button type="button" onClick={() => navigate("/barangay/reports/resolved")} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-sm font-medium text-emerald-500 hover:bg-emerald-500/10">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 2 2 4-4m5 2a9 9 0 11-18 0z" /><circle cx="12" cy="12" r="9" /></svg>
                 Resolved Cases
               </button>
@@ -373,6 +375,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
                     <td className="px-4 py-4">
                       <Link
                         to={`/barangay/reports/${report._id}`}
+                        state={{ from: resolvedOnly ? "resolved" : "reports" }}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]"
                         aria-label={`Open details for ${report.title || "report"}`}
                         title="Open details"

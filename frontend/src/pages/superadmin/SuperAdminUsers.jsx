@@ -49,7 +49,7 @@ const SuperAdminUsers = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const body = response.data || {};
-      setUsers((body.users || []).map((user) => ({
+      setUsers((body.users || []).filter((user) => user.status !== 'deleted').map((user) => ({
         ...user,
         id: user._id || user.id,
         status: user.status || (user.isActive ? 'active' : 'inactive'),

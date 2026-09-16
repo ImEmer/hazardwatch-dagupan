@@ -50,7 +50,8 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
       const matchesPriority = priorityFilter === 'all' || report.priority === priorityFilter;
       const matchesCategory = categoryFilter === 'all' || report.category === categoryFilter;
       const matchesBarangay = barangayFilter === 'all' || (report.assignedBarangay || report.barangay) === barangayFilter;
-      return (resolvedOnly ? report.status === 'Resolved' : report.status !== 'Resolved') && matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesBarangay;
+      const isArchived = report.archived === true || report.status === 'Closed';
+      return (resolvedOnly ? report.status === 'Resolved' && !isArchived : !isArchived) && matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesBarangay;
     });
   }, [reports, resolvedOnly, search, statusFilter, priorityFilter, categoryFilter, barangayFilter]);
 
@@ -109,7 +110,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
-            {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 2 2 4-4m5 2a9 9 0 11-18 0z" /><circle cx="12" cy="12" r="9" /></svg>Resolved Cases</button>}
+            {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-sm font-medium text-emerald-500 hover:bg-emerald-500/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>Resolved Cases</button>}
             {!resolvedOnly && <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${statusFilter === 'all' ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-slate-900'}`}>All</button>}
             {!resolvedOnly && ['Pending', 'In Progress'].map((status) => (
               <button
@@ -253,7 +254,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7V4h6v3m-9 0l1 13h10l1-13" />
                             </svg>
                           </button>
-                          <Link to={`/admin/reports/${report._id || report.id}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]" aria-label={`Open details for ${report.title}`} title="Open details">
+                          <Link to={`${basePath}/reports/${report._id || report.id}`} state={{ from: resolvedOnly ? 'resolved' : 'reports' }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]" aria-label={`Open details for ${report.title}`} title="Open details">
                             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
                             </svg>

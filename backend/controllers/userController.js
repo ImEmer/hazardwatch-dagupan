@@ -22,7 +22,7 @@ const normalizeUserStatus = (user) => {
   return user;
 };
 
-export const getUsers = async (req, res, next) => { try { const users = await User.find().select(fields).sort({ createdAt: -1 }); res.json({ success: true, users: users.map((user) => normalizeUserStatus(user).toObject()) }); } catch (e) { next(e); } };
+export const getUsers = async (req, res, next) => { try { const users = await User.find({ status: { $ne: 'deleted' } }).select(fields).sort({ createdAt: -1 }); res.json({ success: true, users: users.map((user) => normalizeUserStatus(user).toObject()) }); } catch (e) { next(e); } };
 export const getUser = async (req, res, next) => { try { const user = await User.findById(req.params.id).select(fields); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); normalizeUserStatus(user); res.json({ success: true, user }); } catch (e) { next(e); } };
 export const createUser = async (req, res, next) => {
   try {
