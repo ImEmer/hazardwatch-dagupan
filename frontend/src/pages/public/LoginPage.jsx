@@ -41,17 +41,9 @@ const LoginPage = () => {
     return 'Something went wrong. Please try again later.';
   };
 
-  const getBarangayDashboardUrl = (barangay) => {
-    const normalized = (barangay || '').trim().toLowerCase();
-    if (normalized === 'bonuan') return '/barangay/bonuan/dashboard';
-    if (normalized === 'lucao') return '/barangay/lucao/dashboard';
-    if (normalized === 'tapuac') return '/barangay/tapuac/dashboard';
-    return '/barangay/bonuan/dashboard';
-  };
-
   if (isAuthenticated) {
     const targetRoute = user?.role === 'barangay'
-      ? getBarangayDashboardUrl(user?.barangay)
+      ? '/barangay/dashboard'
       : user?.role === 'superadmin'
         ? '/superadmin/dashboard'
         : ['admin'].includes(user?.role)
@@ -79,7 +71,7 @@ const LoginPage = () => {
       await showSuccess(`Welcome back, ${name}!`);
 
       const targetRoute = loggedInUser?.role === 'barangay'
-        ? getBarangayDashboardUrl(loggedInUser?.barangay)
+        ? '/barangay/dashboard'
         : loggedInUser?.role === 'superadmin'
           ? '/superadmin/dashboard'
           : ['admin'].includes(loggedInUser?.role)
