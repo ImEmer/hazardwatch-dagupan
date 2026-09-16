@@ -168,6 +168,12 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
               Export CSV
             </button>
             {!resolvedOnly && (
+              <button type="button" onClick={() => navigate("/barangay/reports/resolved")} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 2 2 4-4m5 2a9 9 0 11-18 0z" /><circle cx="12" cy="12" r="9" /></svg>
+                Resolved Cases
+              </button>
+            )}
+            {!resolvedOnly && (
               <button
                 type="button"
                 onClick={() => updateFilter(setStatus, "all")}
@@ -176,11 +182,11 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
                 All
               </button>
             )}
-            {(resolvedOnly ? ["Resolved"] : ["Pending", "In Progress", "Resolved"]).map((item) => (
+            {!resolvedOnly && ["Pending", "In Progress"].map((item) => (
               <button
                 type="button"
                 key={item}
-                onClick={() => item === "Resolved" && !resolvedOnly ? navigate("/barangay/reports/resolved") : updateFilter(setStatus, item)}
+                onClick={() => updateFilter(setStatus, item)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium ${status === item ? "bg-[#3b82f6] text-white" : isDark ? "bg-[#0a0b0f] text-gray-300" : "bg-slate-100 text-slate-700"}`}
               >
                 {item}
