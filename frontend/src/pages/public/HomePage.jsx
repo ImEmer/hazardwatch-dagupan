@@ -1,9 +1,10 @@
     import React, { useEffect, useRef, useState } from 'react';
-    import { Link } from 'react-router-dom';
+    import { Link, useNavigate } from 'react-router-dom';
     import AOS from 'aos';
     import 'aos/dist/aos.css';
     import StaticMap from '../../components/StaticMap';
     import api from '../../services/api';
+    import useAuth from '../../hooks/useAuth';
 
     const CATEGORY_GROUPS = {
         Flooding: 'Flood', 'Clogged Drainage': 'Water and Drainage', 'Pothole': 'Road and Traffic',
@@ -21,10 +22,25 @@
     };
 
     const HomePage = () => {
+    const { user, token, loading } = useAuth();
+    const navigate = useNavigate();
     const sectionRefs = useRef([]);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [publicStats, setPublicStats] = useState({ totalReports: 0, activeHazards: 0, resolvedCases: 0, areasCovered: 0, topCategories: [] });
     const [statsLoading, setStatsLoading] = useState(true);
+
+    useEffect(() => {
+        if (loading || !token || !user) return;
+
+        const role = user.role?.toLowerCase();
+        const dashboardByRole = {
+            superadmin: '/superadmin/dashboard',
+            admin: '/admin/dashboard',
+            barangay: '/barangay/dashboard',
+        };
+        const dashboard = dashboardByRole[role];
+        if (dashboard) navigate(dashboard, { replace: true });
+    }, [loading, navigate, token, user]);
 
     // Initialize AOS
     useEffect(() => {
