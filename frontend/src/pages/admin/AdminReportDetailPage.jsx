@@ -32,6 +32,7 @@ const AdminReportDetailPage = () => {
   const [fetchedReport, setFetchedReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [photoLoadError, setPhotoLoadError] = useState(false);
+  const basePath = location.pathname.startsWith('/superadmin') ? '/superadmin' : '/admin';
   const report = reports.find((item) => String(item._id || item.id) === id) || fetchedReport;
   const reportSource = location.state?.from || (report?.archived ? 'archived' : report?.status === 'Resolved' ? 'resolved' : 'reports');
   const photoUrl = typeof report?.photo === 'string' && report.photo.trim() ? report.photo.trim() : null;
@@ -119,7 +120,7 @@ const AdminReportDetailPage = () => {
     return (
       <div className={`rounded-2xl border p-8 text-center shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
         <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Report not found</p>
-        <Link to="/admin/reports" className="mt-4 inline-block text-[#3b82f6] hover:text-[#60a5fa]">
+        <Link to={`${basePath}/reports`} className="mt-4 inline-block text-[#3b82f6] hover:text-[#60a5fa]">
           Back to reports
         </Link>
       </div>
@@ -134,7 +135,7 @@ const AdminReportDetailPage = () => {
           <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</h2>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate(reportSource === 'archived' ? '/admin/archived' : reportSource === 'resolved' ? '/admin/reports/resolved' : '/admin/reports')} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{reportSource === 'archived' ? 'Back to Archived' : reportSource === 'resolved' ? 'Back to Resolved Cases' : 'Back to Reports'}</button>
+          <button type="button" onClick={() => navigate(reportSource === 'archived' ? `${basePath}/archived` : reportSource === 'resolved' ? `${basePath}/reports/resolved` : `${basePath}/reports`)} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{reportSource === 'archived' ? 'Back to Archived' : reportSource === 'resolved' ? 'Back to Resolved Cases' : 'Back to Reports'}</button>
           <div className="flex gap-2">
           <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>
             {report.status}

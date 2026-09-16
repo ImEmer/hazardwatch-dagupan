@@ -10,6 +10,7 @@ import {
   STATUS_BADGES_LIGHT,
 } from "../../services/reportOptions";
 import { showError, showSuccess } from "../../services/alerts";
+import Skeleton from "../../components/common/Skeleton";
 
 const PAGE_SIZE = 10;
 const STATUSES = ["Pending", "In Progress", "Closed"];
@@ -51,6 +52,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       search: search || undefined,
     };
     setLoading(true);
+    setError("");
     api
       .get("/reports", {
         params,
@@ -319,11 +321,11 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="7" className={`p-10 text-center ${muted}`}>
-                    Loading reports...
-                  </td>
-                </tr>
+                Array.from({ length: 6 }).map((_, rowIndex) => (
+                  <tr key={rowIndex} className={`border-t ${isDark ? "border-[#2e303a]" : "border-slate-200"}`}>
+                    {Array.from({ length: 7 }).map((__, columnIndex) => <td key={columnIndex} className="px-4 py-4"><Skeleton className="h-5 w-3/4" /></td>)}
+                  </tr>
+                ))
               ) : error ? (
                 <tr>
                   <td colSpan="7" className="p-10 text-center text-red-400">

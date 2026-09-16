@@ -6,6 +6,7 @@ import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import UserFormModal from '../../components/common/UserFormModal';
 import SuspendUserModal from '../../components/SuspendUserModal';
 import { DAGUPAN_BARANGAYS } from '../../services/reportOptions';
+import Skeleton from '../../components/common/Skeleton';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -45,11 +46,15 @@ const AdminUsersPage = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [suspendingUser, setSuspendingUser] = useState(null);
   const [suspensionSaving, setSuspensionSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
+    setLoading(true);
+    setError('');
     try {
       const response = await api.get('/users', {
         headers: { Authorization: `Bearer ${token}` },
@@ -63,7 +68,10 @@ const AdminUsersPage = () => {
         lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
       })));
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Unable to load users.');
+      setUsers([]);
+      setError(error.response?.data?.message || 'Unable to load users.');
+    } finally {
+      setLoading(false);
     }
   }, [token]);
 
@@ -260,7 +268,11 @@ const AdminUsersPage = () => {
               </tr>
             </thead>
             <tbody>
-              {visibleUsers.length === 0 ? (
+              {loading ? (
+                Array.from({ length: 6 }).map((_, rowIndex) => <tr key={rowIndex} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>{Array.from({ length: 8 }).map((__, columnIndex) => <td key={columnIndex} className="px-4 py-4"><Skeleton className="h-5 w-3/4" /></td>)}</tr>)
+              ) : error ? (
+                <tr><td colSpan="8" className="px-4 py-10 text-center text-red-400">{error}</td></tr>
+              ) : visibleUsers.length === 0 ? (
                 <tr><td colSpan="7" className={`px-4 py-10 text-center ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No users found.</td></tr>
               ) : (
                 visibleUsers.map((user) => (

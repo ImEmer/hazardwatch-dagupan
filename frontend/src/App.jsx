@@ -54,6 +54,7 @@ import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
 import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
 import SuperAdminActivityPage from './pages/superadmin/SuperAdminActivityPage';
 import SuperAdminReportsPage from './pages/superadmin/SuperAdminReportsPage';
+import SuperAdminReportDetailPage from './pages/superadmin/SuperAdminReportDetailPage';
 import ScrollToTop from './components/common/ScrollToTop';
 import SessionExpiryModal from './components/SessionExpiryModal';
 const PublicPlaceholder = ({ title, description }) => (
@@ -188,6 +189,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="reports" element={<SuperAdminReportsPage />} />
+              <Route path="reports/:id" element={<SuperAdminReportDetailPage />} />
               <Route path="archived" element={<AdminArchivedPage basePath="/superadmin" />} />
               <Route path="map" element={<AdminMapPage />} />
               <Route path="reports/resolved" element={<AdminResolvedReportsPage basePath="/superadmin" />} />
