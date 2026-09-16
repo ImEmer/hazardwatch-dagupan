@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node seeders/seed.js"
+    "seed": "node seeders/seed.js",
+    "seed:barangays": "node seeders/seedBarangays.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

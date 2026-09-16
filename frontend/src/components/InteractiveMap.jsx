@@ -23,7 +23,8 @@ const InteractiveMap = ({
     colorBy = 'category',
     showClickInstruction = false,
     showSelectedMarker = false,
-    showHeatmap = false
+    showHeatmap = false,
+    flyTo = null
 }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
@@ -153,6 +154,16 @@ const InteractiveMap = ({
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (!map.current || !mapReady || !flyTo?.center) return;
+        map.current.flyTo({
+            center: flyTo.center,
+            zoom: flyTo.zoom || 15,
+            duration: 1500,
+            essential: true
+        });
+    }, [flyTo, mapReady]);
 
     // Update report markers
     useEffect(() => {
