@@ -7,9 +7,15 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+node_modules/
+dist/
+dist-ssr/
+build/
+.env
+.env.local
+.env.*.local
+.vite/
+uploads/
 *.local
 backend/.env
 backend/uploads/*
@@ -18,8 +24,9 @@ backend/uploads/*
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -30,3 +37,4 @@ backend/uploads/*
 ACCOUNTS.md
 credentials.local.md
 *.credentials.md
+.vscode/
