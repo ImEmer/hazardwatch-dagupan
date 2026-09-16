@@ -11,6 +11,7 @@ import statisticsRoutes from './routes/statistics.js';
 import notificationRoutes from './routes/notifications.js';
 import activityRoutes from './routes/activity.js';
 import contactRoutes from './routes/contact.js';
+import User from './models/User.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
@@ -41,7 +42,12 @@ app.get('/api/health', (req, res) => res.json({ success: true, service: 'hazardw
 app.use(notFound);
 app.use(errorHandler);
 
-connectDB().then(() => app.listen(port, () => console.log(`HazardWatch API listening on port ${port}`))).catch((error) => {
+connectDB().then(async () => {
+  if (!await User.exists({ role: 'superadmin', status: { $ne: 'deleted' } })) {
+    console.warn('WARNING: No active superadmin account exists in the database.');
+  }
+  app.listen(port, () => console.log(`HazardWatch API listening on port ${port}`));
+}).catch((error) => {
   console.error('Unable to start API:', error.message);
   process.exit(1);
 });

@@ -22,6 +22,8 @@ const normalizeUserStatus = (user) => {
   return user;
 };
 
+const isLastSuperadmin = async (user) => user.role === 'superadmin' && await User.countDocuments({ role: 'superadmin', status: { $ne: 'deleted' } }) <= 1;
+
 export const getUsers = async (req, res, next) => { try { const users = await User.find({ status: { $ne: 'deleted' } }).select(fields).sort({ createdAt: -1 }); res.json({ success: true, users: users.map((user) => normalizeUserStatus(user).toObject()) }); } catch (e) { next(e); } };
 export const getUser = async (req, res, next) => { try { const user = await User.findById(req.params.id).select(fields); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); normalizeUserStatus(user); res.json({ success: true, user }); } catch (e) { next(e); } };
 export const createUser = async (req, res, next) => {
@@ -46,17 +48,15 @@ export const updateUser = async (req, res, next) => {
     if (!targetUser) return res.status(404).json({ success: false, message: 'User not found.' });
 
     const nextRole = req.body.role;
+    if (nextRole !== undefined && nextRole !== targetUser.role) {
+      return res.status(403).json({ success: false, message: 'User roles cannot be changed through this update flow.' });
+    }
     if (!enforceUserManagementRules(req.user, targetUser, nextRole)) {
       return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' });
     }
 
     const payload = { ...req.body };
-    if (req.user.role === 'admin') {
-      delete payload.role;
-    }
-    if (payload.role && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-      delete payload.role;
-    }
+    delete payload.role;
     if (payload.status && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
       payload.isActive = payload.status !== 'banned' && payload.status !== 'deleted';
     }
@@ -72,12 +72,13 @@ export const updateUser = async (req, res, next) => {
     res.json({ success: true, user });
   } catch (e) { next(e); }
 };
-export const toggleUserStatus = async (req, res, next) => { try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); if (req.user.role === 'admin' && user.role === 'superadmin') return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' }); user.status = user.status === 'active' ? 'suspended' : 'active'; user.isActive = user.status === 'active'; if (user.status === 'suspended') { user.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); user.suspensionReason = 'Temporarily suspended by admin'; } else { user.suspendedUntil = undefined; user.suspensionReason = undefined; } await user.save(); await logActivity({ actor: req.user, action: user.isActive ? 'user_activated' : 'user_deactivated', message: `${req.user.name} ${user.isActive ? 'activated' : 'deactivated'} user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {}); res.json({ success: true, user: user.toJSON() }); } catch (e) { next(e); } };
+export const toggleUserStatus = async (req, res, next) => { try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); if (req.user.role === 'admin' && user.role === 'superadmin') return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' }); if (user.status === 'active' && await isLastSuperadmin(user)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be suspended.' }); user.status = user.status === 'active' ? 'suspended' : 'active'; user.isActive = user.status === 'active'; if (user.status === 'suspended') { user.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); user.suspensionReason = 'Temporarily suspended by admin'; } else { user.suspendedUntil = undefined; user.suspensionReason = undefined; } await user.save(); await logActivity({ actor: req.user, action: user.isActive ? 'user_activated' : 'user_deactivated', message: `${req.user.name} ${user.isActive ? 'activated' : 'deactivated'} user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {}); res.json({ success: true, user: user.toJSON() }); } catch (e) { next(e); } };
 export const deleteUser = async (req, res, next) => {
   try {
     const userToDelete = await User.findById(req.params.id);
     if (!userToDelete) return res.status(404).json({ success: false, message: 'User not found.' });
     if (String(userToDelete._id) === String(req.user._id)) return res.status(403).json({ success: false, message: 'You cannot delete your own account.' });
+    if (await isLastSuperadmin(userToDelete)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be deleted.' });
     if (req.user.role === 'admin' && !['user', 'barangay'].includes(userToDelete.role)) return res.status(403).json({ success: false, message: 'Admins can only delete citizen or barangay accounts.' });
     if (!enforceUserManagementRules(req.user, userToDelete)) return res.status(403).json({ success: false, message: 'You are not allowed to delete this user.' });
     userToDelete.status = 'deleted';
@@ -100,6 +101,7 @@ export const suspendUser = async (req, res, next) => {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     if (String(target._id) === String(req.user._id) || !enforceUserManagementRules(req.user, target)) return res.status(403).json({ success: false, message: 'You are not allowed to suspend this user.' });
+    if (await isLastSuperadmin(target)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be suspended.' });
     const requestedDuration = req.body.durationInDays ?? req.body.duration;
     const durationMs = getDurationMs(requestedDuration);
     const until = requestedDuration === 'custom' ? new Date(req.body.suspendedUntil) : new Date(Date.now() + durationMs);
@@ -115,6 +117,7 @@ export const banUser = async (req, res, next) => {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     if (String(target._id) === String(req.user._id) || !enforceUserManagementRules(req.user, target)) return res.status(403).json({ success: false, message: 'You are not allowed to ban this user.' });
+    if (await isLastSuperadmin(target)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be banned.' });
     target.status = 'banned'; target.isActive = false; target.suspendedUntil = undefined; target.suspensionReason = String(req.body.reason || 'Account permanently banned.').trim(); target.suspendedBy = req.user._id;
     await target.save({ validateBeforeSave: false });
     res.json({ success: true, user: target.toJSON() });

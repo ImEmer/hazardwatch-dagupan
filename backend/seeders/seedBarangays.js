@@ -34,10 +34,13 @@ const users = barangays.map((barangay) => ({
 try {
   await connectDB();
   const emails = users.map((user) => user.email);
-  await User.deleteMany({ email: { $in: emails } });
-  const createdUsers = await User.create(users);
+  const createdUsers = [];
+  for (const userData of users) {
+    const existing = await User.findOne({ email: userData.email });
+    createdUsers.push(existing || await User.create(userData));
+  }
 
-  console.log(`Created ${createdUsers.length} barangay accounts.`);
+  console.log(`Verified ${createdUsers.length} barangay accounts without overwriting existing roles.`);
   createdUsers.forEach((user) => console.log(user.email));
 } finally {
   await mongoose.disconnect();

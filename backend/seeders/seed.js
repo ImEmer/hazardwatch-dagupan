@@ -53,9 +53,11 @@ const users = [
 
 await connectDB();
 await Report.deleteMany({});
-await User.deleteMany({ email: { $in: users.map((user) => user.email) } });
-await User.deleteMany({ email: { $in: ['bonuan@hazardwatch.com', 'lucao@hazardwatch.com', 'tapuac@hazardwatch.com', 'barangay@hazardwatch.com'] } });
-const seededUsers = await User.create(users);
+const seededUsers = [];
+for (const userData of users) {
+  const existing = await User.findOne({ email: userData.email });
+  seededUsers.push(existing || await User.create(userData));
+}
 if (await ActivityLog.countDocuments() === 0) {
   const [superAdmin, admin, barangay] = seededUsers;
   await ActivityLog.insertMany([
