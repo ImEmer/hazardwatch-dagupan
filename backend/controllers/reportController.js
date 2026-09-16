@@ -1,20 +1,21 @@
 import Report from '../models/Report.js';
 import { logActivity } from '../utils/logActivity.js';
 
-const scoped = (user) => user.role === 'barangay' ? { assignedBarangay: user.barangay || '__unassigned_barangay__' } : {};
+const barangayScope = (barangay) => ({ $or: [{ barangay }, { assignedBarangay: barangay }] });
+const scoped = (user) => user.role === 'barangay' ? barangayScope(user.barangay || '__unassigned_barangay__') : {};
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const reportFilter = (req) => {
   const { search, status, category, priority, barangay, startDate, endDate, includeResolved } = req.query;
-  const filter = { deletedAt: null, ...scoped(req.user) };
+  const filter = { deletedAt: null };
   if (status) filter.status = status;
   if (includeResolved !== 'true') filter.status = { $ne: 'Resolved' };
   if (category) filter.category = category;
   if (priority) filter.priority = priority;
-  if (req.user.role === 'barangay') filter.assignedBarangay = req.user.barangay || '__unassigned_barangay__';
-  else if (barangay) filter.assignedBarangay = barangay;
-  if (search) { const pattern = new RegExp(escapeRegex(search), 'i'); filter.$or = [{ title: pattern }, { description: pattern }, { address: pattern }]; }
+  if (req.user.role === 'barangay') filter.$and = [barangayScope(req.user.barangay || '__unassigned_barangay__')];
+  else if (barangay) filter.$and = [barangayScope(barangay)];
+  if (search) { const pattern = new RegExp(escapeRegex(search), 'i'); filter.$and = [...(filter.$and || []), { $or: [{ title: pattern }, { description: pattern }, { address: pattern }] }]; }
   if (startDate || endDate) filter.createdAt = { ...(startDate ? { $gte: new Date(startDate) } : {}), ...(endDate ? { $lte: new Date(`${endDate}T23:59:59.999Z`) } : {}) };
   return filter;
 };

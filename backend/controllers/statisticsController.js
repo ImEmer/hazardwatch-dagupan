@@ -1,7 +1,7 @@
 import Report from '../models/Report.js';
 
-const scope = (user) => user.role === 'barangay' ? { assignedBarangay: user.barangay, deletedAt: null } : { deletedAt: null };
-const barangayScope = (req) => ({ assignedBarangay: req.params.barangay, deletedAt: null });
+const scope = (user) => user.role === 'barangay' ? { $or: [{ barangay: user.barangay }, { assignedBarangay: user.barangay }], deletedAt: null } : { deletedAt: null };
+const barangayScope = (req) => ({ $or: [{ barangay: req.params.barangay }, { assignedBarangay: req.params.barangay }], deletedAt: null });
 const assertBarangayAccess = (req, res) => {
 	if (req.user.role === 'barangay' && String(req.user.barangay || '').toLowerCase() !== String(req.params.barangay || '').toLowerCase()) {
 		res.status(403).json({ success: false, message: 'You can only view your own barangay statistics.' });
