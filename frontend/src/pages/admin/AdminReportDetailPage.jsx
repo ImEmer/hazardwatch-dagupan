@@ -132,7 +132,7 @@ const AdminReportDetailPage = () => {
           <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</h2>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate('/admin/reports')} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">Back to Reports</button>
+          <button type="button" onClick={() => navigate(report.archived ? '/admin/archived' : '/admin/reports')} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{report.archived ? 'Back to Archived' : 'Back to Reports'}</button>
           <div className="flex gap-2">
           <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>
             {report.status}

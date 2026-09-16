@@ -27,9 +27,7 @@ const SubmitReport = () => {
         customCategory: '',
         description: '',
     });
-    const [photo, setPhoto] = useState(null);
-    const [photos, setPhotos] = useState([]);
-    const [photoPreview, setPhotoPreview] = useState(null);
+    const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const photoInputRef = useRef(null);
@@ -61,19 +59,14 @@ const SubmitReport = () => {
     const handlePhotoChange = (e) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
-        const validFiles = files.filter((file) => /^image\/(jpeg|jpg|png|webp)$/.test(file.type));
-        if (!validFiles.length) {
-            setErrors((prev) => ({ ...prev, photo: 'Only JPG, PNG, or WebP images are allowed.' }));
-            return;
-        }
-        setPhotos(validFiles);
-        setPhoto(validFiles[0]);
-        setErrors((prev) => ({ ...prev, photo: '' }));
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setPhotoPreview(reader.result);
-        };
-        reader.readAsDataURL(validFiles[0]);
+        const validFiles = files.filter((file) => /^image\/(jpeg|jpg|png|webp)$/.test(file.type) && file.size <= 5 * 1024 * 1024);
+        if (validFiles.length !== files.length) setErrors((prev) => ({ ...prev, photo: 'Images must be JPG, PNG, or WebP files no larger than 5MB.' }));
+        const available = Math.max(0, 3 - images.length);
+        if (files.length > available) showWarning('Maximum 3 images allowed.');
+        const nextImages = [...images, ...validFiles.slice(0, available)];
+        setImages(nextImages);
+        if (validFiles.length === files.length) setErrors((prev) => ({ ...prev, photo: '' }));
+        e.target.value = '';
     };
 
     const resetFormState = () => {
@@ -81,17 +74,13 @@ const SubmitReport = () => {
         setSelectedLocation(null);
         setSelectedAddress('');
         setSelectedBarangay('');
-        setPhoto(null);
-        setPhotos([]);
-        setPhotoPreview(null);
+        setImages([]);
         setErrors({});
         if (photoInputRef.current) photoInputRef.current.value = '';
     };
 
-    const handleRemovePhoto = () => {
-        setPhoto(null);
-        setPhotos([]);
-        setPhotoPreview(null);
+    const handleRemovePhoto = (index) => {
+        setImages((current) => current.filter((_, imageIndex) => imageIndex !== index));
         setErrors((prev) => ({ ...prev, photo: 'Photo evidence is required.' }));
     };
 
@@ -105,7 +94,7 @@ const SubmitReport = () => {
         } else if (form.description.trim().length < 10) {
             newErrors.description = 'Description must be at least 10 characters long.';
         }
-        if (!photo) newErrors.photo = 'Photo evidence is required.';
+        if (!images.length) newErrors.photo = 'Photo evidence is required.';
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
         else if (!withinDagupanBounds(selectedLocation)) newErrors.location = 'Reports must be submitted within Dagupan City limits.';
         return newErrors;
@@ -141,8 +130,8 @@ const SubmitReport = () => {
                 coordinates: [selectedLocation.lng, selectedLocation.lat]
             },
             address: selectedAddress,
-            photoFile: photo,
-            photos: photos.length ? photos : [photo],
+            photoFile: images[0],
+            photos: images,
             barangay: selectedBarangay,
         };
         try {
@@ -254,29 +243,27 @@ const SubmitReport = () => {
                     </span>
                     </label>
                     <div className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-[#2e303a]'} rounded-lg p-4 hover:border-[#3b82f6]/50 transition`}>
-                    {photoPreview ? (
-                        <div className="relative">
-                        <img 
-                            src={photoPreview} 
-                            alt="Preview" 
-                            className="max-h-48 rounded-lg mx-auto object-contain"
-                        />
-                        <button
-                            type="button"
-                            onClick={handleRemovePhoto}
-                            className="absolute top-2 right-2 bg-red-500/80 text-white rounded-full p-1.5 hover:bg-red-500 transition shadow-lg"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                    {images.length ? (
+                        <div>
+                        <div className="flex flex-wrap gap-3">
+                        {images.map((image, index) => (
+                            <div key={`${image.name}-${index}`} className="relative h-24 w-24 overflow-hidden rounded-lg border border-[#2e303a]">
+                                <img src={URL.createObjectURL(image)} alt={`Selected evidence ${index + 1}`} className="h-full w-full object-cover" />
+                                <button type="button" onClick={() => handleRemovePhoto(index)} className="absolute right-1 top-1 rounded-full bg-red-500/90 p-1 text-white hover:bg-red-500" aria-label={`Remove image ${index + 1}`}>
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                        ))}
+                        </div>
+                        {images.length < 3 && <button type="button" onClick={() => photoInputRef.current?.click()} className="mt-3 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm text-[#60a5fa] hover:bg-[#3b82f6]/10">Add More</button>}
+                        <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple ref={photoInputRef} onChange={handlePhotoChange} className="hidden" />
                         </div>
                     ) : (
                         <div className="text-center py-4">
                         <input
                             type="file"
                             id="photo"
-                            name="photo"
+                            name="images"
                             accept="image/jpeg,image/jpg,image/png,image/webp"
                             multiple
                             ref={photoInputRef}
@@ -290,7 +277,7 @@ const SubmitReport = () => {
                             <svg className="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-sm font-medium">Click to upload photo</span>
+                            <span className="text-sm font-medium">Click to upload photos</span>
                             <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP (max 5MB)</p>
                         </label>
                         </div>

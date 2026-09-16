@@ -26,7 +26,10 @@ const AdminSidebar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const isDark = theme === 'dark';
-  const visibleItems = items.filter((item) => !item.roles || item.roles.includes(user?.role));
+  const visibleItems = items.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
+    if (user?.role === 'superadmin' && ['/admin/reports', '/admin/map', '/admin/users', '/admin/settings'].includes(item.to)) return { ...item, to: item.to.replace('/admin', '/superadmin') };
+    return item;
+  });
 
   useEffect(() => {
     setIsOpen(false);

@@ -170,37 +170,13 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
             {!resolvedOnly && (
               <button
                 type="button"
-                onClick={() => navigate("/barangay/reports/resolved")}
-                title="View resolved cases"
-                aria-label="View resolved cases"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
-              >
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </button>
-            )}
-            {!resolvedOnly && (
-              <button
-                type="button"
                 onClick={() => updateFilter(setStatus, "all")}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium ${status === "all" ? "bg-[#3b82f6] text-white" : isDark ? "bg-[#0a0b0f] text-gray-300" : "bg-slate-100 text-slate-700"}`}
               >
                 All
               </button>
             )}
-            {(resolvedOnly ? ["Resolved"] : STATUSES).map((item) => (
+            {(resolvedOnly ? ["Resolved"] : ["Pending", "In Progress"]).map((item) => (
               <button
                 type="button"
                 key={item}

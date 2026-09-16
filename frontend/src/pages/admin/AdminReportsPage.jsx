@@ -109,9 +109,8 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm font-medium text-[#60a5fa] hover:bg-[#3b82f6]/10"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" /></svg>Export CSV</button>
-            {!resolvedOnly && <button type="button" onClick={() => navigate(`${basePath}/reports/resolved`)} title="View resolved cases" aria-label="View resolved cases" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>}
             {!resolvedOnly && <button type="button" onClick={() => setStatusFilter('all')} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${statusFilter === 'all' ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-slate-900'}`}>All</button>}
-            {(resolvedOnly ? ['Resolved'] : REPORT_STATUSES.filter((status) => status !== 'Resolved')).map((status) => (
+            {(resolvedOnly ? ['Resolved'] : ['Pending', 'In Progress']).map((status) => (
               <button
                 key={status}
                 onClick={() => status === 'Resolved' && !resolvedOnly ? navigate(`${basePath}/reports/resolved`) : setStatusFilter(status)}
@@ -225,7 +224,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                         <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.reportedBy?.name || 'Citizen report'}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-4"><span className="inline-flex rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category === 'Other' && report.customCategory ? `Other — ${report.customCategory}` : report.category}</span></td>
+                    <td className="px-4 py-4"><span className="inline-block max-w-[180px] truncate rounded-full px-3 py-1 text-xs font-medium text-white" title={report.category === 'Other' && report.customCategory ? `Other — ${report.customCategory}` : report.category} style={{ backgroundColor: HAZARD_CATEGORY_COLORS[report.category] || '#6b7280' }}>{report.category === 'Other' && report.customCategory ? `Other — ${report.customCategory}` : report.category}</span></td>
                     <td className={`max-w-0 truncate px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`} title={report.address || 'Dagupan City'}>{report.address || 'Dagupan City'}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>

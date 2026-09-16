@@ -189,6 +189,7 @@ function App() {
               <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="reports" element={<SuperAdminReportsPage />} />
               <Route path="archived" element={<AdminArchivedPage basePath="/superadmin" />} />
+              <Route path="map" element={<AdminMapPage />} />
               <Route path="reports/resolved" element={<AdminResolvedReportsPage basePath="/superadmin" />} />
               <Route path="users" element={<SuperAdminUsers />} />
               <Route path="settings" element={<SuperAdminSettings />} />
