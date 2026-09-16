@@ -5,7 +5,7 @@ import Report from '../models/Report.js';
 import ActivityLog from '../models/ActivityLog.js';
 import { connectDB } from '../config/db.js';
 
-const users = [
+const baseUsers = [
   {
     name: 'Super Admin',
     email: 'superadmin@hazardwatch.com',
@@ -18,33 +18,43 @@ const users = [
     password: 'admin123',
     role: 'admin',
   },
-  {
-    name: 'Bonuan Barangay Captain',
-    email: 'bonuan@hazardwatch.com',
-    password: 'password123',
+];
+
+const barangays = [
+  'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Bacayao Norte', 'Bacayao Sur',
+  'Banaoang', 'Bolosan', 'Bonuan Binloc', 'Bonuan Boquig', 'Bonuan Gueset', 'Calmay',
+  'Carael', 'Caranglaan', 'Herrero', 'Lasip Chico', 'Lasip Grande', 'Lomboy', 'Lucao',
+  'Malued', 'Mamalingling', 'Mangin', 'Mayombo', 'Pantal', 'Pogo Chico', 'Pogo Grande',
+  'Pugaro', 'Salapingao', 'San Fabian', 'Tambac', 'Tapuac',
+];
+
+const toEmail = (barangay) => {
+  const normalized = barangay
+    .replace(/^Barangay I$/, 'Barangay 1')
+    .replace(/^Barangay II$/, 'Barangay 2')
+    .replace(/^Barangay III$/, 'Barangay 3')
+    .replace(/^Barangay IV$/, 'Barangay 4')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+  return `${normalized}@hazardwatch.com`;
+};
+
+const users = [
+  ...baseUsers,
+  ...barangays.map((barangay) => ({
+    name: `${barangay} Barangay Captain`,
+    email: toEmail(barangay),
+    password: 'Barangay@123',
     role: 'barangay',
-    barangay: 'Bonuan',
-  },
-  {
-    name: 'Lucao Barangay Captain',
-    email: 'lucao@hazardwatch.com',
-    password: 'password123',
-    role: 'barangay',
-    barangay: 'Lucao',
-  },
-  {
-    name: 'Tapuac Barangay Captain',
-    email: 'tapuac@hazardwatch.com',
-    password: 'password123',
-    role: 'barangay',
-    barangay: 'Tapuac',
-  },
+    barangay,
+    isActive: true,
+  })),
 ];
 
 await connectDB();
 await Report.deleteMany({});
 await User.deleteMany({ email: { $in: users.map((user) => user.email) } });
-await User.deleteMany({ email: 'barangay@hazardwatch.com' });
+await User.deleteMany({ email: { $in: ['bonuan@hazardwatch.com', 'lucao@hazardwatch.com', 'tapuac@hazardwatch.com', 'barangay@hazardwatch.com'] } });
 const seededUsers = await User.create(users);
 if (await ActivityLog.countDocuments() === 0) {
   const [superAdmin, admin, barangay] = seededUsers;
