@@ -1,5 +1,6 @@
 import Report from '../models/Report.js';
 import { logActivity } from '../utils/logActivity.js';
+import { isDagupanBarangay } from '../utils/dagupanBarangays.js';
 
 const barangayScope = (barangay) => ({ $or: [{ barangay }, { assignedBarangay: barangay }] });
 const scoped = (user) => user.role === 'barangay' ? barangayScope(user.barangay || '__unassigned_barangay__') : {};
@@ -104,6 +105,7 @@ export const getReport = async (req, res, next) => {
 
 export const createReport = async (req, res, next) => {
   try {
+    if (req.body.barangay && !isDagupanBarangay(req.body.barangay)) return res.status(400).json({ success: false, message: 'Invalid barangay.' });
     const uploadedFiles = Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
     const photoValue = uploadedFiles[0] ? (uploadedFiles[0].path || uploadedFiles[0].secure_url) : (typeof req.body.photo === 'string' ? req.body.photo : '');
     const imageUrls = uploadedFiles.map((file) => file.path || file.secure_url).filter(Boolean);

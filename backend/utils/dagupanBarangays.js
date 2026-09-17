@@ -8,6 +8,8 @@ export const DAGUPAN_BARANGAYS = [
 
 export const DAGUPAN_BOUNDS = { minLat: 16.02, maxLat: 16.10, minLng: 120.30, maxLng: 120.40 };
 
+export const isDagupanBarangay = (value) => DAGUPAN_BARANGAYS.includes(String(value || '').trim());
+
 export const isDagupanLocation = ({ lat, lng }) => {
   const latitude = Number(lat);
   const longitude = Number(lng);
