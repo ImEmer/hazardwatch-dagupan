@@ -141,3 +141,22 @@ body,
 [data-theme='light'] .homepage-container [class*='border-[#2a3a5a]'] {
   border-color: #e5e7eb !important;
 }
+
+[data-theme='light'] .confirm-modal {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+
+[data-theme='light'] .confirm-modal-description {
+  color: #475569;
+}
+
+[data-theme='light'] .confirm-modal-cancel {
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+[data-theme='light'] .confirm-modal-cancel:hover {
+  background-color: #f1f5f9;
+}

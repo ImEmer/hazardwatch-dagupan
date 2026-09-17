@@ -1,45 +1,20 @@
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { requestConfirmation } from '../context/ConfirmContext';
 
-const base = {
-  background: '#14151d',
-  color: '#ffffff',
-  confirmButtonColor: '#3b82f6',
-};
+export const showSuccess = (title, description) => toast.success(title, { description });
+export const showError = (title, description) => toast.error(title, { description });
+export const showWarning = (title, description) => toast.warning(title, { description });
+export const showInfo = (title, description) => toast.info(title, { description });
 
-export const showSuccess = (text) => Swal.fire({
-  ...base,
-  icon: 'success',
-  title: 'Success!',
-  text,
-  timer: 3000,
-  showConfirmButton: false,
-  iconColor: '#22c55e',
-  confirmButtonColor: '#22c55e',
+export const showConfirm = (title, text, options = {}) => requestConfirmation({
+  title,
+  description: text,
+  confirmText: options.confirmText || options.confirmButtonText || 'Confirm',
+  cancelText: options.cancelText || 'Cancel',
+  variant: options.variant || 'danger',
 });
 
-export const showError = (text) => Swal.fire({
-  ...base,
-  icon: 'error',
-  title: 'Oops...',
-  text,
-});
-
-export const showWarning = (text) => Swal.fire({
-  ...base,
-  icon: 'warning',
-  title: 'Wait...',
-  text,
-});
-
-export const confirmAction = (text, confirmButtonText = 'Logout') => Swal.fire({
-  ...base,
-  title: 'Are you sure?',
-  text,
-  icon: 'warning',
-  showCancelButton: true,
-  reverseButtons: true,
-  cancelButtonText: 'Cancel',
-  cancelButtonColor: '#6b7280',
-  confirmButtonColor: '#dc2626',
-  confirmButtonText,
-});
+export const confirmAction = (text, confirmButtonText = 'Logout') => showConfirm('Are you sure?', text, {
+  confirmText: confirmButtonText,
+  variant: confirmButtonText.toLowerCase().includes('logout') ? 'warning' : 'danger',
+}).then((isConfirmed) => ({ isConfirmed }));

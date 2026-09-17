@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
-import { showError, showSuccess, showWarning } from '../../services/alerts';
+import { confirmAction, showError, showSuccess, showWarning } from '../../services/alerts';
 import InteractiveMap from '../../components/InteractiveMap';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -113,8 +113,8 @@ const SubmitReport = () => {
         e.preventDefault();
 
         if (!isAuthenticated) {
-            const result = await showWarning('You need to log in before submitting a report.');
-            if (result?.isConfirmed) {
+            const result = await confirmAction('You need to log in before submitting a report.', 'Login');
+            if (result.isConfirmed) {
                 navigate('/login', { state: { from: '/submit' } });
             }
             return;

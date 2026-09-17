@@ -4,6 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ConfirmProvider } from './context/ConfirmContext';
+import { Toaster } from 'sonner';
 import AdminLayout from './components/layout/AdminLayout';
 import PublicLayout from './components/layout/PublicLayout';
 import ProtectedRoute from './components/layout/ProtectedRoute';
@@ -120,8 +122,10 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <ReportProvider>
-          <Router>
+        <ConfirmProvider>
+          <Toaster position="top-right" richColors closeButton duration={4000} theme="system" />
+          <ReportProvider>
+            <Router>
             <SessionExpiryModal />
             <ScrollToTop />
             <PageTitle />
@@ -214,8 +218,9 @@ function App() {
             <Route path="/logout" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </Router>
-        </ReportProvider>
+            </Router>
+          </ReportProvider>
+        </ConfirmProvider>
       </ThemeProvider>
     </AuthProvider>
   );
