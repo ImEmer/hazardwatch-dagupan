@@ -1,0 +1,80 @@
+{
+  "info": {
+    "name": "HazardWatch Security Tests",
+    "description": "ITE 302 security verification collection for authentication, RBAC, validation, rate limiting, barangay isolation, and uploads.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "expectedStatus", "value": "401" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const loginAs = pm.variables.get('loginAs');",
+          "if (!loginAs) return;",
+          "const email = pm.environment.get(`${loginAs}Email`);",
+          "const password = pm.environment.get(`${loginAs}Password`);",
+          "const tokenKey = `${loginAs}Token`;",
+          "if (!email || !password || pm.environment.get(tokenKey)) return;",
+          "pm.sendRequest({ url: `${pm.environment.get('baseUrl')}/auth/login`, method: 'POST', header: { 'Content-Type': 'application/json' }, body: { mode: 'raw', raw: JSON.stringify({ email, password }) } }, (error, response) => { if (!error && response.code === 200) pm.environment.set(tokenKey, response.json().token); });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01_Auth",
+      "item": [
+        { "name": "Login valid", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"{{adminEmail}}\",\"password\":\"{{adminPassword}}\"}" }, "url": "{{baseUrl}}/auth/login" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));", "if (pm.response.code === 200) pm.environment.set('adminToken', pm.response.json().token);"] } }] },
+        { "name": "Login invalid password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"{{adminEmail}}\",\"password\":\"wrong-password\"}" }, "url": "{{baseUrl}}/auth/login" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 401 or 429', () => pm.expect([401, 429]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Protected current user without token", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 401', () => pm.response.to.have.status(401));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Refresh token", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/auth/refresh" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Weak reset password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"token\":\"invalid\",\"password\":\"weak\"}" }, "url": "{{baseUrl}}/auth/reset-password" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] }
+      ]
+    },
+    {
+      "name": "02_RBAC",
+      "item": [
+        { "name": "Citizen cannot list users", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }], "url": "{{baseUrl}}/users" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 403', () => pm.response.to.have.status(403));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Admin cannot manage superadmin", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"role\":\"superadmin\"}" }, "url": "{{baseUrl}}/users/{{userId}}" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 403 or 404', () => pm.expect([403, 404]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Barangay cannot export reports", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{barangayToken}}" }], "url": "{{baseUrl}}/reports/export" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 403', () => pm.response.to.have.status(403));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] }
+      ]
+    },
+    {
+      "name": "03_Input_Validation",
+      "item": [
+        { "name": "Malformed JSON", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{not-json" }, "url": "{{baseUrl}}/auth/login" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Weak registration password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"Test User\",\"email\":\"security-test@example.com\",\"password\":\"weak\"}" }, "url": "{{baseUrl}}/auth/register" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 422', () => pm.response.to.have.status(422));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "NoSQL-like report search", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/reports?search=%24where%3Afunction%28%29%7Breturn%20true%7D" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is not 500', () => pm.expect(pm.response.code).to.be.below(500));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "XSS-like contact input", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"<script>alert(1)</script>\",\"email\":\"test@example.com\",\"subject\":\"Security test\",\"message\":\"This is a validation test message.\"}" }, "url": "{{baseUrl}}/contact" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 201 or 422', () => pm.expect([201, 422]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] }
+      ]
+    },
+    {
+      "name": "04_Rate_Limit",
+      "item": [
+        { "name": "Failed login lockout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"{{adminEmail}}\",\"password\":\"wrong-password\"}" }, "url": "{{baseUrl}}/auth/login" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 401 or 429', () => pm.expect([401, 429]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Auth rate limit probe", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"rate-limit@example.com\",\"password\":\"WrongPassword1!\"}" }, "url": "{{baseUrl}}/auth/login" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 401 or 429', () => pm.expect([401, 429]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] }
+      ]
+    },
+    {
+      "name": "05_Barangay_Isolation",
+      "item": [
+        { "name": "Other barangay statistics denied", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{barangayToken}}" }], "url": "{{baseUrl}}/statistics/barangay/{{otherBarangay}}" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 403', () => pm.response.to.have.status(403));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Other barangay activity denied", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{barangayToken}}" }], "url": "{{baseUrl}}/activity/barangay/{{otherBarangay}}" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 403', () => pm.response.to.have.status(403));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Invalid report barangay", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "category", "value": "Flooding", "type": "text" }, { "key": "description", "value": "This is a valid security test description.", "type": "text" }, { "key": "barangay", "value": "Not A Dagupan Barangay", "type": "text" }, { "key": "location", "value": "{\"type\":\"Point\",\"coordinates\":[120.33,16.04]}", "type": "text" }] }, "url": "{{baseUrl}}/reports" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] }
+      ]
+    },
+    {
+      "name": "06_File_Upload",
+      "item": [
+        { "name": "Invalid file type", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "category", "value": "Flooding", "type": "text" }, { "key": "description", "value": "This is a valid security test description.", "type": "text" }, { "key": "location", "value": "{\"type\":\"Point\",\"coordinates\":[120.33,16.04]}", "type": "text" }, { "key": "images", "type": "file", "src": "{{invalidImagePath}}" }] }, "url": "{{baseUrl}}/reports" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is rejected or validation error', () => pm.expect([400, 422]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Oversized payload", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{oversizedJson}}" }, "url": "{{baseUrl}}/reports" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is 400 or 413', () => pm.expect([400, 413]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] },
+        { "name": "Three-file upload limit", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "category", "value": "Flooding", "type": "text" }, { "key": "description", "value": "This is a valid security test description.", "type": "text" }, { "key": "location", "value": "{\"type\":\"Point\",\"coordinates\":[120.33,16.04]}", "type": "text" }, { "key": "images", "type": "file", "src": "{{validImagePath}}" }, { "key": "images", "type": "file", "src": "{{validImagePath}}" }, { "key": "images", "type": "file", "src": "{{validImagePath}}" }, { "key": "images", "type": "file", "src": "{{validImagePath}}" }] }, "url": "{{baseUrl}}/reports" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status is rejected or validation error', () => pm.expect([400, 422, 500]).to.include(pm.response.code));", "pm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"] } }] }
+      ]
+    }
+  ]
+}
