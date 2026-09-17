@@ -4,6 +4,7 @@ const variants = {
   danger: { button: 'bg-red-600 hover:bg-red-500 focus-visible:ring-red-400', icon: 'text-red-400' },
   warning: { button: 'bg-amber-600 hover:bg-amber-500 focus-visible:ring-amber-400', icon: 'text-amber-400' },
   info: { button: 'bg-blue-600 hover:bg-blue-500 focus-visible:ring-blue-400', icon: 'text-blue-400' },
+  'danger-outline': { button: 'border border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-white focus-visible:ring-red-400 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950', icon: 'text-red-400' },
 };
 
 const ConfirmModal = ({
@@ -58,7 +59,6 @@ const ConfirmModal = ({
         aria-labelledby="confirm-modal-title"
         aria-describedby={description ? 'confirm-modal-description' : undefined}
       >
-        <div className={`mb-4 text-2xl ${style.icon}`} aria-hidden="true">!</div>
         <h2 id="confirm-modal-title" className="text-xl font-semibold">{title}</h2>
         {description && <p id="confirm-modal-description" className="confirm-modal-description mt-2 text-sm leading-6 text-gray-300">{description}</p>}
         <div className="mt-6 flex justify-end gap-3">

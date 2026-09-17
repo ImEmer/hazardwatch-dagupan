@@ -81,7 +81,7 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
-              <button onClick={handleLogout} className={`rounded-lg px-3 py-2 text-sm transition hover:bg-red-500/10 hover:text-red-400 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>Logout</button>
+              <button onClick={handleLogout} className="rounded-lg border border-red-500 px-3 py-2 text-sm text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950">Logout</button>
             </>
           ) : (
             <Link to="/login" className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">Login</Link>
@@ -101,7 +101,7 @@ const Navbar = () => {
           <div className="flex flex-col gap-1">
             {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.label}</NavLink>)}
             {isAuthenticated ? (
-              <><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Go to My Profile ({user?.name || 'Account'})</NavLink>{PRIVILEGED_ROLES.includes(user?.role) && <Link to={getDashboardPath()} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white" onClick={() => setMenuOpen(false)}>Go to Dashboard</Link>}<button onClick={handleLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-red-500/10 hover:text-red-400">Logout</button></>
+              <><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Go to My Profile ({user?.name || 'Account'})</NavLink>{PRIVILEGED_ROLES.includes(user?.role) && <Link to={getDashboardPath()} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white" onClick={() => setMenuOpen(false)}>Go to Dashboard</Link>}<button onClick={handleLogout} className="mt-2 rounded-lg border border-red-500 px-3 py-2 text-left text-sm text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950">Logout</button></>
             ) : <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Login</NavLink>}
           </div>
       </nav>

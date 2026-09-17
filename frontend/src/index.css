@@ -160,3 +160,27 @@ body,
 [data-theme='light'] .confirm-modal-cancel:hover {
   background-color: #f1f5f9;
 }
+
+@keyframes toast-progress-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.toast-progress {
+  transform-origin: left;
+  animation: toast-progress-countdown var(--toast-duration) linear forwards;
+}
+
+[data-theme='dark'] .toast-card {
+  border-color: #334155;
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .toast-description {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .toast-close:hover {
+  color: #ffffff;
+}

@@ -69,14 +69,14 @@ const AdminSidebar = () => {
     </div>
     <div className={`border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><p className="text-xs uppercase tracking-[0.2em] text-gray-400">Signed in as</p><p className="mt-2 font-semibold">{user?.name || 'User'}</p><p className={`text-xs capitalize ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>{user?.role || 'staff'}</p></div>
     <nav className="flex-1 space-y-1 px-3 py-4">{visibleItems.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setIsOpen(false)} className={linkClass}>{item.label}</NavLink>)}</nav>
-    <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><button type="button" onClick={handleLogout} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${isDark ? 'text-red-300 hover:bg-[#14151d]' : 'text-red-600 hover:bg-red-50'}`}><LogoutIcon />Logout</button></div>
+    <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><button type="button" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-xl border border-red-500 px-3 py-2 text-left text-sm text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"><LogoutIcon />Logout</button></div>
   </aside>;
 
   return <>
     <div className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 lg:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
       <button type="button" onClick={() => setIsOpen((value) => !value)} className="rounded-lg p-2" aria-label={isOpen ? 'Close menu' : 'Open menu'}><MenuIcon close={isOpen} /></button>
       <span className="text-sm font-semibold">{user?.role === 'superadmin' ? 'SuperAdmin Panel' : 'Admin Panel'}</span>
-      <button type="button" onClick={handleLogout} className="rounded-lg p-2 text-red-400" aria-label="Logout"><LogoutIcon /></button>
+      <button type="button" onClick={handleLogout} className="rounded-lg border border-red-500 p-2 text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950" aria-label="Logout"><LogoutIcon /></button>
     </div>
     {isOpen && <button type="button" aria-label="Close navigation" onClick={() => setIsOpen(false)} className="fixed inset-0 z-40 bg-black/60 lg:hidden" />}
     {sidebar}
