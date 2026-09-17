@@ -77,12 +77,12 @@ const AdminReportDetailPage = () => {
         <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between gap-3">
             <div className="w-full space-y-3">
-              <div className="h-4 w-24 animate-pulse rounded-md bg-[#1a1a1f]" />
-              <div className="h-8 w-3/5 animate-pulse rounded-md bg-[#1a1a1f]" />
+              <div className={`h-4 w-24 animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-8 w-3/5 animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
             </div>
             <div className="flex gap-2">
-              <div className="h-8 w-20 animate-pulse rounded-full bg-[#1a1a1f]" />
-              <div className="h-8 w-20 animate-pulse rounded-full bg-[#1a1a1f]" />
+              <div className={`h-8 w-20 animate-pulse rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-8 w-20 animate-pulse rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
             </div>
           </div>
         </div>
@@ -90,25 +90,25 @@ const AdminReportDetailPage = () => {
         <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
           <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
             <div className="space-y-4">
-              <div className="h-4 w-28 animate-pulse rounded-md bg-[#1a1a1f]" />
-              <div className="h-4 w-full animate-pulse rounded-md bg-[#1a1a1f]" />
-              <div className="h-4 w-5/6 animate-pulse rounded-md bg-[#1a1a1f]" />
-              <div className="h-4 w-2/3 animate-pulse rounded-md bg-[#1a1a1f]" />
-              <div className="mt-6 h-52 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className={`h-4 w-28 animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-4 w-full animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-4 w-5/6 animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-4 w-2/3 animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`mt-6 h-52 w-full animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
-                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
-                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
-                <div className="h-20 animate-pulse rounded-xl bg-[#1a1a1f]" />
+                <div className={`h-20 animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+                <div className={`h-20 animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+                <div className={`h-20 animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+                <div className={`h-20 animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               </div>
             </div>
           </div>
 
           <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
             <div className="space-y-4">
-              <div className="h-4 w-20 animate-pulse rounded-md bg-[#1a1a1f]" />
-              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
-              <div className="h-12 w-full animate-pulse rounded-xl bg-[#1a1a1f]" />
+              <div className={`h-4 w-20 animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-12 w-full animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-12 w-full animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
             </div>
           </div>
         </div>

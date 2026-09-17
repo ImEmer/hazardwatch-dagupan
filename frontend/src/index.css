@@ -75,3 +75,69 @@ body,
     background-color: #16171d;
   }
 }
+
+[data-theme='light'] .public-shell {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+[data-theme='light'] .public-shell main {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .public-shell > :not(.homepage-container) [class*='bg-[#14151d]'],
+[data-theme='light'] .public-shell > :not(.homepage-container) [class*='bg-[#0a0b0f]'] {
+  background-color: #ffffff !important;
+}
+
+[data-theme='light'] .public-shell > :not(.homepage-container) [class*='border-[#2e303a]'] {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme='light'] .public-shell > :not(.homepage-container) [class*='text-gray-400'],
+[data-theme='light'] .public-shell > :not(.homepage-container) [class*='text-gray-500'] {
+  color: #64748b !important;
+}
+
+[data-theme='light'] .public-shell > :not(.homepage-container) [class*='text-white'] {
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .public-shell > :not(.homepage-container) input,
+[data-theme='light'] .public-shell > :not(.homepage-container) textarea,
+[data-theme='light'] .public-shell > :not(.homepage-container) select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .public-shell > :not(.homepage-container) button[class*='bg-[#3b82f6]'],
+[data-theme='light'] .public-shell > :not(.homepage-container) a[class*='bg-[#3b82f6]'],
+[data-theme='light'] .public-shell > :not(.homepage-container) .auth-button {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .public-shell nav a:not([class*='text-[#3b82f6]']) {
+  color: #d1d5db;
+}
+
+[data-theme='light'] .homepage-container [class*='text-white'] {
+  color: #111827 !important;
+}
+
+[data-theme='light'] .homepage-container [class*='text-gray-400'],
+[data-theme='light'] .homepage-container [class*='text-gray-500'] {
+  color: #4b5563 !important;
+}
+
+[data-theme='light'] .homepage-container [class*='bg-[#0f1729]'],
+[data-theme='light'] .homepage-container [class*='bg-[#1a233a]'],
+[data-theme='light'] .homepage-container [class*='bg-[#1d2842]'] {
+  background-color: #ffffff !important;
+}
+
+[data-theme='light'] .homepage-container [class*='border-[#25334f]'],
+[data-theme='light'] .homepage-container [class*='border-[#2a3a5a]'] {
+  border-color: #e5e7eb !important;
+}

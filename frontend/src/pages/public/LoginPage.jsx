@@ -18,6 +18,8 @@ const LoginPage = () => {
   const getFriendlyError = (message = '') => {
     const normalized = message.toLowerCase();
 
+    if (normalized.includes('suspended') || normalized.includes('banned')) return message;
+
     if (normalized.includes('secretorprivatekey') || normalized.includes('must have a value') || normalized.includes('jwt') || normalized.includes('token')) {
       return 'Something went wrong. Please try again later.';
     }
@@ -83,7 +85,6 @@ const LoginPage = () => {
     } catch (loginError) {
       const friendlyMessage = getFriendlyError(loginError?.message);
       setError(friendlyMessage);
-      await showError(friendlyMessage);
     } finally {
       setSubmitting(false);
     }

@@ -1,17 +1,22 @@
 import React, { createContext, useEffect, useState } from 'react';
+import useAuth from '../hooks/useAuth';
 
 const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('hazardwatch-theme');
-    return savedTheme || 'dark';
-  });
+  const { user } = useAuth();
+  const userKey = user?._id || user?.id || 'guest';
+  const storageKey = `hazardwatch-theme-${userKey}`;
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
-    localStorage.setItem('hazardwatch-theme', theme);
+    setTheme(localStorage.getItem(storageKey) || 'dark');
+  }, [storageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, theme);
     document.documentElement.dataset.theme = theme;
-  }, [theme]);
+  }, [storageKey, theme]);
 
   const toggleTheme = () => {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));

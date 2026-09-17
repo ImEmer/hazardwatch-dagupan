@@ -10,7 +10,7 @@ const reportFilter = (req) => {
   const { search, status, category, priority, barangay, startDate, endDate, includeResolved } = req.query;
   const filter = { deletedAt: null, archived: { $ne: true } };
   if (status) filter.status = status;
-  if (includeResolved !== 'true') filter.status = { $ne: 'Resolved' };
+  else if (includeResolved !== 'true') filter.status = { $nin: ['Resolved', 'Closed'] };
   if (category) filter.category = category;
   if (priority) filter.priority = priority;
   if (req.user.role === 'barangay') filter.$and = [barangayScope(req.user.barangay || '__unassigned_barangay__')];

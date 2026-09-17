@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import useTheme from '../../hooks/useTheme';
 import { confirmAction } from '../../services/alerts';
 
 const publicLinks = [
@@ -15,11 +16,13 @@ const publicLinks = [
 const PRIVILEGED_ROLES = ['superadmin', 'admin', 'barangay'];
 
 const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium transition ${
-  isActive ? 'text-[#3b82f6]' : 'text-gray-300 hover:text-[#3b82f6]'
+  isActive ? 'text-[#3b82f6]' : 'text-gray-700 hover:text-[#3b82f6] dark:text-gray-300'
 }`;
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -53,10 +56,10 @@ const Navbar = () => {
 
   return (
     <header className={`fixed inset-x-0 top-0 z-50 h-16 transition ${
-      scrolled ? 'border-b border-[#2e303a] bg-[#0a0b0f]/95 backdrop-blur-md' : 'bg-transparent'
+      scrolled ? `border-b backdrop-blur-md ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/95' : 'border-slate-200 bg-white/95'}` : isDark ? 'bg-transparent' : 'bg-white/90'
     }`}>
       <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between px-4 md:px-6">
-        <Link to="/" className="text-lg font-bold tracking-tight text-white" onClick={() => setMenuOpen(false)}>
+        <Link to="/" className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`} onClick={() => setMenuOpen(false)}>
           HazardWatch
         </Link>
 
@@ -69,23 +72,23 @@ const Navbar = () => {
             <>
               {PRIVILEGED_ROLES.includes(user?.role) && <Link to={getDashboardPath()} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">Go to Dashboard</Link>}
               <div className="relative">
-                <button onClick={() => setAccountOpen((open) => !open)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-gray-300 hover:text-white" aria-expanded={accountOpen}>
+                <button onClick={() => setAccountOpen((open) => !open)} className={`flex items-center gap-2 rounded-lg px-2 py-2 text-sm ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-expanded={accountOpen}>
                   <span aria-hidden="true">{user?.name || 'Account'}</span><span aria-hidden="true" className="text-xs">&#9662;</span>
                 </button>
                 {accountOpen && (
-                  <div className="absolute right-0 top-12 w-44 rounded-xl border border-[#2e303a] bg-[#14151d] p-1 shadow-xl">
-                    <Link to="/profile" onClick={() => setAccountOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-[#0a0b0f] hover:text-white">Go to My Profile</Link>
+                  <div className={`absolute right-0 top-12 w-44 rounded-xl border p-1 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+                    <Link to="/profile" onClick={() => setAccountOpen(false)} className={`block rounded-lg px-3 py-2 text-sm ${isDark ? 'text-gray-300 hover:bg-[#0a0b0f] hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>Go to My Profile</Link>
                   </div>
                 )}
               </div>
-              <button onClick={handleLogout} className="rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-red-500/10 hover:text-red-400">Logout</button>
+              <button onClick={handleLogout} className={`rounded-lg px-3 py-2 text-sm transition hover:bg-red-500/10 hover:text-red-400 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>Logout</button>
             </>
           ) : (
             <Link to="/login" className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563eb]">Login</Link>
           )}
         </div>
 
-        <button type="button" className="rounded-lg border border-[#2e303a] p-2 text-gray-300 transition hover:bg-[#14151d] hover:text-white md:hidden" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen}>
+        <button type="button" className={`rounded-lg border p-2 transition md:hidden ${isDark ? 'border-[#2e303a] text-gray-300 hover:bg-[#14151d] hover:text-white' : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`} onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen}>
           {menuOpen ? (
             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
           ) : (
@@ -94,7 +97,7 @@ const Navbar = () => {
         </button>
       </div>
 
-      <nav className={`overflow-hidden border-b border-[#2e303a] bg-[#0a0b0f] px-4 transition-all duration-300 md:hidden ${menuOpen ? 'max-h-96 py-2 pb-4 opacity-100' : 'max-h-0 py-0 opacity-0'}`}>
+      <nav className={`overflow-hidden border-b px-4 transition-all duration-300 md:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'} ${menuOpen ? 'max-h-96 py-2 pb-4 opacity-100' : 'max-h-0 py-0 opacity-0'}`}>
           <div className="flex flex-col gap-1">
             {links.map((item) => <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuOpen(false)}>{item.label}</NavLink>)}
             {isAuthenticated ? (

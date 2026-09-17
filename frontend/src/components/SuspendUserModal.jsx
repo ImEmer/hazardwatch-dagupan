@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 const initialForm = { duration: '7', customDate: '', reason: '' };
 
-const SuspendUserModal = ({ isOpen, isDark, userName, onClose, onConfirm, saving = false }) => {
+const SuspendUserModal = ({ isOpen, isDark, targetUser, currentUser, userName, onClose, onConfirm, saving = false }) => {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState('');
 
@@ -13,7 +13,7 @@ const SuspendUserModal = ({ isOpen, isDark, userName, onClose, onConfirm, saving
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !targetUser || String(targetUser.id || targetUser._id) === String(currentUser?._id || currentUser?.id) || targetUser.role === 'superadmin') return null;
   const inputClass = `mt-1 w-full rounded-lg border px-3 py-2 outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`;
   const submit = async (event) => {
     event.preventDefault();

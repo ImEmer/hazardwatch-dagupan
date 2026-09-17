@@ -5,6 +5,7 @@
     import StaticMap from '../../components/StaticMap';
     import api from '../../services/api';
     import useAuth from '../../hooks/useAuth';
+    import useTheme from '../../hooks/useTheme';
 
     const CATEGORY_GROUPS = {
         Flooding: 'Flood', 'Clogged Drainage': 'Water and Drainage', 'Pothole': 'Road and Traffic',
@@ -23,6 +24,8 @@
 
     const HomePage = () => {
     const { user, token, loading } = useAuth();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const navigate = useNavigate();
     const sectionRefs = useRef([]);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -298,35 +301,23 @@
     ];
 
     // Background color classes for alternating sections
-    const bgClasses = [
-        'bg-[#0d0d0f]',      // Dark Gray
-        'bg-[#0f1729]',      // Dark Blue 1
-        'bg-[#0a0b0f]',      // Black
-        'bg-[#111d33]'       // Dark Blue 2
-    ];
+    const bgClasses = isDark
+        ? ['bg-[#0d0d0f]', 'bg-[#0f1729]', 'bg-[#0a0b0f]', 'bg-[#111d33]']
+        : ['bg-white', 'bg-slate-50', 'bg-white', 'bg-slate-50'];
 
     // Border colors for alternating sections
-    const borderClasses = [
-        'border-[#1a1a1f]',
-        'border-[#1a2744]',
-        'border-[#14141a]',
-        'border-[#1f2f4a]'
-    ];
+    const borderClasses = isDark
+        ? ['border-[#1a1a1f]', 'border-[#1a2744]', 'border-[#14141a]', 'border-[#1f2f4a]']
+        : ['border-gray-200', 'border-gray-200', 'border-gray-200', 'border-gray-200'];
 
     // Card background colors for alternating sections
-    const cardBgClasses = [
-        'bg-[#14151d]',
-        'bg-[#1a233a]',
-        'bg-[#111218]',
-        'bg-[#1d2842]'
-    ];
+    const cardBgClasses = isDark
+        ? ['bg-[#14151d]', 'bg-[#1a233a]', 'bg-[#111218]', 'bg-[#1d2842]']
+        : ['bg-white shadow-sm', 'bg-white shadow-sm', 'bg-white shadow-sm', 'bg-white shadow-sm'];
 
-    const cardBorderClasses = [
-        'border-[#2e303a]',
-        'border-[#25334f]',
-        'border-[#22242c]',
-        'border-[#2a3a5a]'
-    ];
+    const cardBorderClasses = isDark
+        ? ['border-[#2e303a]', 'border-[#25334f]', 'border-[#22242c]', 'border-[#2a3a5a]']
+        : ['border-gray-200', 'border-gray-200', 'border-gray-200', 'border-gray-200'];
 
     // Function to get background class based on index
     const getBgClass = (index) => bgClasses[index % bgClasses.length];
@@ -359,7 +350,7 @@
         <section className="relative min-h-screen overflow-hidden">
             <div className="absolute inset-0 z-0">
             <StaticMap />
-            <div className="absolute inset-0 bg-[#0a0b0f]/60 backdrop-blur-[2px]"></div>
+            <div className={`absolute inset-0 backdrop-blur-[2px] ${isDark ? 'bg-[#0a0b0f]/60' : 'bg-white/80'}`}></div>
             </div>
 
             <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-8 py-24 md:px-12 md:py-32">
@@ -368,7 +359,7 @@
                 Dagupan City - Community Safety
                 </div>
 
-                <h1 className="mb-6 text-5xl font-bold leading-[1.1] text-white md:text-7xl">
+                <h1 className={`mb-6 text-5xl font-bold leading-[1.1] md:text-7xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Report Hazards.
                 <br />
                 Track Incidents.
@@ -376,7 +367,7 @@
                 <span className="text-[#3b82f6]">Keep Your Community Safe.</span>
                 </h1>
 
-                <p className="mb-8 max-w-2xl text-lg leading-relaxed text-white md:text-xl">
+                <p className={`mb-8 max-w-2xl text-lg leading-relaxed md:text-xl ${isDark ? 'text-white' : 'text-gray-600'}`}>
                 Report hazards, track incidents, and keep your community informed in real time.
                 HazardWatch connects citizens and local staff in one platform for faster reporting,
                 monitoring, and response.
@@ -386,7 +377,7 @@
                 <Link to="/submit" className="rounded-xl bg-[#3b82f6] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#3b82f6]/30 transition hover:bg-[#2563eb] hover:shadow-[#3b82f6]/50">
                     Report a Hazard
                 </Link>
-                <Link to="/map" className="rounded-xl border border-[#2e303a] bg-[#14151d] px-8 py-3.5 text-base font-semibold text-white transition hover:bg-[#1f2028]">
+                <Link to="/map" className={`rounded-xl border px-8 py-3.5 text-base font-semibold transition ${isDark ? 'border-[#2e303a] bg-[#14151d] text-white hover:bg-[#1f2028]' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'}`}>
                     View Hazard Map
                 </Link>
                 </div>
@@ -487,8 +478,8 @@
                 <div 
                     key={index}
                     className={`${getCardBgClass(2)} border ${getCardBorderClass(2)} rounded-xl p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`}
-                    data-aos="zoom-in"
-                    data-aos-delay={index * 80}
+                    data-aos={index < 4 ? 'fade-right' : 'fade-left'}
+                    data-aos-delay={(index % 4) * 100}
                     data-aos-once="true"
                 >
                     <div className="w-12 h-12 bg-[#3b82f6]/10 rounded-lg flex items-center justify-center mb-3">

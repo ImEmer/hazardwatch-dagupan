@@ -28,7 +28,7 @@ const roleKeyword = (value) => {
 };
 
 const SuperAdminUsers = () => {
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   const { theme } = useTheme();
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
@@ -122,6 +122,7 @@ const SuperAdminUsers = () => {
   };
 
   const handleDelete = async (userToDelete) => {
+    if (!canManageTarget(userToDelete)) return;
     const result = await confirmAction(`Delete ${userToDelete.name}? This action cannot be undone.`, 'Delete');
     if (!result.isConfirmed) return;
 
@@ -156,6 +157,7 @@ const SuperAdminUsers = () => {
   };
 
   const changeRestriction = async (targetUser, action) => {
+    if (!canManageTarget(targetUser)) return;
     if (action === 'suspend') { setSuspendingUser(targetUser); return; }
     const result = await confirmAction(`Unsuspend ${targetUser.name}'s account?`, 'Unsuspend user');
     if (!result.isConfirmed) return;
@@ -174,6 +176,13 @@ const SuperAdminUsers = () => {
     ['Barangay accounts', users.filter((user) => user.role === 'barangay').length, 'border-emerald-500'],
     ['Admins', users.filter((user) => ['admin', 'superadmin'].includes(user.role)).length, 'border-red-500'],
   ];
+  const canManageTarget = (targetUser) => {
+    const levels = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
+    const currentId = currentUser?._id || currentUser?.id;
+    return String(targetUser.id) !== String(currentId)
+      && targetUser.role !== 'superadmin'
+      && (levels[currentUser?.role] || 0) > (levels[targetUser.role] || 0);
+  };
 
   return (
     <main className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-24 text-white">
@@ -201,7 +210,7 @@ const SuperAdminUsers = () => {
             <table className="min-w-full text-left text-sm">
               <thead className={isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-50 text-slate-500'}>
                 <tr>
-                  <th className="px-4 py-3"><input type="checkbox" aria-label="Select all users" checked={visibleUsers.length > 0 && visibleUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? visibleUsers.map((user) => user.id) : [])} /></th>
+                  <th className="px-4 py-3"><input type="checkbox" aria-label="Select all users" checked={visibleUsers.some(canManageTarget) && visibleUsers.filter(canManageTarget).every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? visibleUsers.filter(canManageTarget).map((user) => user.id) : [])} /></th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Role</th>
@@ -219,7 +228,7 @@ const SuperAdminUsers = () => {
                 ) : (
                   visibleUsers.map((user) => (
                     <tr key={user.id} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
-                      <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${user.name}`} checked={selectedIds.includes(user.id)} onChange={() => setSelectedIds((current) => current.includes(user.id) ? current.filter((id) => id !== user.id) : [...current, user.id])} /></td>
+                      <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${user.name}`} disabled={!canManageTarget(user)} checked={selectedIds.includes(user.id)} onChange={() => setSelectedIds((current) => current.includes(user.id) ? current.filter((id) => id !== user.id) : [...current, user.id])} /></td>
                       <td className={`px-4 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{user.name}</td>
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.email}</td>
                       <td className="px-4 py-4">
@@ -229,7 +238,7 @@ const SuperAdminUsers = () => {
                       </td>
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.barangay || '—'}</td>
                       <td className="px-4 py-4">
-                        <div className="flex gap-3">
+                        {canManageTarget(user) && <div className="flex gap-3">
                           <button type="button" onClick={() => openEditor(user)} title="Edit user" aria-label="Edit user" className="rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                           </button>
@@ -237,7 +246,7 @@ const SuperAdminUsers = () => {
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 6V4h8v2m-9 0l1 14h8l1-14M10 10v6m4-6v6" /></svg>
                           </button>
                           {['suspended', 'banned'].includes(user.status) ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 9m0-5v5h-5M20 12a8 8 0 01-13.7 5.7L4 15m0 5v-5h5" /></svg></button> : <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M9 9l6 6M15 9l-6 6" /></svg></button>}
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   ))
@@ -260,7 +269,7 @@ const SuperAdminUsers = () => {
         </div>
       </div>
 
-      <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
+      <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} targetUser={suspendingUser} currentUser={currentUser} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
 
       {isEditing && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

@@ -44,7 +44,7 @@ export const login = async (req, res, next) => {
 
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
-    if (user.status === 'suspended' && user.suspendedUntil && new Date(user.suspendedUntil) < new Date()) {
+    if (user.status === 'suspended' && user.suspendedUntil && new Date(user.suspendedUntil) <= new Date()) {
       user.status = 'active';
       user.isActive = true;
       user.suspendedUntil = undefined;
@@ -52,9 +52,28 @@ export const login = async (req, res, next) => {
       user.suspendedBy = undefined;
       await user.save({ validateBeforeSave: false });
     }
-    if (user.status === 'suspended' || user.status === 'banned') {
-      const reason = user.suspensionReason || 'Your account is restricted.';
-      return res.status(403).json({ success: false, message: reason });
+    if (user.status === 'suspended') {
+      const now = new Date();
+      const suspendedUntil = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+      const remainingMs = suspendedUntil ? Math.max(0, suspendedUntil.getTime() - now.getTime()) : 0;
+      const dayMs = 24 * 60 * 60 * 1000;
+      const daysRemaining = Math.ceil(remainingMs / dayMs);
+      const durationMessage = remainingMs < dayMs
+        ? 'less than a day'
+        : `${daysRemaining} more day${daysRemaining === 1 ? '' : 's'}`;
+      const reason = user.suspensionReason ? ` Reason: ${user.suspensionReason}` : '';
+      return res.status(403).json({
+        success: false,
+        status: 'suspended',
+        suspendedUntil: user.suspendedUntil || null,
+        daysRemaining,
+        reason: user.suspensionReason || '',
+        message: `Your account is suspended for ${durationMessage}.${reason}`,
+      });
+    }
+    if (user.status === 'banned') {
+      const reason = user.suspensionReason ? ` Reason: ${user.suspensionReason}` : '';
+      return res.status(403).json({ success: false, status: 'banned', suspendedUntil: null, daysRemaining: null, reason: user.suspensionReason || '', message: `Your account is permanently banned.${reason}` });
     }
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     clearFailedLogins(req, normalizedEmail);
@@ -90,12 +109,16 @@ export const updateProfile = async (req, res, next) => {
   try {
     const { name, email } = req.body;
     if (!name?.trim() || !email?.trim()) return res.status(422).json({ success: false, message: 'Name and email are required.' });
-    const duplicate = await User.findOne({ email: email.trim().toLowerCase(), _id: { $ne: req.user._id } });
-    if (duplicate) return res.status(409).json({ success: false, message: 'Email already registered.' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const currentEmail = String(req.user.email || '').trim().toLowerCase();
+    const emailChanged = currentEmail !== normalizedEmail;
+    if (emailChanged) {
+      const duplicate = await User.findOne({ email: normalizedEmail, _id: { $ne: req.user._id } });
+      if (duplicate) return res.status(409).json({ success: false, message: 'Email already registered.' });
+    }
     const nameChanged = req.user.name !== name.trim();
-    const emailChanged = req.user.email !== email.trim().toLowerCase();
     req.user.name = name.trim();
-    req.user.email = email.trim().toLowerCase();
+    req.user.email = normalizedEmail;
     await req.user.save({ validateBeforeSave: false });
     const action = nameChanged && emailChanged ? 'profile_updated' : nameChanged ? 'name_updated' : 'email_updated';
     const message = action === 'profile_updated' ? `${req.user.name} updated their profile` : `${req.user.name} updated their ${action === 'name_updated' ? 'name' : 'email'}`;

@@ -4,7 +4,7 @@ const Skeleton = ({ className = '', style }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  return <div style={style} className={`animate-pulse rounded-md ${isDark ? 'bg-[#1a1a1f]' : 'bg-gray-200'} ${className}`} />;
+  return <div style={style} className={`animate-pulse rounded-md ${isDark ? 'bg-slate-700' : 'bg-gray-200'} ${className}`} />;
 };
 
 export const SkeletonCard = ({ className = '' }) => (

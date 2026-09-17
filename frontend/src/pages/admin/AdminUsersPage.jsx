@@ -180,7 +180,7 @@ const AdminUsersPage = () => {
   };
 
   const handleDelete = async (targetUser) => {
-    if (targetUser.role === 'superadmin' || targetUser.role === 'admin' || targetUser.role === 'staff' || targetUser.id === currentUser?._id) return;
+    if (!canManageTarget(targetUser)) return;
     const result = await confirmAction(`Delete ${targetUser.name}'s account? This action cannot be undone.`, 'Delete user');
     if (!result.isConfirmed) return;
     try {
@@ -210,6 +210,7 @@ const AdminUsersPage = () => {
   };
 
   const changeRestriction = async (targetUser, action) => {
+    if (!canManageTarget(targetUser)) return;
     if (action === 'suspend') { setSuspendingUser(targetUser); return; }
     const result = await confirmAction(`Unsuspend ${targetUser.name}'s account?`, 'Unsuspend user');
     if (!result.isConfirmed) return;
@@ -229,6 +230,13 @@ const AdminUsersPage = () => {
     ['Barangay accounts', users.filter((user) => user.role === 'barangay').length, 'border-emerald-500'],
     ['Admins', users.filter((user) => ['admin', 'superadmin'].includes(user.role)).length, 'border-red-500'],
   ];
+  const canManageTarget = (targetUser) => {
+    const levels = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
+    const currentId = currentUser?._id || currentUser?.id;
+    return String(targetUser.id) !== String(currentId)
+      && targetUser.role !== 'superadmin'
+      && (levels[currentUser?.role] || 0) > (levels[targetUser.role] || 0);
+  };
 
   return (
     <div className="space-y-6">
@@ -257,7 +265,7 @@ const AdminUsersPage = () => {
           <table className="min-w-full text-left text-sm text-gray-200">
             <thead className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'bg-[#0a0b0f] text-gray-400' : 'bg-slate-100 text-slate-500'}`}>
               <tr>
-                <th className="px-4 py-3"><input type="checkbox" aria-label="Select all users" checked={visibleUsers.length > 0 && visibleUsers.every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? visibleUsers.map((user) => user.id) : [])} /></th>
+                <th className="px-4 py-3"><input type="checkbox" aria-label="Select all users" checked={visibleUsers.some(canManageTarget) && visibleUsers.filter(canManageTarget).every((user) => selectedIds.includes(user.id))} onChange={(event) => setSelectedIds(event.target.checked ? visibleUsers.filter(canManageTarget).map((user) => user.id) : [])} /></th>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Role</th>
@@ -277,7 +285,7 @@ const AdminUsersPage = () => {
               ) : (
                 visibleUsers.map((user) => (
                 <tr key={user.id} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
-                  <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${user.name}`} disabled={user.id === (currentUser?._id || currentUser?.id)} checked={selectedIds.includes(user.id)} onChange={() => setSelectedIds((current) => current.includes(user.id) ? current.filter((id) => id !== user.id) : [...current, user.id])} /></td>
+                  <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${user.name}`} disabled={!canManageTarget(user)} checked={selectedIds.includes(user.id)} onChange={() => setSelectedIds((current) => current.includes(user.id) ? current.filter((id) => id !== user.id) : [...current, user.id])} /></td>
                   <td className={`px-4 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{user.name}</td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.email}</td>
                   <td className="px-4 py-4">
@@ -293,7 +301,7 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-1">
+                    {canManageTarget(user) && <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => openEditor(user)}
@@ -315,7 +323,7 @@ const AdminUsersPage = () => {
                       >
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 6V4h8v2m-9 0l1 14h8l1-14M10 10v6m4-6v6" /></svg>
                       </button>
-                    </div>
+                    </div>}
                   </td>
                 </tr>
                 ))
@@ -336,7 +344,7 @@ const AdminUsersPage = () => {
         </div>
       </div>
 
-      <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
+      <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} targetUser={suspendingUser} currentUser={currentUser} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
 
       {isEditing && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

@@ -118,8 +118,8 @@ const PageTitle = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <ReportProvider>
           <Router>
             <SessionExpiryModal />
@@ -216,8 +216,8 @@ function App() {
             </Routes>
           </Router>
         </ReportProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

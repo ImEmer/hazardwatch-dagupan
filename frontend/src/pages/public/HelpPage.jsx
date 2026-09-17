@@ -2,6 +2,7 @@
     import { Link } from 'react-router-dom';
     import AOS from 'aos';
     import 'aos/dist/aos.css';
+    import useTheme from '../../hooks/useTheme';
 
     const faqs = [
     ['How do I submit a report?', 'Sign in, open Submit Report, choose a hazard type, describe what happened, upload photo evidence, and select the location on the map.'],
@@ -13,6 +14,8 @@
 
     const HelpPage = () => {
     const [activeFAQ, setActiveFAQ] = useState(null);
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     useEffect(() => {
         AOS.init({ duration: 800, easing: 'ease-in-out', once: true });
@@ -56,10 +59,10 @@
             <h2 className="text-xl font-semibold">Frequently asked questions</h2>
             <div className="mt-4 space-y-2">{faqs.map(([question, answer], index) => (
                 <div key={question} className="overflow-hidden rounded-xl border border-[#2e303a]">
-                    <button type="button" onClick={() => setActiveFAQ(activeFAQ === index ? null : index)} aria-expanded={activeFAQ === index} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left font-semibold text-white hover:bg-[#1a1a1f]">
+                    <button type="button" onClick={() => setActiveFAQ(activeFAQ === index ? null : index)} aria-expanded={activeFAQ === index} className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left font-semibold ${isDark ? 'text-white hover:bg-slate-800' : 'text-gray-900 hover:bg-gray-200'} ${activeFAQ === index ? (isDark ? 'bg-slate-800' : 'bg-gray-50') : ''}`}>
                         <span>{question}</span><span className="text-xl text-gray-400" aria-hidden="true">{activeFAQ === index ? '-' : '+'}</span>
                     </button>
-                    {activeFAQ === index && <p className="border-t border-[#2e303a] px-4 py-3 text-sm leading-6 text-gray-400">{answer}</p>}
+                    {activeFAQ === index && <p className={`border-t px-4 py-3 text-sm leading-6 ${isDark ? 'border-[#2e303a] text-gray-400' : 'border-gray-200 text-gray-600'}`}>{answer}</p>}
                 </div>
             ))}</div>
         </section>

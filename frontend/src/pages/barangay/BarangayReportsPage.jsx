@@ -95,7 +95,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
 
   const isVisible = (report) => {
     const isArchived = report.archived === true || report.status === "Closed";
-    return resolvedOnly ? report.status === "Resolved" && !isArchived : !isArchived;
+    return resolvedOnly ? report.status === "Resolved" && !isArchived : !isArchived && !["Resolved", "Closed"].includes(report.status);
   };
   const updateFilter = (setter, value) => {
     setter(value);
@@ -263,6 +263,11 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
           </div>
           {[
             [search, `Search: ${search}`, () => updateFilter(setSearch, "")],
+            [
+              !resolvedOnly && status !== "all" && status,
+              status,
+              () => updateFilter(setStatus, "all"),
+            ],
             [
               priority !== "all" && priority,
               priority,
