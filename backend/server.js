@@ -16,7 +16,25 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
-app.use(helmet());
+const apiOrigin = process.env.CLIENT_URL || 'https://hazardwatch-dagupan.onrender.com';
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://tile.openstreetmap.org'],
+      connectSrc: ["'self'", 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', apiOrigin, 'https://hazardwatch-dagupan.vercel.app'],
+      fontSrc: ["'self'", 'data:'],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: true,
+}));
 
 
 app.use(cors({
