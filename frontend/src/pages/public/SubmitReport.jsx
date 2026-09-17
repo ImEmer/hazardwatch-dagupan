@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useAuth from '../../hooks/useAuth';
+import useTheme from '../../hooks/useTheme';
 import { showError, showSuccess, showWarning } from '../../services/alerts';
 import InteractiveMap from '../../components/InteractiveMap';
 import AOS from 'aos';
@@ -18,6 +19,8 @@ const withinDagupanBounds = ({ lat, lng }) => {
 const SubmitReport = () => {
     const { addReport } = useReports();
     const { isAuthenticated, token } = useAuth();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const navigate = useNavigate();
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [selectedAddress, setSelectedAddress] = useState('');
@@ -152,11 +155,11 @@ const SubmitReport = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0b0f] py-8 px-4">
+        <div className={`min-h-screen px-4 py-8 ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-50'}`}>
         <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-12">
             {/* LEFT COLUMN - FORM */}
-            <div data-aos="fade-up" className="lg:col-span-2 lg:h-full bg-[#14151d] border border-[#2e303a] rounded-xl shadow-md p-6">
+            <div data-aos="fade-up" className={`lg:col-span-2 lg:h-full rounded-xl border p-6 shadow-md ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-gray-200 bg-white shadow-sm'}`}>
                 <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Hazard Type */}
                 <div>
@@ -261,7 +264,7 @@ const SubmitReport = () => {
                             </div>
                         ))}
                         </div>
-                        {images.length < 3 && <button type="button" onClick={() => photoInputRef.current?.click()} className="mt-3 rounded-lg border border-[#3b82f6] px-3 py-2 text-sm text-[#60a5fa] hover:bg-[#3b82f6]/10">Add More</button>}
+                        {images.length < 3 && <button type="button" onClick={() => photoInputRef.current?.click()} className={`mt-3 rounded-lg border px-3 py-2 text-sm transition ${isDark ? 'border-slate-600 text-slate-300 hover:border-blue-500 hover:bg-slate-800' : 'border-gray-300 text-gray-700 hover:border-blue-500 hover:bg-gray-50'}`}><span className={isDark ? 'text-slate-400' : 'text-gray-600'} aria-hidden="true">+</span> Add More</button>}
                         <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple ref={photoInputRef} onChange={handlePhotoChange} className="hidden" />
                         </div>
                     ) : (
@@ -333,12 +336,12 @@ const SubmitReport = () => {
 
             {/* RIGHT COLUMN - MAP */}
             <div data-aos="fade-left" data-aos-delay="150" className="lg:col-span-3 lg:h-full">
-                <div className={`h-full bg-[#14151d] border ${errors.location ? 'border-red-500' : 'border-[#2e303a]'} rounded-xl overflow-hidden flex flex-col`}>
-                <div className="p-3 border-b border-[#2e303a] bg-[#0a0b0f]/50 flex items-center gap-2">
+                <div className={`h-full overflow-hidden rounded-xl border ${errors.location ? 'border-red-500' : isDark ? 'border-[#2e303a]' : 'border-gray-200'} flex flex-col ${isDark ? 'bg-[#14151d]' : 'bg-white shadow-sm'}`}>
+                <div className={`flex items-center gap-2 border-b p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/50' : 'border-gray-200 bg-slate-50'}`}>
                     <svg className="w-4 h-4 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
-                    <p className="text-sm text-gray-400">
+                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     Click the map to select the hazard location.
                     </p>
                 </div>
@@ -352,13 +355,13 @@ const SubmitReport = () => {
                         showSelectedMarker={true}
                     />
                 </div>
-                <div className="p-3 border-t border-[#2e303a] bg-[#0a0b0f]/50 flex items-center gap-2">
+                <div className={`flex items-center gap-2 border-t p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/50' : 'border-gray-200 bg-slate-50'}`}>
                     {selectedLocation ? (
                     <>
                         <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                         </svg>
-                        <span className="text-sm text-white font-medium flex-1 truncate">
+                        <span className={`flex-1 truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {selectedAddress}
                         </span>
                         <button
@@ -378,7 +381,7 @@ const SubmitReport = () => {
                         <svg className="w-4 h-4 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.5 7.5l-1.5 4.5L9 12" />
                         </svg>
-                        <span className="text-sm text-gray-400">No location selected yet.</span>
+                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No location selected yet.</span>
                     </>
                     )}
                     {selectedLocation && <p className="mt-1 text-xs text-green-400">Location selected.</p>}
