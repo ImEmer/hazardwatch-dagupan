@@ -31,7 +31,6 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const isLoading = reportsLoading;
   const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : 'all');
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
@@ -42,6 +41,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, total: 0, pages: 1 });
+  const isLoading = reportsLoading;
 
   useEffect(() => {
     let cancelled = false;
