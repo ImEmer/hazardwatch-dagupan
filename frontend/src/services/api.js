@@ -57,3 +57,13 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const analyticsApi = {
+  getReportsPerBarangay: () => api.get('/analytics/reports-per-barangay'),
+  getReportsPerCategory: () => api.get('/analytics/reports-per-category'),
+  getReportsPerPriority: () => api.get('/analytics/reports-per-priority'),
+  getReportsPerDay: () => api.get('/analytics/reports-per-day'),
+  getTumblingHourly: () => api.get('/analytics/tumbling-hourly'),
+  getSliding: () => api.get('/analytics/sliding'),
+  getSessions: () => api.get('/analytics/sessions'),
+};
