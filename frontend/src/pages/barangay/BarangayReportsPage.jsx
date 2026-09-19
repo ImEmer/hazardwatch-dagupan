@@ -155,12 +155,12 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className={`text-xs uppercase tracking-[0.25em] ${muted}`}>
-              {user.barangay} operational queue
+              {user.barangay} {resolvedOnly ? "resolved queue" : "operational queue"}
             </p>
             <h1
               className={`mt-2 text-2xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
             >
-              Reports management
+              {resolvedOnly ? "Resolved Cases" : "Reports management"}
             </h1>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -259,7 +259,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className={`rounded-xl border px-3 py-2.5 text-sm ${panel}`}>
-            {reports.filter(isVisible).length} results
+            {pagination.total} results
           </div>
           {[
             [search, `Search: ${search}`, () => updateFilter(setSearch, "")],

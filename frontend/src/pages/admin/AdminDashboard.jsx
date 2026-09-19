@@ -33,6 +33,7 @@
       const [overview, setOverview] = useState(null);
       const [timeline, setTimeline] = useState([]);
       const [barangays, setBarangays] = useState([]);
+      const [showAllBarangays, setShowAllBarangays] = useState(false);
       const [statisticsLoading, setStatisticsLoading] = useState(true);
       const [statisticsError, setStatisticsError] = useState('');
 
@@ -78,6 +79,7 @@
         };
       });
       const barangayData = barangays.filter((item) => item._id).map((item) => ({ name: item._id, count: item.count }));
+      const visibleBarangayData = showAllBarangays ? barangayData : barangayData.slice(0, 10);
       const chartText = isDark ? '#d1d5db' : '#475569';
       const chartGrid = isDark ? '#2e303a' : '#e2e8f0';
       const tooltipStyle = {
@@ -234,10 +236,10 @@
             </div>
 
             <div className={`rounded-2xl border p-5 shadow-xl xl:col-span-2 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
-              <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by barangay</h3>
-              {barangayData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={Math.max(220, barangayData.length * 42)}>
-                  <BarChart data={barangayData} layout="vertical" margin={{ top: 8, right: 8, left: 16, bottom: 8 }}>
+              <div className="mb-4 flex items-center justify-between gap-3"><h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by barangay</h3>{barangayData.length > 10 && <button type="button" onClick={() => setShowAllBarangays((current) => !current)} className="text-sm font-medium text-[#3b82f6] hover:text-[#60a5fa]">{showAllBarangays ? 'Show Top 10' : 'View All'}</button>}</div>
+              {visibleBarangayData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={showAllBarangays ? Math.min(520, Math.max(320, visibleBarangayData.length * 28)) : 320}>
+                  <BarChart data={visibleBarangayData} layout="vertical" margin={{ top: 8, right: 8, left: 16, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
                     <XAxis type="number" allowDecimals={false} stroke={chartText} />
                     <YAxis dataKey="name" type="category" width={100} stroke={chartText} tick={{ fontSize: 12 }} />

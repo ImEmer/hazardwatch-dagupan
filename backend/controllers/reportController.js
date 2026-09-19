@@ -9,7 +9,7 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const reportFilter = (req) => {
   const { search, status, category, priority, barangay, startDate, endDate, includeResolved } = req.query;
-  const filter = { deletedAt: null, archived: { $ne: true } };
+  const filter = { deletedAt: null, isActive: true, archived: { $ne: true } };
   if (status) filter.status = status;
   else if (includeResolved !== 'true') filter.status = { $nin: ['Resolved', 'Closed'] };
   if (category) filter.category = category;
@@ -64,10 +64,16 @@ export const getReports = async (req, res, next) => {
 
 export const getArchivedReports = async (req, res, next) => {
   try {
-    const filter = { archived: true, deletedAt: null };
+    const { page = 1, limit = 10 } = req.query;
+    const pageNumber = Math.max(1, Number(page));
+    const limitNumber = Math.min(100, Math.max(1, Number(limit)));
+    const filter = { archived: true, deletedAt: null, isActive: true };
     if (req.user.role === 'barangay') Object.assign(filter, barangayScope(req.user.barangay || '__unassigned_barangay__'));
-    const reports = await Report.find(filter).populate('assignedTo', 'name email').sort({ archivedAt: -1, createdAt: -1 });
-    res.json({ success: true, reports });
+    const [reports, total] = await Promise.all([
+      Report.find(filter).populate('assignedTo', 'name email').sort({ archivedAt: -1, createdAt: -1 }).skip((pageNumber - 1) * limitNumber).limit(limitNumber),
+      Report.countDocuments(filter),
+    ]);
+    res.json({ success: true, reports, pagination: { page: pageNumber, limit: limitNumber, total, pages: Math.ceil(total / limitNumber) } });
   } catch (error) { next(error); }
 };
 
