@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
   passwordResetCodeAttempts: { type: Number, default: 0, select: false },
   passwordResetCodeToken: { type: String, select: false },
   passwordResetCodeTokenExpires: { type: Date, select: false },
+  passwordResetLastSentAt: { type: Date, select: false },
 }, { timestamps: true });
 
 userSchema.pre('save', async function hashPassword(next) {

@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-const createTransporter = () => nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT, 10),
     secure: false,
@@ -11,6 +11,18 @@ const createTransporter = () => nodemailer.createTransport({
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
+});
+
+console.log('[sendEmail] SMTP Config:', {
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    user: process.env.EMAIL_USER,
+    passLength: process.env.EMAIL_PASS?.length || 0,
+});
+
+transporter.verify((error) => {
+    if (error) console.error('[sendEmail] Verify failed:', error.message);
+    else console.log('[sendEmail] Server is ready to send emails');
 });
 
 const escapeHtml = (value) => String(value || '')
@@ -28,7 +40,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     });
 
     try {
-        const info = await createTransporter().sendMail({
+        const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM_NAME
                 ? `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`
                 : process.env.EMAIL_FROM,
@@ -49,7 +61,14 @@ export const sendEmail = async ({ to, subject, html, text }) => {
 export const sendPasswordResetCode = (email, code, name, token) => {
     const safeName = escapeHtml(name || 'there');
     const safeCode = escapeHtml(code);
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${encodeURIComponent(token)}`;
+    const clientOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+    const clientUrl = process.env.NODE_ENV === 'development'
+        ? clientOrigins.find((origin) => origin.includes('localhost')) || clientOrigins[0]
+        : clientOrigins.find((origin) => !origin.includes('localhost')) || clientOrigins[0];
+    const resetUrl = `${clientUrl}/reset-password/${encodeURIComponent(token)}`;
     const safeResetUrl = escapeHtml(resetUrl);
     const subject = 'Your HazardWatch password reset code';
     const text = `Hi ${name || 'there'},\n\nClick this link to reset your password: ${resetUrl}\n\nOr enter this code on the website: ${code}\n\nThis code expires in 15 minutes. If you did not request a password reset, you can ignore this email.`;

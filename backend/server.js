@@ -19,7 +19,11 @@ import passport from './config/passport.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
-const apiOrigin = process.env.CLIENT_URL || 'https://hazardwatch-dagupan.onrender.com';
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+if (!allowedOrigins.length) allowedOrigins.push('http://localhost:5173');
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -27,7 +31,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://tile.openstreetmap.org'],
-      connectSrc: ["'self'", 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', apiOrigin, 'https://hazardwatch-dagupan.vercel.app'],
+      connectSrc: ["'self'", ...allowedOrigins, 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', 'https://hazardwatch-dagupan.onrender.com'],
       fontSrc: ["'self'", 'data:'],
       frameAncestors: ["'none'"],
     },
@@ -41,11 +45,10 @@ app.use(helmet({
 
 
 app.use(cors({
-  origin: [
-    'https://hazardwatch-dagupan.vercel.app',
-    'http://localhost:5173',
-    'https://hazardwatch-dagupan.onrender.com'
-  ],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

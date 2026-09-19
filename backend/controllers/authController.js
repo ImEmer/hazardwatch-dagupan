@@ -150,8 +150,13 @@ export const forgotPassword = async (req, res) => {
   const response = { success: true, message: 'If an account exists for this email, a reset code has been sent.' };
 
   try {
-    const user = await User.findOne({ email: String(req.body.email || '').trim().toLowerCase() });
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const user = await User.findOne({ email }).select('+passwordResetLastSentAt');
     if (!user) return res.json(response);
+
+    if (user.passwordResetLastSentAt && Date.now() - user.passwordResetLastSentAt.getTime() < 60 * 1000) {
+      return res.status(429).json({ success: false, message: 'Please wait 60 seconds before requesting another code.' });
+    }
 
     await logActivity({ actor: user, action: 'password_reset_requested', message: `${user.name} requested a password reset`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     const rawToken = crypto.randomBytes(32).toString('hex');
@@ -163,6 +168,7 @@ export const forgotPassword = async (req, res) => {
     user.passwordResetCodeAttempts = 0;
     user.passwordResetCodeToken = undefined;
     user.passwordResetCodeTokenExpires = undefined;
+    user.passwordResetLastSentAt = new Date();
     await user.save({ validateBeforeSave: false });
 
     if (process.env.NODE_ENV === 'development') {
@@ -171,9 +177,11 @@ export const forgotPassword = async (req, res) => {
     }
 
     try {
+      console.log('[forgot-password] Sending email to:', email);
       await sendPasswordResetCode(user.email, resetCode, user.name, rawToken);
+      console.log('[forgot-password] Email sent to:', email);
     } catch (error) {
-      console.error('[forgot-password] Email delivery failed:', error.message);
+      console.error('[forgot-password] Email failed:', error.message);
     }
   } catch (error) {
     console.error('[forgot-password] Error:', error.message);
