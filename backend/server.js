@@ -21,11 +21,16 @@ import passport from './config/passport.js';
 const app = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 5000;
-const allowedOrigins = (process.env.CLIENT_URL || '')
+const configuredOrigins = (process.env.CLIENT_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-if (!allowedOrigins.length) allowedOrigins.push('http://localhost:5173');
+const allowedOrigins = [...new Set([
+  'http://localhost:5173',
+  'https://hazardwatch-dagupan.vercel.app',
+  ...configuredOrigins,
+])];
+console.log('[CORS] Allowed origins:', allowedOrigins);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {

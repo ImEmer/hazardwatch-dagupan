@@ -24,7 +24,7 @@ const priorityColorsLight = {
 };
 
 const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
-  const { reports, reportsLoading, reportsError, deleteReport } = useReports();
+  const { deleteReport } = useReports();
   const { token } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,6 +38,38 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState('');
+  const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, total: 0, pages: 1 });
+
+  useEffect(() => {
+    let cancelled = false;
+    setReportsLoading(true);
+    setReportsError('');
+    api.get('/reports', {
+      params: {
+        page,
+        limit: PAGE_SIZE,
+        includeResolved: resolvedOnly,
+        status: resolvedOnly ? 'Resolved' : statusFilter === 'all' ? undefined : statusFilter,
+        category: categoryFilter === 'all' ? undefined : categoryFilter,
+        priority: priorityFilter === 'all' ? undefined : priorityFilter,
+        barangay: barangayFilter === 'all' ? undefined : barangayFilter,
+        search: search || undefined,
+      },
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((response) => {
+      if (cancelled) return;
+      setReports(response.data?.reports || []);
+      setPagination(response.data?.pagination || { page, limit: PAGE_SIZE, total: 0, pages: 1 });
+    }).catch((error) => {
+      if (!cancelled) setReportsError(error.response?.data?.message || 'Unable to load reports.');
+    }).finally(() => {
+      if (!cancelled) setReportsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [barangayFilter, categoryFilter, page, priorityFilter, resolvedOnly, search, statusFilter, token]);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -66,12 +98,12 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
     setSearchParams(next, { replace: true });
   }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, setSearchParams]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  const pageCount = Math.max(1, pagination.pages);
   const sortedReports = [...filteredReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const visibleReports = sortedReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const visibleReports = sortedReports;
   const barangays = [...new Set(reports.map((report) => report.assignedBarangay || report.barangay).filter(Boolean))].sort();
 
-  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); };
+  const resetFilters = () => { setSearch(''); setStatusFilter(resolvedOnly ? 'Resolved' : 'all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); };
   const exportCsv = async () => {
     try {
       const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, includeResolved: resolvedOnly };
@@ -169,7 +201,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           <select value={barangayFilter} onChange={(event) => setBarangayFilter(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="all">All barangays</option>{barangays.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
           <button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm xl:ml-auto ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2"><div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{filteredReports.length} results</div>{[[search, `Search: ${search}`, () => setSearch('')], [!resolvedOnly && statusFilter !== 'all' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{pagination.total} results</div>{[[search, `Search: ${search}`, () => setSearch('')], [!resolvedOnly && statusFilter !== 'all' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
