@@ -1,7 +1,10 @@
 import Report from '../models/Report.js';
 
-const scope = (user) => user.role === 'barangay' ? { $or: [{ barangay: user.barangay }, { assignedBarangay: user.barangay }], deletedAt: null } : { deletedAt: null };
-const barangayScope = (req) => ({ $or: [{ barangay: req.params.barangay }, { assignedBarangay: req.params.barangay }], deletedAt: null });
+const activeReportScope = { deletedAt: null, isActive: true, archived: { $ne: true } };
+const scope = (user) => user.role === 'barangay'
+	? { ...activeReportScope, $or: [{ barangay: user.barangay }, { assignedBarangay: user.barangay }] }
+	: activeReportScope;
+const barangayScope = (req) => ({ ...activeReportScope, $or: [{ barangay: req.params.barangay }, { assignedBarangay: req.params.barangay }] });
 const assertBarangayAccess = (req, res) => {
 	if (req.user.role === 'barangay' && String(req.user.barangay || '').toLowerCase() !== String(req.params.barangay || '').toLowerCase()) {
 		res.status(403).json({ success: false, message: 'You can only view your own barangay statistics.' });
@@ -13,7 +16,7 @@ export const getOverview = async (req, res, next) => { try { const filter = scop
 const grouped = (field) => async (req, res, next) => { try { const data = await Report.aggregate([{ $match: scope(req.user) }, { $group: { _id: `$${field}`, count: { $sum: 1 } } }, { $sort: { count: -1 } }]); res.json({ success: true, data }); } catch (e) { next(e); } };
 export const getCategories = grouped('category');
 export const getStatuses = grouped('status');
-export const getBarangays = grouped('assignedBarangay');
+export const getBarangays = async (req, res, next) => { try { const data = await Report.aggregate([{ $match: scope(req.user) }, { $project: { area: { $ifNull: ['$assignedBarangay', '$barangay'] } } }, { $group: { _id: '$area', count: { $sum: 1 } } }, { $sort: { count: -1 } }]); res.json({ success: true, data }); } catch (e) { next(e); } };
 export const getTimeline = async (req, res, next) => { try { const data = await Report.aggregate([{ $match: scope(req.user) }, { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } }, { $sort: { _id: 1 } }]); res.json({ success: true, data }); } catch (e) { next(e); } };
 const getBarangayStats = (field) => async (req, res, next) => { try { if (!assertBarangayAccess(req, res)) return; const data = await Report.aggregate([{ $match: barangayScope(req) }, { $group: { _id: `$${field}`, count: { $sum: 1 } } }, { $sort: { count: -1 } }]); res.json({ success: true, data }); } catch (e) { next(e); } };
 export const getBarangayOverview = async (req, res, next) => { try { if (!assertBarangayAccess(req, res)) return; const filter = barangayScope(req); const [total, status, priority] = await Promise.all([Report.countDocuments(filter), Report.aggregate([{ $match: filter }, { $group: { _id: '$status', count: { $sum: 1 } } }]), Report.aggregate([{ $match: filter }, { $group: { _id: '$priority', count: { $sum: 1 } } }])]); res.json({ success: true, total, status, priority }); } catch (e) { next(e); } };

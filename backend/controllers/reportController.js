@@ -157,6 +157,9 @@ export const updateStatus = async (req, res, next) => {
     if (nextStatus === 'Closed') {
       update.archived = true;
       update.archivedAt = new Date();
+    } else {
+      update.archived = false;
+      update.archivedAt = null;
     }
     const updated = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, update, { new: true, runValidators: true });
     await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated status of report ${updated._id} to ${req.body.status}`, entityType: 'report', entityId: updated._id }).catch(() => {});

@@ -1,4 +1,4 @@
-    import React, { useState } from 'react';
+    import React, { useEffect, useState } from 'react';
     import {
       Area,
       AreaChart,
@@ -16,39 +16,68 @@
       YAxis,
     } from 'recharts';
     import { useReports } from '../../context/ReportContext';
+    import useAuth from '../../hooks/useAuth';
     import useTheme from '../../hooks/useTheme';
+    import api from '../../services/api';
     import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
     import Skeleton, { SkeletonCard, SkeletonChart, SkeletonTable } from '../../components/common/Skeleton';
 
     const AdminDashboard = ({ headingLabel = 'Admin Dashboard' }) => {
       const { reports, reportsLoading, reportsError } = useReports();
+      const { token } = useAuth();
       const { theme } = useTheme();
       const isDark = theme === 'dark';
       const currentDate = new Date();
       const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
       const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-      const isLoading = reportsLoading;
+      const [overview, setOverview] = useState(null);
+      const [timeline, setTimeline] = useState([]);
+      const [barangays, setBarangays] = useState([]);
+      const [statisticsLoading, setStatisticsLoading] = useState(true);
+      const [statisticsError, setStatisticsError] = useState('');
 
-      const totalReports = reports.length;
-      const pending = reports.filter((report) => report.status === 'Pending').length;
-      const inProgress = reports.filter((report) => report.status === 'In Progress').length;
-      const resolved = reports.filter((report) => report.status === 'Resolved').length;
+      useEffect(() => {
+        let cancelled = false;
+        setStatisticsLoading(true);
+        setStatisticsError('');
+        Promise.all([
+          api.get('/statistics/overview', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/statistics/timeline', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/statistics/barangay', { headers: { Authorization: `Bearer ${token}` } }),
+        ]).then(([overviewResponse, timelineResponse, barangayResponse]) => {
+          if (cancelled) return;
+          setOverview(overviewResponse.data || null);
+          setTimeline(timelineResponse.data?.data || []);
+          setBarangays(barangayResponse.data?.data || []);
+        }).catch((error) => {
+          if (!cancelled) setStatisticsError(error.response?.data?.message || 'Unable to load dashboard statistics.');
+        }).finally(() => {
+          if (!cancelled) setStatisticsLoading(false);
+        });
+        return () => { cancelled = true; };
+      }, [token]);
+
+      const isLoading = reportsLoading || statisticsLoading;
+
+      const statusCounts = Object.fromEntries((overview?.status || []).map((item) => [item._id, item.count]));
+      const priorityCounts = Object.fromEntries((overview?.priority || []).map((item) => [item._id, item.count]));
+      const totalReports = overview?.total ?? reports.length;
+      const pending = statusCounts.Pending || 0;
+      const inProgress = statusCounts['In Progress'] || 0;
+      const resolved = statusCounts.Resolved || 0;
       const statusData = REPORT_STATUSES.map((status) => ({
         name: status,
-        value: reports.filter((report) => report.status === status).length,
+        value: statusCounts[status] || 0,
       }));
       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
       const timelineData = Array.from({ length: daysInMonth }, (_, index) => {
-        const date = new Date(selectedYear, selectedMonth, index + 1);
         const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`;
         return {
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          reports: reports.filter((report) => new Date(report.createdAt).toISOString().slice(0, 10) === dateKey).length,
+          date: new Date(selectedYear, selectedMonth, index + 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          reports: timeline.find((item) => item._id === dateKey)?.count || 0,
         };
       });
-      const barangayData = [...new Set(reports.map((report) => report.assignedBarangay || report.barangay).filter(Boolean))]
-        .map((barangay) => ({ name: barangay, count: reports.filter((report) => (report.assignedBarangay || report.barangay) === barangay).length }))
-        .sort((a, b) => b.count - a.count);
+      const barangayData = barangays.filter((item) => item._id).map((item) => ({ name: item._id, count: item.count }));
       const chartText = isDark ? '#d1d5db' : '#475569';
       const chartGrid = isDark ? '#2e303a' : '#e2e8f0';
       const tooltipStyle = {
@@ -67,7 +96,7 @@
         { name: 'Low', color: '#64748b' },
       ].map((level) => ({
         ...level,
-        count: reports.filter((report) => (report.priority || 'Medium') === level.name).length,
+        count: priorityCounts[level.name] || 0,
       }));
       const maxPriorityCount = Math.max(...priorityLevels.map((level) => level.count), 1);
 
@@ -110,8 +139,8 @@
         );
       }
 
-      if (reportsError) {
-        return <div className={`rounded-2xl border p-6 ${isDark ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-red-200 bg-red-50 text-red-700'}`}>{reportsError}</div>;
+      if (reportsError || statisticsError) {
+        return <div className={`rounded-2xl border p-6 ${isDark ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-red-200 bg-red-50 text-red-700'}`}>{reportsError || statisticsError}</div>;
       }
 
       return (
