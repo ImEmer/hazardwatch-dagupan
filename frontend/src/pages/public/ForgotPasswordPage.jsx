@@ -20,10 +20,14 @@ const ForgotPasswordPage = () => {
     setSubmitting(true);
     try {
       await forgotPassword(email);
-      await showSuccess('If an account exists for this email, a reset link has been sent.');
+      await showSuccess('If an account exists for this email, a reset code has been sent.');
       navigate('/login');
     } catch (error) {
-      await showError(error.message);
+      const message = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')
+        ? 'Request timed out. Please try again.'
+        : error.message || 'Unable to send the reset request. Please try again.';
+      setError(message);
+      await showError(message);
     } finally {
       setSubmitting(false);
     }

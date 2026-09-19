@@ -146,29 +146,30 @@ export const checkEmail = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
-  const response = { success: true, message: 'If an account exists for this email, a reset link has been sent.' };
-  if (!user) return res.json(response);
-  await logActivity({ actor: user, action: 'password_reset_requested', message: `${user.name} requested a password reset`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
-  const rawToken = crypto.randomBytes(32).toString('hex');
-  user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-  user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
-  await user.save({ validateBeforeSave: false });
+  const response = { success: true, message: 'If an account exists for this email, a reset code has been sent.' };
 
   try {
-    if (process.env.NODE_ENV === 'production') {
-      await sendPasswordResetCode(user.email, rawToken, user.name);
-    } else {
+    const user = await User.findOne({ email: String(req.body.email || '').trim().toLowerCase() });
+    if (!user) return res.json(response);
+
+    await logActivity({ actor: user, action: 'password_reset_requested', message: `${user.name} requested a password reset`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
+    await user.save({ validateBeforeSave: false });
+
+    if (process.env.NODE_ENV === 'development') {
       console.log(`🔐 Reset code for ${user.email}: ${rawToken}`);
-      try {
-        await sendPasswordResetCode(user.email, rawToken, user.name);
-      } catch (error) {
-        console.error('Unable to send password reset email in development:', error.message);
-      }
+    }
+
+    try {
+      await sendPasswordResetCode(user.email, rawToken, user.name);
+    } catch (error) {
+      console.error('[forgot-password] Email delivery failed:', error.message);
     }
   } catch (error) {
-    console.error('Unable to send password reset email:', error.message);
-    return res.status(500).json({ success: false, message: 'Unable to send reset code. Please try again later.' });
+    console.error('[forgot-password] Error:', error.message);
+    console.error('[forgot-password] Stack:', error.stack);
   }
 
   return res.json(response);
