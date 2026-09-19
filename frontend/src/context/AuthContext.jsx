@@ -182,6 +182,13 @@ export const AuthProvider = ({ children }) => {
     return session.user;
   }, [persistSession]);
 
+  const loginWithToken = useCallback(async (nextToken) => {
+    const response = await request('/auth/me', {}, nextToken);
+    const nextUser = response.user || response;
+    persistSession({ token: nextToken, user: nextUser });
+    return nextUser;
+  }, [persistSession]);
+
   const refreshSession = useCallback(async () => {
     const response = await request('/auth/refresh', { method: 'POST' }, token);
     const session = response.token ? response : response.data;
@@ -246,6 +253,7 @@ export const AuthProvider = ({ children }) => {
     showExpiryWarning,
     isAuthenticated: Boolean(user && token),
     login,
+    loginWithToken,
     refreshSession,
     logout,
     register,
@@ -255,7 +263,7 @@ export const AuthProvider = ({ children }) => {
     deleteAccount,
     forgotPassword,
     resetPassword,
-  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updateProfile, user]);
+  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, loginWithToken, logout, refreshSession, register, resetPassword, token, updateProfile, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

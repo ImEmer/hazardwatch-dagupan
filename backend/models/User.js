@@ -4,7 +4,9 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, minlength: 8, select: false },
+  googleId: { type: String, unique: true, sparse: true },
+  authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
+  password: { type: String, required: function passwordRequired() { return this.authProvider !== 'google'; }, minlength: 8, select: false },
   role: { type: String, enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'], default: 'user' },
   barangay: { type: String, trim: true, default: null },
   phone: { type: String, trim: true },
@@ -21,12 +23,13 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.pre('save', async function hashPassword(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
 userSchema.methods.comparePassword = function comparePassword(candidate) {
+  if (!this.password) return false;
   return bcrypt.compare(candidate, this.password);
 };
 

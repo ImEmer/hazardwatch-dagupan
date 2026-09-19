@@ -3,10 +3,11 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
+import { sendPasswordResetCode } from '../utils/sendEmail.js';
 
-const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
+export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
-const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
+export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 
 export const register = async (req, res, next) => {
   try {
@@ -146,14 +147,30 @@ export const checkEmail = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email: req.body.email });
-  const response = { success: true, message: 'If an account exists, a reset link has been sent.' };
+  const response = { success: true, message: 'If an account exists for this email, a reset link has been sent.' };
   if (!user) return res.json(response);
   await logActivity({ actor: user, action: 'password_reset_requested', message: `${user.name} requested a password reset`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
   const rawToken = crypto.randomBytes(32).toString('hex');
   user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
   user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
   await user.save({ validateBeforeSave: false });
-  if (process.env.NODE_ENV !== 'production') response.resetToken = rawToken;
+
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      await sendPasswordResetCode(user.email, rawToken, user.name);
+    } else {
+      console.log(`🔐 Reset code for ${user.email}: ${rawToken}`);
+      try {
+        await sendPasswordResetCode(user.email, rawToken, user.name);
+      } catch (error) {
+        console.error('Unable to send password reset email in development:', error.message);
+      }
+    }
+  } catch (error) {
+    console.error('Unable to send password reset email:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to send reset code. Please try again later.' });
+  }
+
   return res.json(response);
 };
 

@@ -15,6 +15,7 @@ import User from './models/User.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
+import passport from './config/passport.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -51,6 +52,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '2mb' }));
+app.use(passport.initialize());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }), authRoutes);
 app.use('/api/reports', reportRoutes);

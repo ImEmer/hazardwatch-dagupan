@@ -15,6 +15,7 @@ import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import ForgotPasswordPage from './pages/public/ForgotPasswordPage';
 import ResetPasswordPage from './pages/public/ResetPasswordPage';
+import GoogleAuthSuccess from './pages/public/GoogleAuthSuccess';
 import AboutPage from './pages/public/AboutPage';
 import TrackReportPage from './pages/public/TrackReportPage';
 import HazardMapPage from './pages/public/HazardMapPage';
@@ -146,6 +147,7 @@ function App() {
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
             <Route path="/reset-password/:token" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
+            <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 
             <Route path="/barangay" element={<ProtectedRoute allowedRoles={['barangay']}><BarangayLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="dashboard" replace />} />
