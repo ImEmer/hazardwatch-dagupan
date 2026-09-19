@@ -14,6 +14,7 @@ import SubmitReport from './pages/public/SubmitReport';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import ForgotPasswordPage from './pages/public/ForgotPasswordPage';
+import EnterResetCodePage from './pages/public/EnterResetCodePage';
 import ResetPasswordPage from './pages/public/ResetPasswordPage';
 import GoogleAuthSuccess from './pages/public/GoogleAuthSuccess';
 import AboutPage from './pages/public/AboutPage';
@@ -88,6 +89,7 @@ const pageTitles = [
   { match: (pathname) => pathname === '/login', title: 'Login | HazardWatch' },
   { match: (pathname) => pathname === '/register', title: 'Register | HazardWatch' },
   { match: (pathname) => pathname === '/forgot-password', title: 'Forgot Password | HazardWatch' },
+  { match: (pathname) => pathname === '/enter-reset-code', title: 'Enter Reset Code | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/barangay/'), title: 'Barangay Operations | HazardWatch' },
   { match: (pathname) => pathname === '/barangay/bonuan/dashboard', title: 'Bonuan Barangay Dashboard | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/barangay/bonuan/reports/'), title: 'Bonuan Report Detail | HazardWatch' },
@@ -146,6 +148,8 @@ function App() {
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
+            <Route path="/enter-reset-code" element={<PublicPage><EnterResetCodePage /></PublicPage>} />
+            <Route path="/reset-password" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
             <Route path="/reset-password/:token" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
             <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import passport from '../config/passport.js';
-import { changePassword, checkEmail, deleteAccount, forgotPassword, getMe, issueToken, login, logout, refresh, register, resetPassword, updateProfile } from '../controllers/authController.js';
+import { changePassword, checkEmail, deleteAccount, forgotPassword, getMe, issueToken, login, logout, refresh, register, resetPassword, updateProfile, verifyResetCode } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import { passwordPolicy, validateBadRequest, validateLogin, validateRegister } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
@@ -39,5 +39,6 @@ router.post('/change-password', protect, passwordPolicy('newPassword'), validate
 router.put('/profile', protect, updateProfile);
 router.delete('/account', protect, deleteAccount);
 router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-code', verifyResetCode);
 router.post('/reset-password', passwordPolicy(), validateBadRequest, resetPassword);
 export default router;

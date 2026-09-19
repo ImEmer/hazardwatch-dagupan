@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
   profileImage: String,
   resetPasswordToken: { type: String, select: false },
   resetPasswordExpires: { type: Date, select: false },
+  passwordResetCode: { type: String, select: false },
+  passwordResetCodeExpires: { type: Date, select: false },
+  passwordResetCodeAttempts: { type: Number, default: 0, select: false },
+  passwordResetCodeToken: { type: String, select: false },
+  passwordResetCodeTokenExpires: { type: Date, select: false },
 }, { timestamps: true });
 
 userSchema.pre('save', async function hashPassword(next) {

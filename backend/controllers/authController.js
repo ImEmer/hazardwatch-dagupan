@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
@@ -154,16 +155,22 @@ export const forgotPassword = async (req, res) => {
 
     await logActivity({ actor: user, action: 'password_reset_requested', message: `${user.name} requested a password reset`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     const rawToken = crypto.randomBytes(32).toString('hex');
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
+    user.passwordResetCode = await bcrypt.hash(resetCode, 12);
+    user.passwordResetCodeExpires = Date.now() + 15 * 60 * 1000;
+    user.passwordResetCodeAttempts = 0;
+    user.passwordResetCodeToken = undefined;
+    user.passwordResetCodeTokenExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🔐 Reset code for ${user.email}: ${rawToken}`);
+      console.log(`🔐 Reset code for ${user.email}: ${resetCode}`);
     }
 
     try {
-      await sendPasswordResetCode(user.email, rawToken, user.name);
+      await sendPasswordResetCode(user.email, resetCode, user.name, rawToken);
     } catch (error) {
       console.error('[forgot-password] Email delivery failed:', error.message);
     }
@@ -175,14 +182,66 @@ export const forgotPassword = async (req, res) => {
   return res.json(response);
 };
 
+export const verifyResetCode = async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const code = String(req.body.code || '').trim();
+    const user = await User.findOne({ email }).select('+passwordResetCode +passwordResetCodeExpires +passwordResetCodeAttempts');
+    if (!user || !user.passwordResetCode || !user.passwordResetCodeExpires || user.passwordResetCodeExpires <= new Date()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset code.' });
+    }
+    if ((user.passwordResetCodeAttempts || 0) >= 5) {
+      user.passwordResetCode = undefined;
+      user.passwordResetCodeExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(429).json({ success: false, message: 'Too many invalid code attempts. Please request a new code.' });
+    }
+
+    const isValid = await bcrypt.compare(code, user.passwordResetCode);
+    if (!isValid) {
+      user.passwordResetCodeAttempts = (user.passwordResetCodeAttempts || 0) + 1;
+      if (user.passwordResetCodeAttempts >= 5) {
+        user.passwordResetCode = undefined;
+        user.passwordResetCodeExpires = undefined;
+      }
+      await user.save({ validateBeforeSave: false });
+      return res.status(user.passwordResetCodeAttempts >= 5 ? 429 : 400).json({
+        success: false,
+        message: user.passwordResetCodeAttempts >= 5 ? 'Too many invalid code attempts. Please request a new code.' : 'Invalid reset code.',
+      });
+    }
+
+    const rawCodeToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetCodeToken = crypto.createHash('sha256').update(rawCodeToken).digest('hex');
+    user.passwordResetCodeTokenExpires = Date.now() + 10 * 60 * 1000;
+    user.passwordResetCode = undefined;
+    user.passwordResetCodeExpires = undefined;
+    user.passwordResetCodeAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+    return res.json({ success: true, token: rawCodeToken });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const resetPassword = async (req, res, next) => {
   try {
     const tokenHash = crypto.createHash('sha256').update(req.body.token || '').digest('hex');
-    const user = await User.findOne({ resetPasswordToken: tokenHash, resetPasswordExpires: { $gt: Date.now() } }).select('+resetPasswordToken +resetPasswordExpires');
+    const user = await User.findOne({
+      $or: [
+        { resetPasswordToken: tokenHash, resetPasswordExpires: { $gt: Date.now() } },
+        { passwordResetCodeToken: tokenHash, passwordResetCodeTokenExpires: { $gt: Date.now() } },
+      ],
+    }).select('+resetPasswordToken +resetPasswordExpires +passwordResetCodeToken +passwordResetCodeTokenExpires');
     if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
     user.password = req.body.password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.passwordResetCodeToken = undefined;
+    user.passwordResetCodeTokenExpires = undefined;
+    user.passwordResetCode = undefined;
+    user.passwordResetCodeExpires = undefined;
+    user.passwordResetCodeAttempts = 0;
     await user.save();
     await logActivity({ actor: user, action: 'password_reset', message: `${user.name} reset their password`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     res.json({ success: true, message: 'Password reset successfully.' });

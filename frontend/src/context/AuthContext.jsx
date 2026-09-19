@@ -246,6 +246,13 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
+  const verifyResetCode = useCallback(async (email, code) => {
+    return request('/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+  }, []);
+
   const value = useMemo(() => ({
     user,
     token,
@@ -262,8 +269,9 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     deleteAccount,
     forgotPassword,
+    verifyResetCode,
     resetPassword,
-  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, loginWithToken, logout, refreshSession, register, resetPassword, token, updateProfile, user]);
+  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, loginWithToken, logout, refreshSession, register, resetPassword, token, updateProfile, user, verifyResetCode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

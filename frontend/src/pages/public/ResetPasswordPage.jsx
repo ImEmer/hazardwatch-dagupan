@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { AuthCard } from './RegisterPage';
 import { showError, showSuccess, showWarning } from '../../services/alerts';
@@ -7,11 +7,17 @@ import { validatePassword } from '../../services/validation';
 
 const ResetPasswordPage = () => {
   const { token } = useParams();
+  const location = useLocation();
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
   const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' });
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const resetToken = token || new URLSearchParams(location.search).get('token');
+
+  useEffect(() => {
+    if (!resetToken) showError('Invalid or expired reset link.');
+  }, [resetToken]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -26,9 +32,9 @@ const ResetPasswordPage = () => {
     }
     setSubmitting(true);
     try {
-      await resetPassword(token, passwords.password);
-      await showSuccess('Your password has been reset. You can now log in.');
-      navigate('/login');
+      await resetPassword(resetToken, passwords.password);
+      await showSuccess('Password changed successfully. You can now log in.');
+      window.setTimeout(() => navigate('/login', { replace: true }), 2000);
     } catch (error) {
       await showError(error.message);
     } finally {

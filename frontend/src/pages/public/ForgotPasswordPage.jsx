@@ -21,7 +21,7 @@ const ForgotPasswordPage = () => {
     try {
       await forgotPassword(email);
       await showSuccess('If an account exists for this email, a reset code has been sent.');
-      navigate('/login');
+      navigate(`/enter-reset-code?email=${encodeURIComponent(email.trim())}`);
     } catch (error) {
       const message = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')
         ? 'Request timed out. Please try again.'

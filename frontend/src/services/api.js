@@ -9,7 +9,7 @@ const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
 
 const isAuthRoute = (url = '') => {
-  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
+  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
 };
 
 const clearStoredSession = () => {
