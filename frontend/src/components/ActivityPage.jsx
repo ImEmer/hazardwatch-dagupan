@@ -4,6 +4,7 @@ import useTheme from '../hooks/useTheme';
 import api from '../services/api';
 import { showError } from '../services/alerts';
 import Skeleton from './common/Skeleton';
+import Pagination from './common/Pagination';
 
 const relativeTime = (date) => {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
@@ -12,10 +13,6 @@ const relativeTime = (date) => {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
   return `${Math.floor(seconds / 86400)} days ago`;
 };
-
-const pageNumbers = (pages, page) => pages <= 7
-  ? Array.from({ length: pages }, (_, index) => index + 1)
-  : [1, ...(page > 3 ? ['...'] : []), ...Array.from({ length: Math.min(pages - 1, page + 1) - Math.max(2, page - 1) + 1 }, (_, index) => Math.max(2, page - 1) + index), ...(page < pages - 2 ? ['...'] : []), pages];
 
 const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
   const { token } = useAuth();
@@ -52,8 +49,6 @@ const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
   }, [activeTab, dateFilter, endpoint, page, roleParam, search, token]);
 
   const totalPages = Math.max(1, pagination.pages || 1);
-  const first = pagination.total ? (pagination.page - 1) * pagination.limit + 1 : 0;
-  const last = Math.min(pagination.page * pagination.limit, pagination.total);
   const panel = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';
   const muted = isDark ? 'text-gray-400' : 'text-slate-500';
 
@@ -65,7 +60,7 @@ const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
       <section className={`rounded-2xl border shadow-xl ${panel}`}>
         {loading ? <div className="space-y-4 p-4">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/3" /></div></div>)}</div> : error ? <p className="p-8 text-center text-red-400">{error}</p> : !activities.length ? <p className={`p-8 text-center ${muted}`}>No activity yet.</p> : <div className={`divide-y ${isDark ? 'divide-[#2e303a]' : 'divide-slate-200'}`}>{activities.map((activity) => <div key={activity._id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className={isDark ? 'text-white' : 'text-slate-900'}>{activity.message || activity.action}</p><span className="mt-1 inline-flex rounded-full bg-blue-500/10 px-2 py-1 text-xs capitalize text-blue-400">{activity.actorRole || activity.role}</span></div><time title={new Date(activity.createdAt).toLocaleString()} className={`text-xs ${muted}`}>{relativeTime(activity.createdAt)}</time></div>)}</div>}
       </section>
-      <footer className="mt-4 flex flex-col items-center gap-3 px-1 py-3 sm:flex-row sm:justify-between"><p className={`text-sm ${muted}`}>Showing {first}-{last} of {pagination.total} entries</p><div className="flex items-center gap-3 text-sm"><button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="text-gray-400 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>{pageNumbers(totalPages, page).map((value, index) => value === '...' ? <span key={`ellipsis-${index}`} className="text-gray-500">...</span> : <button type="button" key={value} onClick={() => setPage(Math.min(totalPages, Math.max(1, value)))} className={page === value ? 'font-bold text-[#3b82f6]' : 'text-gray-400 hover:text-white'}>{value}</button>)}<button type="button" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))} className="text-gray-400 disabled:cursor-not-allowed disabled:opacity-40">Next</button></div><p className={`text-xs ${muted}`}>{pagination.total} total entries</p></footer>
+      <Pagination currentPage={page} totalPages={totalPages} totalItems={pagination.total} itemsPerPage={pagination.limit} onPageChange={setPage} isDark={isDark} />
     </div>
   );
 };

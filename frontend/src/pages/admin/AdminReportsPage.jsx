@@ -7,6 +7,7 @@ import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
 import Skeleton from '../../components/common/Skeleton';
+import Pagination from '../../components/common/Pagination';
 
 const PAGE_SIZE = 10;
 const priorityColors = {
@@ -303,16 +304,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
         </div>
       </div>
       {selectedIds.length > 0 && <div className="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-[#2e303a] bg-[#14151d] px-4 py-3 text-sm text-white shadow-2xl"><span>{selectedIds.length} selected</span><button type="button" onClick={deleteSelected} className="rounded-lg bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-500">Delete Selected</button><button type="button" onClick={() => setSelectedIds([])} className="rounded-lg border border-[#2e303a] px-3 py-2 text-gray-300">Cancel</button></div>}
-      <div className="flex items-center justify-between px-1 py-3">
-        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {pageCount}</p>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Previous page">&lt;</button>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
-            <button type="button" key={pageNumber} onClick={() => setPage(pageNumber)} className={`px-2 py-1.5 text-sm ${page === pageNumber ? 'font-bold text-[#3b82f6]' : isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`}>{pageNumber}</button>
-          ))}
-          <button type="button" onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page === pageCount} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Next page">&gt;</button>
-        </div>
-      </div>
+      <Pagination currentPage={page} totalPages={pageCount} totalItems={pagination.total} itemsPerPage={pagination.limit} onPageChange={setPage} isDark={isDark} />
     </div>
   );
 };

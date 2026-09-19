@@ -11,6 +11,7 @@ import {
 } from "../../services/reportOptions";
 import { showError, showSuccess } from "../../services/alerts";
 import Skeleton from "../../components/common/Skeleton";
+import Pagination from "../../components/common/Pagination";
 
 const PAGE_SIZE = 10;
 const STATUSES = ["Pending", "In Progress", "Closed"];
@@ -144,10 +145,6 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     : "border-slate-200 bg-white";
   const field = `rounded-xl border px-3 py-2.5 text-sm focus:border-[#3b82f6] focus:outline-none ${isDark ? "border-[#2e303a] bg-[#0a0b0f] text-white" : "border-slate-200 bg-slate-50 text-slate-900"}`;
   const muted = isDark ? "text-gray-400" : "text-slate-500";
-  const first = pagination.total
-    ? (pagination.page - 1) * pagination.limit + 1
-    : 0;
-  const last = Math.min(pagination.page * pagination.limit, pagination.total);
 
   return (
     <div className="space-y-6">
@@ -399,34 +396,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
           </table>
         </div>
       </section>
-      <div className="flex items-center justify-between">
-        <p className={`text-sm ${muted}`}>
-          Showing {first}–{last} of {pagination.total} entries
-        </p>
-        <div className="flex gap-3 text-sm">
-          <button
-            type="button"
-            disabled={page === 1}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="text-gray-400 disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className={muted}>
-            Page {page} of {Math.max(1, pagination.pages)}
-          </span>
-          <button
-            type="button"
-            disabled={page >= pagination.pages}
-            onClick={() =>
-              setPage((current) => Math.min(pagination.pages, current + 1))
-            }
-            className="text-gray-400 disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <Pagination currentPage={page} totalPages={pagination.pages} totalItems={pagination.total} itemsPerPage={pagination.limit} onPageChange={setPage} isDark={isDark} />
     </div>
   );
 };
