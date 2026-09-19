@@ -9,7 +9,7 @@ router.get('/public', validatePagination, getPublicReports);
 router.get('/export', protect, allowRoles('admin', 'superadmin'), exportReportsCsv);
 router.get('/', protect, isStaff, validatePagination, getReports);
 router.get('/mine', protect, getMyReports);
-router.get('/archived', protect, isStaff, getArchivedReports);
+router.get('/archived', protect, isStaff, validatePagination, getArchivedReports);
 router.get('/:id', protect, isStaff, validateId, getReport);
 router.post('/', protect, uploadPhoto.array('images', 3), validateReport, createReport);
 router.put('/:id', protect, isStaff, validateId, updateReport);

@@ -3,7 +3,7 @@ import { isDagupanBarangay, isDagupanLocation } from '../utils/dagupanBarangays.
 
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(422).json({ success: false, message: 'Validation failed', errors: errors.array() });
+  if (!errors.isEmpty()) return res.status(422).json({ success: false, message: errors.array()[0]?.msg || 'Validation failed', errors: errors.array() });
   next();
 };
 
@@ -69,4 +69,8 @@ export const validateReport = [
   validateBadRequest,
 ];
 export const validateId = [param('id').isMongoId().withMessage('Invalid id.'), validate];
-export const validatePagination = [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 100 }), validate];
+export const validatePagination = [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer.'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be an integer between 1 and 100.'),
+  validate,
+];

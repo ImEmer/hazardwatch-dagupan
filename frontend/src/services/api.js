@@ -23,11 +23,12 @@ const clearStoredSession = () => {
 
 api.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem(TOKEN_KEY)
-      || sessionStorage.getItem('token')
-      || localStorage.getItem(TOKEN_KEY)
-      || localStorage.getItem('token');
-    if (token) {
+    const token = localStorage.getItem(TOKEN_KEY)
+      || localStorage.getItem('token')
+      || sessionStorage.getItem(TOKEN_KEY)
+      || sessionStorage.getItem('token');
+    if (token && !config.headers?.Authorization) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
     if (config.data instanceof FormData) {

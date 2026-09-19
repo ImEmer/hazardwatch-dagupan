@@ -74,11 +74,18 @@
             setReportsError('');
             try {
                 if (canAccessStaffReports) {
+                    const params = { page: 1, limit: 100, includeResolved: true };
                     const response = await api.get('/reports', {
-                        params: { page: 1, limit: 20000, includeResolved: true },
+                        params,
                         headers: { Authorization: `Bearer ${token}` },
                     });
-                    const nextReports = response.data?.reports || [];
+                    const pagination = response.data?.pagination || {};
+                    const pages = Math.max(1, Number(pagination.pages) || 1);
+                    const remainingPages = await Promise.all(Array.from({ length: pages - 1 }, (_, index) => api.get('/reports', {
+                        params: { ...params, page: index + 2 },
+                        headers: { Authorization: `Bearer ${token}` },
+                    })));
+                    const nextReports = [response, ...remainingPages].flatMap((pageResponse) => pageResponse.data?.reports || []);
                     setReports(nextReports);
                     return nextReports;
                 }

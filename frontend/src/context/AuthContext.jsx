@@ -54,8 +54,8 @@ const request = async (path, options = {}, token = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => getStoredSession().token);
+  const [user, setUser] = useState(() => getStoredSession().user);
   const [loading, setLoading] = useState(true);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
 
