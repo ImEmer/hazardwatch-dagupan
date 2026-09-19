@@ -20,6 +20,7 @@ uploads/
 backend/.env
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/seeders/data/*.csv
 
 # Editor directories and files
 .vscode/*
