@@ -28,7 +28,7 @@ const EnterResetCodePage = () => {
     setError('');
     try {
       const response = await verifyResetCode(email.trim(), code);
-      navigate(`/reset-password?token=${encodeURIComponent(response.token)}`, { replace: true });
+      navigate(`/reset-password/${encodeURIComponent(response.token)}`, { replace: true });
     } catch (requestError) {
       const message = requestError.message || 'Invalid or expired reset code.';
       setError(message);
@@ -39,7 +39,7 @@ const EnterResetCodePage = () => {
   };
 
   return (
-    <AuthCard title="Enter Reset Code" description="Enter the 6-digit code sent to your email.">
+    <AuthCard title="Enter Reset Code" description="Enter the 6-digit code sent to your email. We sent a 6-digit code and a reset link to your email.">
       <form onSubmit={submit} className="space-y-4">
         {error && <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
         <label className="block text-sm text-gray-300">Email

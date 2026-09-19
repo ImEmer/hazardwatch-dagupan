@@ -49,7 +49,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
 export const sendPasswordResetCode = (email, code, name, token) => {
     const safeName = escapeHtml(name || 'there');
     const safeCode = escapeHtml(code);
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${encodeURIComponent(token)}`;
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${encodeURIComponent(token)}`;
     const safeResetUrl = escapeHtml(resetUrl);
     const subject = 'Your HazardWatch password reset code';
     const text = `Hi ${name || 'there'},\n\nClick this link to reset your password: ${resetUrl}\n\nOr enter this code on the website: ${code}\n\nThis code expires in 15 minutes. If you did not request a password reset, you can ignore this email.`;

@@ -20,7 +20,7 @@ const ForgotPasswordPage = () => {
     setSubmitting(true);
     try {
       await forgotPassword(email);
-      await showSuccess('If an account exists for this email, a reset code has been sent.');
+      await showSuccess('We sent a 6-digit code and a reset link to your email.');
       navigate(`/enter-reset-code?email=${encodeURIComponent(email.trim())}`);
     } catch (error) {
       const message = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')

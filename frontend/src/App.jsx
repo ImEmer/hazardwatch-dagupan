@@ -149,7 +149,6 @@ function App() {
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
             <Route path="/enter-reset-code" element={<PublicPage><EnterResetCodePage /></PublicPage>} />
-            <Route path="/reset-password" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
             <Route path="/reset-password/:token" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
             <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 

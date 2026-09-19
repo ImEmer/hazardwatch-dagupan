@@ -166,7 +166,8 @@ export const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🔐 Reset code for ${user.email}: ${resetCode}`);
+      console.log(`🔐 Reset link token: ${rawToken}`);
+      console.log(`🔐 Reset code (6-digit): ${resetCode}`);
     }
 
     try {
