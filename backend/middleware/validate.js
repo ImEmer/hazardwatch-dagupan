@@ -38,7 +38,7 @@ export const validateRegister = [
   body('role').optional().isIn(['superadmin', 'admin', 'staff', 'barangay', 'user']),
   body('barangay').optional().trim().escape().isLength({ max: 100 }),
   body('phone').optional().trim().escape().isLength({ max: 30 }),
-  validate,
+  validateBadRequest,
 ];
 export const validateLogin = [body('email').trim().isEmail().normalizeEmail(), body('password').notEmpty(), validate];
 export const validateReport = [
@@ -48,10 +48,10 @@ export const validateReport = [
     if (req.body.category === 'Other' && customCategory.length < 3) throw new Error('Please specify the hazard type using at least 3 characters.');
     if (req.body.category !== 'Other' && customCategory) throw new Error('Custom hazard type is only allowed when category is Other.');
     if (customCategory.length > 60 || !/^[A-Za-z0-9 ]*$/.test(customCategory)) throw new Error('Custom hazard type must contain only letters, numbers, and spaces, up to 60 characters.');
-    req.body.customCategory = customCategory;
+    req.body.customCategory = customCategory.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[character]);
     return true;
   }),
-  body('description').trim().isLength({ min: 10 }),
+  body('description').trim().escape().isLength({ min: 10, max: 5000 }),
   body('location').custom((value, { req }) => {
     let location;
     try {
@@ -67,7 +67,7 @@ export const validateReport = [
     req.body.location = location;
     return true;
   }),
-  body('barangay').custom((value) => {
+  body('barangay').trim().custom((value) => {
     if (value && !isDagupanBarangay(value)) throw new Error('Invalid barangay.');
     return true;
   }),
@@ -111,7 +111,7 @@ export const validateId = [param('id').isMongoId().withMessage('Invalid id.'), v
 export const validatePagination = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer.'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be an integer between 1 and 100.'),
-  validate,
+  validateBadRequest,
 ];
 
 const reportCategories = ['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak'];
