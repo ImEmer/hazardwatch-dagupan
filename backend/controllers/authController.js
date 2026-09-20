@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import TokenBlacklist from '../models/TokenBlacklist.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
 import { sendPasswordResetCode } from '../utils/sendEmail.js';
@@ -9,6 +10,15 @@ import { sendPasswordResetCode } from '../utils/sendEmail.js';
 export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
+const revokeToken = async (req, decodedToken = jwt.decode(req.headers.authorization.slice(7))) => {
+  const token = req.headers.authorization.slice(7);
+  if (!decodedToken?.exp) return;
+  await TokenBlacklist.updateOne(
+    { token: crypto.createHash('sha256').update(token).digest('hex') },
+    { $setOnInsert: { token: crypto.createHash('sha256').update(token).digest('hex'), userId: req.user._id, expiresAt: new Date(decodedToken.exp * 1000) } },
+    { upsert: true },
+  );
+};
 
 export const register = async (req, res, next) => {
   try {
@@ -86,11 +96,21 @@ export const login = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-export const refresh = async (req, res) => {
+export const refresh = async (req, res, next) => {
+  try {
+    await revokeToken(req);
+  } catch (error) {
+    return next(error);
+  }
   res.json({ success: true, token: issueToken(req.user), user: publicUser(req.user) });
 };
 
-export const logout = async (req, res) => {
+export const logout = async (req, res, next) => {
+  try {
+    await revokeToken(req);
+  } catch (error) {
+    return next(error);
+  }
   await logActivity({ actor: req.user, action: 'logout', message: `${req.user.name} logged out`, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: req.user._id }).catch(() => {});
   res.json({ success: true, message: 'Logged out successfully.' });
 };
