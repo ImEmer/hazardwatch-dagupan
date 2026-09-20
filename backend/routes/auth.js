@@ -3,8 +3,10 @@ import { changePassword, checkEmail, deleteAccount, forgotPassword, getMe, login
 import { protect } from '../middleware/auth.js';
 import { passwordPolicy, validateBadRequest, validateLogin, validateRegister } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
+import { authLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
+router.use(authLimiter);
 router.get('/check-email', checkEmail);
 router.post('/register', validateRegister, register);
 router.post('/login', validateLogin, login);
@@ -14,7 +16,7 @@ router.get('/me', protect, getMe);
 router.post('/change-password', protect, passwordPolicy('newPassword'), validateBadRequest, changePassword);
 router.put('/profile', protect, updateProfile);
 router.delete('/account', protect, deleteAccount);
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
 router.post('/verify-reset-code', verifyResetCode);
-router.post('/reset-password', passwordPolicy(), validateBadRequest, resetPassword);
+router.post('/reset-password', resetPasswordLimiter, passwordPolicy(), validateBadRequest, resetPassword);
 export default router;

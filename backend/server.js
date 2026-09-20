@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import reportRoutes from './routes/reports.js';
@@ -16,6 +15,7 @@ import User from './models/User.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
+import { globalLimiter } from './middleware/rateLimit.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -61,8 +61,9 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '2mb' }));
+app.use('/api', globalLimiter);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }), authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/statistics', statisticsRoutes);

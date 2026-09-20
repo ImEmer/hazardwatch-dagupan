@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { getMessages, submitMessage, updateMessageStatus } from '../controllers/contactController.js';
 import { allowRoles, protect } from '../middleware/auth.js';
 import { validateId } from '../middleware/validate.js';
+import { contactLimiter } from '../middleware/rateLimit.js';
 
 const validateContact = [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters.'),
@@ -17,7 +18,7 @@ const validateContact = [
 ];
 
 const router = Router();
-router.post('/', validateContact, submitMessage);
+router.post('/', contactLimiter, validateContact, submitMessage);
 router.get('/', protect, allowRoles('admin', 'superadmin'), getMessages);
 router.patch('/:id/status', protect, allowRoles('admin', 'superadmin'), validateId, body('status').isIn(['new', 'read', 'resolved']), updateMessageStatus);
 export default router;
