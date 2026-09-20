@@ -13,7 +13,7 @@ const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
 
 const managementError = (actor, targetUser, action) => {
   if (String(targetUser._id) === String(actor._id)) return `You cannot ${action} your own account.`;
-  if (targetUser.role === 'superadmin') return 'SuperAdmin accounts cannot be modified via the UI.';
+  if (!['admin', 'superadmin'].includes(actor.role) || !['user', 'barangay'].includes(targetUser.role)) return `You do not have permission to ${action} a user with role ${targetUser.role}.`;
   if ((ROLE_LEVELS[actor.role] || 0) <= (ROLE_LEVELS[targetUser.role] || 0)) return `You do not have permission to ${action} a user with role ${targetUser.role}.`;
   return null;
 };
@@ -110,6 +110,7 @@ export const updateUser = async (req, res, next) => {
 
     const payload = { ...req.body };
     delete payload.role;
+    if (targetUser.role === 'barangay') delete payload.barangay;
     if (payload.status && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
       payload.isActive = payload.status !== 'banned' && payload.status !== 'deleted';
     }

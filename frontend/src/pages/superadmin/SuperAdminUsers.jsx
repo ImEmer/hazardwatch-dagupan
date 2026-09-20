@@ -208,6 +208,10 @@ const SuperAdminUsers = () => {
       && targetUser.role !== 'superadmin'
       && (levels[currentUser?.role] || 0) > (levels[targetUser.role] || 0);
   };
+  const canShowEdit = (targetUser) => {
+    const currentId = currentUser?._id || currentUser?.id;
+    return String(targetUser.id) !== String(currentId);
+  };
 
   return (
     <main className="min-h-screen px-4 pb-10 text-white">
@@ -223,7 +227,7 @@ const SuperAdminUsers = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {userStats.map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp key={theme} end={value} duration={800} /></p></div>)}
+          {userStats.map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={value} duration={800} /></p></div>)}
         </div>
 
         <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
@@ -263,14 +267,14 @@ const SuperAdminUsers = () => {
                       </td>
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.barangay || '—'}</td>
                       <td className="px-4 py-4">
-                        {canManageTarget(user) && <div className="flex gap-3">
+                        {canShowEdit(user) && <div className="flex gap-3">
                           <button type="button" onClick={() => openEditor(user)} title="Edit user" aria-label="Edit user" className="rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                           </button>
-                          <button type="button" onClick={() => handleDelete(user)} title="Delete user" aria-label="Delete user" className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 hover:text-red-300">
+                          {user.role !== 'admin' && user.role !== 'superadmin' && <button type="button" onClick={() => handleDelete(user)} title="Delete user" aria-label="Delete user" className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 hover:text-red-300">
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 6V4h8v2m-9 0l1 14h8l1-14M10 10v6m4-6v6" /></svg>
-                          </button>
-                          {['suspended', 'banned'].includes(user.status) ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 9m0-5v5h-5M20 12a8 8 0 01-13.7 5.7L4 15m0 5v-5h5" /></svg></button> : <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M9 9l6 6M15 9l-6 6" /></svg></button>}
+                          </button>}
+                          {user.role !== 'admin' && user.role !== 'superadmin' && (['suspended', 'banned'].includes(user.status) ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 9m0-5v5h-5M20 12a8 8 0 01-13.7 5.7L4 15m0 5v-5h5" /></svg></button> : <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M9 9l6 6M15 9l-6 6" /></svg></button>)}
                         </div>}
                       </td>
                     </UserRow>
@@ -314,7 +318,7 @@ const SuperAdminUsers = () => {
               {form.role === 'barangay' && (
                 <label className="block text-sm">
                   <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Barangay</span>
-                  <select required value={form.barangay} onChange={(event) => setForm((prev) => ({ ...prev, barangay: event.target.value }))} className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}><option value="">Select barangay</option>{DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
+                  <select required disabled={Boolean(selectedUser)} value={form.barangay} onChange={(event) => setForm((prev) => ({ ...prev, barangay: event.target.value }))} className={`mt-1 w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}><option value="">Select barangay</option>{DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
                 </label>
               )}
             </div>

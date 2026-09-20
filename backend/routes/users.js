@@ -22,8 +22,7 @@ router.delete('/bulk', async (req, res) => {
   const targets = await User.find({ _id: { $in: ids } }).select('_id role');
   for (const target of targets) {
     if (String(target._id) === String(req.user._id)) return res.status(403).json({ success: false, message: 'You cannot delete your own account.' });
-    if (target.role === 'superadmin') return res.status(403).json({ success: false, message: 'SuperAdmin accounts cannot be modified via the UI.' });
-    if ((roleLevels[req.user.role] || 0) <= (roleLevels[target.role] || 0)) return res.status(403).json({ success: false, message: `You do not have permission to delete a user with role ${target.role}.` });
+    if (!['admin', 'superadmin'].includes(req.user.role) || !['user', 'barangay'].includes(target.role) || (roleLevels[req.user.role] || 0) <= (roleLevels[target.role] || 0)) return res.status(403).json({ success: false, message: `You do not have permission to delete a user with role ${target.role}.` });
   }
   const roleFilter = req.user.role === 'admin' ? { role: { $in: ['user', 'barangay'] } } : { role: { $nin: ['superadmin', 'staff'] } };
   const users = await User.find({ _id: { $in: ids }, ...roleFilter });

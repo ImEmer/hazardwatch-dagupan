@@ -260,6 +260,10 @@ const AdminUsersPage = () => {
       && targetUser.role !== 'superadmin'
       && (levels[currentUser?.role] || 0) > (levels[targetUser.role] || 0);
   };
+  const canShowEdit = (targetUser) => {
+    const currentId = currentUser?._id || currentUser?.id;
+    return String(targetUser.id) !== String(currentId) && (canManageTarget(targetUser) || ['admin', 'superadmin'].includes(targetUser.role));
+  };
 
   return (
     <div className="space-y-6">
@@ -276,7 +280,7 @@ const AdminUsersPage = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {userStats.map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp key={theme} end={value} duration={800} /></p></div>)}
+        {userStats.map(([label, value, tone]) => <div key={label} className={`rounded-2xl border-l-4 ${tone} border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}><p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</p><p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={value} duration={800} /></p></div>)}
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
@@ -324,7 +328,7 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
                   <td className="px-4 py-4">
-                    {canManageTarget(user) && <div className="flex items-center gap-1">
+                    {(canShowEdit(user) || canManageTarget(user)) && <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => openEditor(user)}
@@ -404,9 +408,10 @@ const AdminUsersPage = () => {
                 <label className="block text-sm">
                   <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Barangay</span>
                   <select
+                    disabled={Boolean(selectedUser)}
                     value={form.barangay}
                     onChange={(event) => setForm((prev) => ({ ...prev, barangay: event.target.value }))}
-                    className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}
                     required
                   ><option value="">Select barangay</option>{DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
                 </label>
