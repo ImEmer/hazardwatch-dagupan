@@ -47,7 +47,7 @@
         }
         const timer = window.setTimeout(() => setPriorityAnimated(true), 100);
         return () => window.clearTimeout(timer);
-      }, [isLoading]);
+      }, [isLoading, theme]);
 
       useEffect(() => {
         let cancelled = false;
@@ -132,19 +132,19 @@
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className={`rounded-2xl border-l-4 border-blue-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Total reports</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={totalReports} /></p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp key={theme} end={totalReports} /></p>
             </div>
             <div className={`rounded-2xl border-l-4 border-amber-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Pending</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={pending} /></p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp key={theme} end={pending} /></p>
             </div>
             <div className={`rounded-2xl border-l-4 border-violet-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>In progress</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={inProgress} /></p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp key={theme} end={inProgress} /></p>
             </div>
             <div className={`rounded-2xl border-l-4 border-emerald-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Resolved</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={resolved} /></p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp key={theme} end={resolved} /></p>
             </div>
           </div>
 
@@ -152,7 +152,7 @@
             <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
               <h3 className={`mb-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by status</h3>
               <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
+                <PieChart key={theme}>
                   <Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
                     {statusData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}
                   </Pie>
@@ -198,7 +198,7 @@
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={timelineData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <AreaChart key={theme} data={timelineData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
                   <defs><linearGradient id="reportsTrend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
                   <XAxis dataKey="date" stroke={chartText} tick={{ fontSize: 11 }} interval={Math.max(1, Math.floor(daysInMonth / 7))} />
@@ -214,7 +214,7 @@
               <div className="mb-4 flex items-center justify-between gap-3"><h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by barangay</h3>{barangayData.length > 10 && <button type="button" onClick={() => setShowAllBarangays((current) => !current)} className="text-sm font-medium text-[#3b82f6] hover:text-[#60a5fa]">{showAllBarangays ? 'Show Top 10' : 'View All'}</button>}</div>
               {visibleBarangayData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={showAllBarangays ? Math.min(520, Math.max(320, visibleBarangayData.length * 28)) : 320}>
-                  <BarChart data={visibleBarangayData} layout="vertical" margin={{ top: 8, right: 8, left: 16, bottom: 8 }}>
+                  <BarChart key={theme} data={visibleBarangayData} layout="vertical" margin={{ top: 8, right: 8, left: 16, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
                     <XAxis type="number" allowDecimals={false} stroke={chartText} />
                     <YAxis dataKey="name" type="category" width={100} stroke={chartText} tick={{ fontSize: 12 }} />
