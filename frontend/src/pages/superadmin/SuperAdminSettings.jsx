@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess } from '../../services/alerts';
 import PasswordToggle from '../../components/PasswordToggle';
+import useTheme from '../../hooks/useTheme';
 
 const SuperAdminSettings = () => {
   const { user, updateProfile, changePassword } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [profile, setProfile] = useState({ name: '', email: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
@@ -50,7 +53,7 @@ const SuperAdminSettings = () => {
   const inputClass = 'w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white placeholder:text-gray-500';
 
   return (
-    <main className="min-h-screen px-4 pb-10 text-white">
+    <main className={`min-h-screen px-4 pb-10 ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-8 shadow-xl">
           <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Super Admin</p>

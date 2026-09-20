@@ -36,15 +36,6 @@ import ReportDetailPage from './pages/public/ReportDetailPage';
 import ProfilePage from './pages/public/ProfilePage';
 import HelpPage from './pages/public/HelpPage';
 import BarangayLayout from './components/layout/BarangayLayout';
-import BonuanDashboard from './pages/barangay/bonuan/BonuanDashboard';
-import BonuanReportsPage from './pages/barangay/bonuan/BonuanReportsPage';
-import BonuanReportDetail from './pages/barangay/bonuan/BonuanReportDetail';
-import LucaoDashboard from './pages/barangay/lucao/LucaoDashboard';
-import LucaoReportsPage from './pages/barangay/lucao/LucaoReportsPage';
-import LucaoReportDetail from './pages/barangay/lucao/LucaoReportDetail';
-import TapuacDashboard from './pages/barangay/tapuac/TapuacDashboard';
-import TapuacReportsPage from './pages/barangay/tapuac/TapuacReportsPage';
-import TapuacReportDetail from './pages/barangay/tapuac/TapuacReportDetail';
 import BarangayDashboard from './pages/barangay/BarangayDashboard';
 import BarangayReportsPage from './pages/barangay/BarangayReportsPage';
 import BarangayReportDetail from './pages/barangay/BarangayReportDetail';
@@ -89,12 +80,6 @@ const pageTitles = [
   { match: (pathname) => pathname === '/forgot-password', title: 'Forgot Password | HazardWatch' },
   { match: (pathname) => pathname === '/enter-reset-code', title: 'Enter Reset Code | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/barangay/'), title: 'Barangay Operations | HazardWatch' },
-  { match: (pathname) => pathname === '/barangay/bonuan/dashboard', title: 'Bonuan Barangay Dashboard | HazardWatch' },
-  { match: (pathname) => pathname.startsWith('/barangay/bonuan/reports/'), title: 'Bonuan Report Detail | HazardWatch' },
-  { match: (pathname) => pathname === '/barangay/lucao/dashboard', title: 'Lucao Barangay Dashboard | HazardWatch' },
-  { match: (pathname) => pathname.startsWith('/barangay/lucao/reports/'), title: 'Lucao Report Detail | HazardWatch' },
-  { match: (pathname) => pathname === '/barangay/tapuac/dashboard', title: 'Tapuac Barangay Dashboard | HazardWatch' },
-  { match: (pathname) => pathname.startsWith('/barangay/tapuac/reports/'), title: 'Tapuac Report Detail | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/dashboard', title: 'Super Admin Dashboard | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/users', title: 'Super Admin Users | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/settings', title: 'Super Admin Settings | HazardWatch' },
@@ -158,33 +143,6 @@ function App() {
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="map" element={<BarangayMapPage />} />
               <Route path="settings" element={<BarangaySettingsPage />} />
-            </Route>
-
-            <Route path="/barangay/bonuan" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Bonuan']}><BarangayLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<BarangayDashboard />} />
-              <Route path="reports" element={<BarangayReportsPage />} />
-              <Route path="archived" element={<BarangayArchivedPage />} />
-              <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
-              <Route path="reports/:id" element={<BarangayReportDetail />} />
-            </Route>
-
-            <Route path="/barangay/lucao" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Lucao']}><BarangayLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<BarangayDashboard />} />
-              <Route path="reports" element={<BarangayReportsPage />} />
-              <Route path="archived" element={<BarangayArchivedPage />} />
-              <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
-              <Route path="reports/:id" element={<BarangayReportDetail />} />
-            </Route>
-
-            <Route path="/barangay/tapuac" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Tapuac']}><BarangayLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<BarangayDashboard />} />
-              <Route path="reports" element={<BarangayReportsPage />} />
-              <Route path="archived" element={<BarangayArchivedPage />} />
-              <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
-              <Route path="reports/:id" element={<BarangayReportDetail />} />
             </Route>
 
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><AdminLayout /></ProtectedRoute>}>

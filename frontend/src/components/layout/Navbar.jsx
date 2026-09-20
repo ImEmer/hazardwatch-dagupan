@@ -32,10 +32,7 @@ const Navbar = () => {
   const getDashboardPath = () => {
     if (user?.role === 'superadmin') return '/superadmin/dashboard';
     if (user?.role === 'admin') return '/admin/dashboard';
-    if (user?.role === 'barangay') {
-      const barangay = (user.barangay || '').trim().toLowerCase();
-      return ['/bonuan', '/lucao', '/tapuac'].includes(`/${barangay}`) ? `/barangay/${barangay}/dashboard` : '/barangay/bonuan/dashboard';
-    }
+    if (user?.role === 'barangay') return '/barangay/dashboard';
     return '/';
   };
 

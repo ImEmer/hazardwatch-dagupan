@@ -20,7 +20,8 @@
     import useTheme from '../../hooks/useTheme';
     import api from '../../services/api';
     import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
-    import Skeleton, { SkeletonCard, SkeletonChart, SkeletonTable } from '../../components/common/Skeleton';
+    import { SkeletonDashboard } from '../../components/common/Skeleton';
+    import CountUp from '../../components/common/CountUp';
 
     const AdminDashboard = ({ headingLabel = 'Admin Dashboard' }) => {
       const { reports, reportsLoading, reportsError } = useReports();
@@ -36,6 +37,17 @@
       const [showAllBarangays, setShowAllBarangays] = useState(false);
       const [statisticsLoading, setStatisticsLoading] = useState(true);
       const [statisticsError, setStatisticsError] = useState('');
+      const [priorityAnimated, setPriorityAnimated] = useState(false);
+      const isLoading = reportsLoading || statisticsLoading;
+
+      useEffect(() => {
+        if (isLoading) {
+          setPriorityAnimated(false);
+          return undefined;
+        }
+        const timer = window.setTimeout(() => setPriorityAnimated(true), 100);
+        return () => window.clearTimeout(timer);
+      }, [isLoading]);
 
       useEffect(() => {
         let cancelled = false;
@@ -57,8 +69,6 @@
         });
         return () => { cancelled = true; };
       }, [token]);
-
-      const isLoading = reportsLoading || statisticsLoading;
 
       const statusCounts = Object.fromEntries((overview?.status || []).map((item) => [item._id, item.count]));
       const priorityCounts = Object.fromEntries((overview?.priority || []).map((item) => [item._id, item.count]));
@@ -103,42 +113,7 @@
       const maxPriorityCount = Math.max(...priorityLevels.map((level) => level.count), 1);
 
       if (isLoading) {
-        return (
-          <div className="space-y-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-8 w-44" />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <SkeletonCard key={index} className="h-28 w-full" />
-              ))}
-            </div>
-
-            <div className="grid gap-6 xl:grid-cols-2">
-              <SkeletonChart className="h-[280px] w-full" />
-              <div className="space-y-3 rounded-2xl border border-[#2e303a] bg-[#14151d] p-5">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="space-y-2">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-2.5 w-full rounded-full" />
-                  </div>
-                ))}
-              </div>
-              <div className="xl:col-span-2">
-                <SkeletonChart className="h-[280px] w-full" />
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-5">
-              <Skeleton className="mb-4 h-5 w-32" />
-              <SkeletonTable rows={5} cols={6} />
-            </div>
-          </div>
-        );
+        return <SkeletonDashboard />;
       }
 
       if (reportsError || statisticsError) {
@@ -157,19 +132,19 @@
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className={`rounded-2xl border-l-4 border-blue-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Total reports</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{totalReports}</p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={totalReports} /></p>
             </div>
             <div className={`rounded-2xl border-l-4 border-amber-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Pending</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{pending}</p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={pending} /></p>
             </div>
             <div className={`rounded-2xl border-l-4 border-violet-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>In progress</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{inProgress}</p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={inProgress} /></p>
             </div>
             <div className={`rounded-2xl border-l-4 border-emerald-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Resolved</p>
-              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{resolved}</p>
+              <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={resolved} /></p>
             </div>
           </div>
 
@@ -178,7 +153,7 @@
               <h3 className={`mb-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by status</h3>
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value">
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
                     {statusData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} />
@@ -203,7 +178,7 @@
                       <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{level.count}</span>
                     </div>
                     <div className={`h-2 overflow-hidden rounded-full ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-100'}`}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.max((level.count / maxPriorityCount) * 100, level.count ? 8 : 0)}%`, backgroundColor: level.color }} />
+                      <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: priorityAnimated ? `${Math.max((level.count / maxPriorityCount) * 100, level.count ? 8 : 0)}%` : '0%', backgroundColor: level.color }} />
                     </div>
                   </div>
                 ))}
@@ -229,8 +204,8 @@
                   <XAxis dataKey="date" stroke={chartText} tick={{ fontSize: 11 }} interval={Math.max(1, Math.floor(daysInMonth / 7))} />
                   <YAxis allowDecimals={false} stroke={chartText} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Area type="monotone" dataKey="reports" name="Reports" stroke="#3b82f6" fill="url(#reportsTrend)" strokeWidth={2} />
-                  <Line type="monotone" dataKey="reports" stroke="#60a5fa" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="reports" name="Reports" stroke="#3b82f6" fill="url(#reportsTrend)" strokeWidth={2} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                  <Line type="monotone" dataKey="reports" stroke="#60a5fa" strokeWidth={2} dot={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -244,7 +219,7 @@
                     <XAxis type="number" allowDecimals={false} stroke={chartText} />
                     <YAxis dataKey="name" type="category" width={100} stroke={chartText} tick={{ fontSize: 12 }} />
                     <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="count" name="Reports" fill="#8b5cf6" radius={[0, 4, 4, 0]} activeBar={false} />
+                    <Bar dataKey="count" name="Reports" fill="#8b5cf6" radius={[0, 4, 4, 0]} activeBar={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
