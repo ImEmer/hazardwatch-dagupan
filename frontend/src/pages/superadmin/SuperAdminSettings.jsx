@@ -50,7 +50,7 @@ const SuperAdminSettings = () => {
   const inputClass = 'w-full rounded-xl border border-[#2e303a] bg-[#0a0b0f] px-3 py-2.5 text-white placeholder:text-gray-500';
 
   return (
-    <main className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-24 text-white">
+    <main className="min-h-screen px-4 pb-10 text-white">
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-8 shadow-xl">
           <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Super Admin</p>

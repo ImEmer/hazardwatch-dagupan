@@ -209,7 +209,7 @@ const SuperAdminUsers = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-24 text-white">
+    <main className="min-h-screen px-4 pb-10 text-white">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between">
