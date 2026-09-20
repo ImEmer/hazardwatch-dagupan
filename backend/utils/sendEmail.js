@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { BrevoClient } from '@getbrevo/brevo';
 
 const escapeHtml = (value) => String(value || '')
     .replaceAll('&', '&amp;')
@@ -8,32 +8,26 @@ const escapeHtml = (value) => String(value || '')
     .replaceAll("'", '&#039;');
 
 export const sendEmail = async ({ to, subject, html, text }) => {
-    if (!process.env.RESEND_API_KEY) throw new Error('Missing RESEND_API_KEY');
+    if (!process.env.BREVO_API_KEY) throw new Error('Missing BREVO_API_KEY');
     if (!process.env.EMAIL_FROM) throw new Error('Missing EMAIL_FROM');
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.EMAIL_FROM_NAME
-        ? `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`
-        : process.env.EMAIL_FROM;
-
     try {
-        const { data, error } = await resend.emails.send({
-            from,
-            to: [to],
+        const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
+        const data = await brevo.transactionalEmails.sendTransacEmail({
             subject,
-            html,
-            text,
+            htmlContent: html,
+            textContent: text,
+            sender: {
+                name: process.env.EMAIL_FROM_NAME || 'HazardWatch',
+                email: process.env.EMAIL_FROM,
+            },
+            to: [{ email: to }],
         });
-
-        if (error) {
-            console.error('[sendEmail] Resend API failed:', error);
-            throw new Error('Email sending failed');
-        }
-
-        console.log('[sendEmail] Email accepted:', { to, subject, id: data?.id });
+        console.log('[sendEmail] Email accepted:', { to, subject, messageId: data?.messageId });
         return data;
     } catch (error) {
         console.error('[sendEmail] Failed:', error.message);
+        if (error.body) console.error('[sendEmail] Response:', error.body);
         throw error;
     }
 };
