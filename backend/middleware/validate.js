@@ -68,6 +68,36 @@ export const validateReport = [
   }),
   validateBadRequest,
 ];
+const validateReportLocation = body('location').optional().custom((value, { req }) => {
+  let location;
+  try {
+    location = typeof value === 'string' ? JSON.parse(value) : value;
+  } catch {
+    throw new Error('A valid map location is required.');
+  }
+  if (!location?.coordinates || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+    throw new Error('A valid map location is required.');
+  }
+  const [longitude, latitude] = location.coordinates.map(Number);
+  if (!isDagupanLocation({ lat: latitude, lng: longitude })) throw new Error('Location must be within Dagupan City.');
+  req.body.location = location;
+  return true;
+});
+
+export const validateReportUpdate = [
+  body().custom((value) => {
+    const allowed = ['title', 'description', 'category', 'priority', 'location'];
+    const unknown = Object.keys(value || {}).find((key) => !allowed.includes(key));
+    if (unknown) throw new Error(`Field ${unknown} is not allowed.`);
+    return true;
+  }),
+  body('title').optional().trim().isLength({ min: 3, max: 120 }).escape(),
+  body('description').optional().trim().isLength({ min: 10, max: 5000 }).escape(),
+  body('category').optional().isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
+  body('priority').optional().isIn(['Low', 'Medium', 'High', 'Urgent']),
+  validateReportLocation,
+  validateBadRequest,
+];
 export const validateId = [param('id').isMongoId().withMessage('Invalid id.'), validate];
 export const validatePagination = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer.'),

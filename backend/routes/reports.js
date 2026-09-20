@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { addComment, assignReport, createReport, deleteReport, exportReportsCsv, getArchivedReports, getMyReports, getPublicReports, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
 import { allowRoles, isStaff, protect } from '../middleware/auth.js';
 import { uploadPhoto } from '../middleware/upload.js';
-import { validateId, validatePagination, validateReport } from '../middleware/validate.js';
+import { validateId, validatePagination, validateReport, validateReportUpdate } from '../middleware/validate.js';
 
 const router = Router();
 router.get('/public', validatePagination, getPublicReports);
@@ -12,7 +12,7 @@ router.get('/mine', protect, getMyReports);
 router.get('/archived', protect, isStaff, validatePagination, getArchivedReports);
 router.get('/:id', protect, isStaff, validateId, getReport);
 router.post('/', protect, uploadPhoto.array('images', 3), validateReport, createReport);
-router.put('/:id', protect, isStaff, validateId, updateReport);
+router.put('/:id', protect, isStaff, validateId, validateReportUpdate, updateReport);
 router.patch('/:id/status', protect, isStaff, validateId, updateStatus);
 router.patch('/:id/priority', protect, isStaff, validateId, updatePriority);
 router.patch('/:id/assign', protect, allowRoles('superadmin', 'admin'), validateId, assignReport);
