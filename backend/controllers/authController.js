@@ -159,10 +159,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     await logActivity({ actor: user, action: 'password_reset_requested', message: `${user.name} requested a password reset`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
-    const rawToken = crypto.randomBytes(32).toString('hex');
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
     user.passwordResetCode = await bcrypt.hash(resetCode, 12);
     user.passwordResetCodeExpires = Date.now() + 15 * 60 * 1000;
     user.passwordResetCodeAttempts = 0;
@@ -172,16 +169,15 @@ export const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🔐 Reset link token: ${rawToken}`);
       console.log(`🔐 Reset code (6-digit): ${resetCode}`);
     }
 
     try {
       console.log('[forgot-password] Sending email to:', email);
-      await sendPasswordResetCode(user.email, resetCode, user.name, rawToken);
-      console.log('[forgot-password] Email sent to:', email);
+      const info = await sendPasswordResetCode(user.email, resetCode, user.name);
+      console.log('[forgot-password] Email sent:', { to: email, messageId: info.messageId });
     } catch (error) {
-      console.error('[forgot-password] Email failed:', error.message);
+      console.error('[forgot-password] Email failed:', { message: error.message, code: error.code, command: error.command, response: error.response, stack: error.stack });
     }
   } catch (error) {
     console.error('[forgot-password] Error:', error.message);
@@ -237,15 +233,11 @@ export const resetPassword = async (req, res, next) => {
   try {
     const tokenHash = crypto.createHash('sha256').update(req.body.token || '').digest('hex');
     const user = await User.findOne({
-      $or: [
-        { resetPasswordToken: tokenHash, resetPasswordExpires: { $gt: Date.now() } },
-        { passwordResetCodeToken: tokenHash, passwordResetCodeTokenExpires: { $gt: Date.now() } },
-      ],
-    }).select('+resetPasswordToken +resetPasswordExpires +passwordResetCodeToken +passwordResetCodeTokenExpires');
+      passwordResetCodeToken: tokenHash,
+      passwordResetCodeTokenExpires: { $gt: Date.now() },
+    }).select('+passwordResetCodeToken +passwordResetCodeTokenExpires');
     if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
     user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
     user.passwordResetCodeToken = undefined;
     user.passwordResetCodeTokenExpires = undefined;
     user.passwordResetCode = undefined;

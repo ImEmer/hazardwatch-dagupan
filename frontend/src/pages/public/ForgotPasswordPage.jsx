@@ -20,7 +20,7 @@ const ForgotPasswordPage = () => {
     setSubmitting(true);
     try {
       await forgotPassword(email);
-      await showSuccess('We sent a 6-digit code and a reset link to your email.');
+      await showSuccess('We sent a 6-digit code to your email.');
       navigate(`/enter-reset-code?email=${encodeURIComponent(email.trim())}`);
     } catch (error) {
       const message = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')
@@ -34,13 +34,13 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <AuthCard title="Reset Password" description="Enter your email and we will send you a reset link.">
+    <AuthCard title="Reset Password" description="Enter your email and we will send you a 6-digit reset code.">
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm text-gray-300">Email
           <input type="email" id="email" name="email" autoComplete="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} className={`auth-input mt-2 ${error ? 'border-red-500' : ''}`} />
           {error && <span className="mt-1 block text-xs text-red-400">{error}</span>}
         </label>
-        <button disabled={submitting} className="auth-button">{submitting ? 'Sending...' : 'Send Reset Link'}</button>
+        <button disabled={submitting} className="auth-button">{submitting ? 'Sending...' : 'Send Reset Code'}</button>
         <p className="text-center text-sm"><Link className="auth-link" to="/login">Back to Login</Link></p>
       </form>
     </AuthCard>

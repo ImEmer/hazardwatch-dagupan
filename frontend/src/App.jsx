@@ -16,7 +16,6 @@ import RegisterPage from './pages/public/RegisterPage';
 import ForgotPasswordPage from './pages/public/ForgotPasswordPage';
 import EnterResetCodePage from './pages/public/EnterResetCodePage';
 import ResetPasswordPage from './pages/public/ResetPasswordPage';
-import GoogleAuthSuccess from './pages/public/GoogleAuthSuccess';
 import AboutPage from './pages/public/AboutPage';
 import TrackReportPage from './pages/public/TrackReportPage';
 import HazardMapPage from './pages/public/HazardMapPage';
@@ -46,7 +45,6 @@ import LucaoReportDetail from './pages/barangay/lucao/LucaoReportDetail';
 import TapuacDashboard from './pages/barangay/tapuac/TapuacDashboard';
 import TapuacReportsPage from './pages/barangay/tapuac/TapuacReportsPage';
 import TapuacReportDetail from './pages/barangay/tapuac/TapuacReportDetail';
-import BarangayActivityPage from './pages/barangay/BarangayActivityPage';
 import BarangayDashboard from './pages/barangay/BarangayDashboard';
 import BarangayReportsPage from './pages/barangay/BarangayReportsPage';
 import BarangayReportDetail from './pages/barangay/BarangayReportDetail';
@@ -150,7 +148,6 @@ function App() {
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
             <Route path="/enter-reset-code" element={<PublicPage><EnterResetCodePage /></PublicPage>} />
             <Route path="/reset-password/:token" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
-            <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 
             <Route path="/barangay" element={<ProtectedRoute allowedRoles={['barangay']}><BarangayLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="dashboard" replace />} />
@@ -161,7 +158,6 @@ function App() {
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="map" element={<BarangayMapPage />} />
               <Route path="settings" element={<BarangaySettingsPage />} />
-              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/barangay/bonuan" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Bonuan']}><BarangayLayout /></ProtectedRoute>}>
@@ -171,7 +167,6 @@ function App() {
               <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
-              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/barangay/lucao" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Lucao']}><BarangayLayout /></ProtectedRoute>}>
@@ -181,7 +176,6 @@ function App() {
               <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
-              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/barangay/tapuac" element={<ProtectedRoute allowedRoles={['barangay']} allowedBarangay={['Tapuac']}><BarangayLayout /></ProtectedRoute>}>
@@ -191,7 +185,6 @@ function App() {
               <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
-              <Route path="activity" element={<BarangayActivityPage />} />
             </Route>
 
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><AdminLayout /></ProtectedRoute>}>

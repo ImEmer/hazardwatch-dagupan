@@ -7,6 +7,8 @@ import UserFormModal from '../../components/common/UserFormModal';
 import SuspendUserModal from '../../components/SuspendUserModal';
 import { DAGUPAN_BARANGAYS } from '../../services/reportOptions';
 import Skeleton from '../../components/common/Skeleton';
+import Pagination from '../../components/common/Pagination';
+import useDebounce from '../../hooks/useDebounce';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -33,10 +35,13 @@ const roleKeyword = (value) => {
   return '';
 };
 
+const UserRow = React.memo(({ user, className, children }) => <tr data-user-id={user._id || user.id} className={className}>{children}</tr>);
+
 const AdminUsersPage = () => {
   const { token, user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: PAGE_SIZE });
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -48,15 +53,23 @@ const AdminUsersPage = () => {
   const [suspensionSaving, setSuspensionSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const handleSearchChange = useCallback((event) => {
+    setSearch(event.target.value);
+    setPage(1);
+    setLoading(true);
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
+    if (search !== debouncedSearch) return;
     setLoading(true);
     setError('');
     try {
       const response = await api.get('/users', {
+        params: { page, limit: PAGE_SIZE, search: roleKeyword(debouncedSearch) || debouncedSearch.trim() },
         headers: { Authorization: `Bearer ${token}` },
       });
       const body = response.data || {};
@@ -67,13 +80,14 @@ const AdminUsersPage = () => {
         statusLabel: user.status === 'suspended' ? 'Suspended' : user.status === 'banned' ? 'Banned' : user.status === 'deleted' ? 'Deleted' : user.isActive ? 'Active' : 'Inactive',
         lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
       })));
+      setPagination(body.pagination || { total: 0, pages: 1, limit: PAGE_SIZE });
     } catch (error) {
       setUsers([]);
       setError(error.response?.data?.message || 'Unable to load users.');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [debouncedSearch, page, token]);
 
   useEffect(() => {
     fetchUsers().catch(() => {});
@@ -85,10 +99,6 @@ const AdminUsersPage = () => {
       window.removeEventListener('focus', handleFocus);
     };
   }, [fetchUsers]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [users.length]);
 
   const openEditor = (user) => {
     setSelectedUser(user);
@@ -217,13 +227,7 @@ const AdminUsersPage = () => {
     try { await api.post(`/users/${targetUser.id}/unsuspend`, {}, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await showSuccess('User unsuspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to unsuspend user.'); }
   };
 
-  const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
-  const searchedRole = roleKeyword(search);
-  const filteredUsers = users.filter((user) => searchedRole
-    ? user.role === searchedRole
-    : [user.name, user.email, user.role, user.barangay].some((value) => String(value || '').toLowerCase().includes(search.trim().toLowerCase())));
-  const filteredPageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
-  const visibleUsers = filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const visibleUsers = users;
   const userStats = [
     ['Total users', users.length, 'border-blue-500'],
     ['Citizens', users.filter((user) => user.role === 'user').length, 'border-gray-500'],
@@ -259,7 +263,7 @@ const AdminUsersPage = () => {
       <div className={`overflow-hidden rounded-2xl border shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
         <div className={`border-b p-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
           <label htmlFor="user-search" className={`sr-only ${isDark ? 'text-white' : 'text-slate-900'}`}>Search users</label>
-          <input id="user-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search by name, email, role, or barangay" className={`w-full rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+          <input id="user-search" type="search" value={search} onChange={handleSearchChange} placeholder="Search by name, email, role, or barangay" className={`w-full rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm text-gray-200">
@@ -277,14 +281,14 @@ const AdminUsersPage = () => {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 6 }).map((_, rowIndex) => <tr key={rowIndex} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>{Array.from({ length: 8 }).map((__, columnIndex) => <td key={columnIndex} className="px-4 py-4"><Skeleton className="h-5 w-3/4" /></td>)}</tr>)
+                Array.from({ length: PAGE_SIZE }).map((_, rowIndex) => <tr key={rowIndex} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>{Array.from({ length: 8 }).map((__, columnIndex) => <td key={columnIndex} className="px-4 py-4"><Skeleton className="h-5 w-3/4" /></td>)}</tr>)
               ) : error ? (
                 <tr><td colSpan="8" className="px-4 py-10 text-center text-red-400">{error}</td></tr>
               ) : visibleUsers.length === 0 ? (
                 <tr><td colSpan="7" className={`px-4 py-10 text-center ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No users found.</td></tr>
               ) : (
                 visibleUsers.map((user) => (
-                <tr key={user.id} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+                <UserRow key={user._id || user.id} user={user} className={`border-t ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
                   <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${user.name}`} disabled={!canManageTarget(user)} checked={selectedIds.includes(user.id)} onChange={() => setSelectedIds((current) => current.includes(user.id) ? current.filter((id) => id !== user.id) : [...current, user.id])} /></td>
                   <td className={`px-4 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{user.name}</td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.email}</td>
@@ -325,7 +329,7 @@ const AdminUsersPage = () => {
                       </button>
                     </div>}
                   </td>
-                </tr>
+                </UserRow>
                 ))
               )}
             </tbody>
@@ -333,16 +337,7 @@ const AdminUsersPage = () => {
         </div>
       </div>
       {selectedIds.length > 0 && <div className="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-[#2e303a] bg-[#14151d] px-4 py-3 text-sm text-white shadow-2xl"><span>{selectedIds.length} selected</span><button type="button" onClick={deleteSelected} className="rounded-lg bg-red-600 px-3 py-2 font-semibold text-white">Delete Selected</button><button type="button" onClick={() => setSelectedIds([])} className="rounded-lg border border-[#2e303a] px-3 py-2 text-gray-300">Cancel</button></div>}
-      <div className="flex items-center justify-between px-1 py-3">
-        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page} of {filteredPageCount}</p>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Previous page">&lt;</button>
-          {Array.from({ length: filteredPageCount }, (_, index) => index + 1).map((pageNumber) => (
-            <button type="button" key={pageNumber} onClick={() => setPage(pageNumber)} className={`px-2 py-1.5 text-sm ${page === pageNumber ? 'font-bold text-[#3b82f6]' : isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`}>{pageNumber}</button>
-          ))}
-          <button type="button" onClick={() => setPage((current) => Math.min(filteredPageCount, current + 1))} disabled={page === filteredPageCount} className={`px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${isDark ? 'text-gray-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'}`} aria-label="Next page">&gt;</button>
-        </div>
-      </div>
+      <Pagination currentPage={page} totalPages={pagination.pages} totalItems={pagination.total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} isDark={isDark} />
 
       <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} targetUser={suspendingUser} currentUser={currentUser} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
 

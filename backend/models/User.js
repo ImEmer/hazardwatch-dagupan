@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  // Kept for existing Google users. Google Sign-In is deprecated.
   googleId: { type: String, unique: true, sparse: true },
   authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
   password: { type: String, required: function passwordRequired() { return this.authProvider !== 'google'; }, minlength: 8, select: false },
@@ -27,6 +28,12 @@ const userSchema = new mongoose.Schema({
   passwordResetCodeTokenExpires: { type: Date, select: false },
   passwordResetLastSentAt: { type: Date, select: false },
 }, { timestamps: true });
+
+userSchema.index({ status: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ status: 1, role: 1 });
+userSchema.index({ name: 'text', email: 'text' });
 
 userSchema.pre('save', async function hashPassword(next) {
   if (!this.isModified('password') || !this.password) return next();

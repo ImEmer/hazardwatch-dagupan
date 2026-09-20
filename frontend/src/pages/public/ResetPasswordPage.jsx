@@ -15,7 +15,7 @@ const ResetPasswordPage = () => {
   const resetToken = token;
 
   useEffect(() => {
-    if (!resetToken) showError('Invalid or expired reset link.');
+    if (!resetToken) showError('Invalid or expired reset code.');
   }, [resetToken]);
 
   const submit = async (event) => {

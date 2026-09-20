@@ -12,12 +12,18 @@ if (!recipient) {
 try {
   const info = await sendEmail({
     to: recipient,
-    subject: 'HazardWatch SMTP IPv4 test',
-    text: 'This is a test email from the HazardWatch SMTP configuration.',
-    html: '<p>This is a test email from the HazardWatch SMTP configuration.</p>',
+    subject: 'HazardWatch Resend API test',
+    text: 'This is a test email from the HazardWatch Resend API configuration.',
+    html: '<p>This is a test email from the HazardWatch Resend API configuration.</p>',
   });
-  console.log('[testEmail] Email sent successfully:', info.response || info.messageId);
+  console.log('[testEmail] Email accepted successfully:', {
+    to: recipient,
+    id: info?.id,
+  });
 } catch (error) {
-  console.error('[testEmail] Email failed:', error.message);
+  console.error('[testEmail] Email failed:', {
+    message: error.message,
+    stack: error.stack,
+  });
   process.exitCode = 1;
 }

@@ -1,30 +1,4 @@
-import nodemailer from 'nodemailer';
-
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT, 10),
-    secure: false,
-    family: 4,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-});
-
-console.log('[sendEmail] SMTP Config:', {
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    user: process.env.EMAIL_USER,
-    passLength: process.env.EMAIL_PASS?.length || 0,
-});
-
-transporter.verify((error) => {
-    if (error) console.error('[sendEmail] Verify failed:', error.message);
-    else console.log('[sendEmail] Server is ready to send emails');
-});
+import { Resend } from 'resend';
 
 const escapeHtml = (value) => String(value || '')
     .replaceAll('&', '&amp;')
@@ -34,45 +8,41 @@ const escapeHtml = (value) => String(value || '')
     .replaceAll("'", '&#039;');
 
 export const sendEmail = async ({ to, subject, html, text }) => {
-    console.log('[sendEmail] SMTP config:', {
-        host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT, 10),
-        user: process.env.EMAIL_USER,
-    });
+    if (!process.env.RESEND_API_KEY) throw new Error('Missing RESEND_API_KEY');
+    if (!process.env.EMAIL_FROM) throw new Error('Missing EMAIL_FROM');
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.EMAIL_FROM_NAME
+        ? `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`
+        : process.env.EMAIL_FROM;
 
     try {
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM_NAME
-                ? `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`
-                : process.env.EMAIL_FROM,
-            to,
+        const { data, error } = await resend.emails.send({
+            from,
+            to: [to],
             subject,
             html,
             text,
         });
 
-        console.log(`Email sent to ${to} with subject "${subject}" at ${new Date().toISOString()}`);
-        return info;
+        if (error) {
+            console.error('[sendEmail] Resend API failed:', error);
+            throw new Error('Email sending failed');
+        }
+
+        console.log('[sendEmail] Email accepted:', { to, subject, id: data?.id });
+        return data;
     } catch (error) {
         console.error('[sendEmail] Failed:', error.message);
         throw error;
     }
 };
 
-export const sendPasswordResetCode = (email, code, name, token) => {
+export const sendPasswordResetCode = (email, code, name) => {
     const safeName = escapeHtml(name || 'there');
     const safeCode = escapeHtml(code);
-    const clientOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean);
-    const clientUrl = process.env.NODE_ENV === 'development'
-        ? clientOrigins.find((origin) => origin.includes('localhost')) || clientOrigins[0]
-        : clientOrigins.find((origin) => !origin.includes('localhost')) || clientOrigins[0];
-    const resetUrl = `${clientUrl}/reset-password/${encodeURIComponent(token)}`;
-    const safeResetUrl = escapeHtml(resetUrl);
     const subject = 'Your HazardWatch password reset code';
-    const text = `Hi ${name || 'there'},\n\nClick this link to reset your password: ${resetUrl}\n\nOr enter this code on the website: ${code}\n\nThis code expires in 15 minutes. If you did not request a password reset, you can ignore this email.`;
+    const text = `Hi ${name || 'there'},\n\nYour password reset code is: ${code}. Enter this code on the website to reset your password.\n\nThis code expires in 15 minutes. If you did not request a password reset, you can ignore this email.`;
     const html = `
         <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
             <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
@@ -81,13 +51,11 @@ export const sendPasswordResetCode = (email, code, name, token) => {
                 </div>
                 <div style="padding:32px 28px;">
                     <p style="margin:0 0 16px;font-size:16px;">Hi ${safeName},</p>
-                    <p style="margin:0 0 16px;line-height:1.6;">Click the button below to reset your password, or enter the code on the website.</p>
-                    <p style="margin:0 0 24px;text-align:center;"><a href="${safeResetUrl}" style="display:inline-block;background:#1261a0;color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:700;">Reset your password</a></p>
+                    <p style="margin:0 0 16px;line-height:1.6;">Your password reset code is shown below. Enter this code on the website to reset your password.</p>
                     <div style="margin:0 0 24px;padding:20px;text-align:center;background:#eaf4ff;border:1px solid #b8d9f7;border-radius:8px;">
                         <div style="margin-bottom:8px;color:#52708f;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;">Password reset code</div>
                         <div style="color:#1261a0;font-size:30px;font-weight:700;letter-spacing:5px;word-break:break-all;">${safeCode}</div>
                     </div>
-                    <p style="margin:0 0 24px;text-align:center;color:#52708f;font-size:14px;">OR enter this code on the website</p>
                     <p style="margin:0;color:#52708f;font-size:14px;line-height:1.6;">This code expires in 15 minutes. If you did not request a password reset, you can ignore this email.</p>
                 </div>
             </div>

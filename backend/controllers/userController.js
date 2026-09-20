@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import { logActivity } from '../utils/logActivity.js';
 
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
+const listFields = 'name email role barangay status isActive lastLogin createdAt';
 const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
 
 const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
@@ -30,7 +31,34 @@ const normalizeUserStatus = (user) => {
 
 const isLastSuperadmin = async (user) => user.role === 'superadmin' && await User.countDocuments({ role: 'superadmin', status: { $ne: 'deleted' } }) <= 1;
 
-export const getUsers = async (req, res, next) => { try { const users = await User.find({ status: { $ne: 'deleted' } }).select(fields).sort({ createdAt: -1 }); res.json({ success: true, users: users.map((user) => normalizeUserStatus(user).toObject()) }); } catch (e) { next(e); } };
+export const getUsers = async (req, res, next) => {
+  try {
+    const requestedPage = Number.parseInt(req.query.page, 10) || 1;
+    const requestedLimit = Number.parseInt(req.query.limit, 10) || 10;
+    const limit = Math.min(100, Math.max(1, requestedLimit));
+    const search = String(req.query.search || '').trim();
+    const filter = { status: { $ne: 'deleted' } };
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } },
+        { role: { $regex: escapedSearch, $options: 'i' } },
+        { barangay: { $regex: escapedSearch, $options: 'i' } },
+      ];
+    }
+    const safeRequestedPage = Math.max(1, requestedPage);
+    const startedAt = performance.now();
+    const [users, total] = await Promise.all([
+      User.find(filter).select(listFields).sort({ createdAt: -1 }).skip((safeRequestedPage - 1) * limit).limit(limit).lean(),
+      User.countDocuments(filter),
+    ]);
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const page = Math.min(safeRequestedPage, pages);
+    console.log('[users] list query', { page, limit, search: search || undefined, total, durationMs: Math.round(performance.now() - startedAt) });
+    res.json({ success: true, users: users.map(normalizeUserStatus), pagination: { total, page, pages, limit } });
+  } catch (e) { next(e); }
+};
 export const getUser = async (req, res, next) => { try { const user = await User.findById(req.params.id).select(fields); if (!user) return res.status(404).json({ success: false, message: 'User not found.' }); normalizeUserStatus(user); res.json({ success: true, user }); } catch (e) { next(e); } };
 export const createUser = async (req, res, next) => {
   try {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -17,6 +18,7 @@ const toCounts = (items = []) => Object.fromEntries(items.map((item) => [item._i
 
 const BarangayDashboard = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const barangay = user?.barangay || '';
@@ -91,7 +93,7 @@ const BarangayDashboard = () => {
         <ResponsiveContainer width="100%" height={280}><AreaChart data={timelineData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}><defs><linearGradient id="barangayReportsTrend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke={chartGrid} /><XAxis dataKey="date" stroke={chartText} tick={{ fontSize: 11 }} interval={Math.max(1, Math.floor(daysInMonth / 7))} /><YAxis allowDecimals={false} stroke={chartText} /><Tooltip contentStyle={tooltipStyle} /><Area type="monotone" dataKey="reports" name="Reports" stroke="#3b82f6" fill="url(#barangayReportsTrend)" strokeWidth={2} /><Line type="monotone" dataKey="reports" stroke="#60a5fa" strokeWidth={2} dot={false} /></AreaChart></ResponsiveContainer>
       </div>
     </div>
-    <section className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}><h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Recent reports</h2><div className="mt-4 space-y-3">{dashboard.reports.map((report) => <div key={report._id} className={`flex items-center justify-between rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}><div><p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category || 'Hazard'} report`}</p><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report._id}</p></div><div className="text-right"><p className="text-xs font-medium text-[#60a5fa]">{report.priority || 'Medium'}</p><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.status || 'Pending'}</p></div></div>)}{!dashboard.reports.length && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No reports found.</p>}</div></section>
+    <section className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}><div className="flex items-center justify-between gap-3"><h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Recent reports</h2><button type="button" onClick={() => navigate('/barangay/reports')} className="text-sm font-semibold text-[#3b82f6] hover:text-[#60a5fa]">View All</button></div><div className="mt-4 space-y-3">{dashboard.reports.map((report) => <div key={report._id} className={`flex items-center justify-between rounded-xl border p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}><div><p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category || 'Hazard'} report`}</p><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report._id}</p></div><div className="text-right"><p className="text-xs font-medium text-[#60a5fa]">{report.priority || 'Medium'}</p><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.status || 'Pending'}</p></div></div>)}{!dashboard.reports.length && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No reports found.</p>}</div></section>
   </div>;
 };
 
