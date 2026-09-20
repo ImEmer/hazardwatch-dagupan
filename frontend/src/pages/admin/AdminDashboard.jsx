@@ -162,7 +162,7 @@
               </ResponsiveContainer>
             </div>
 
-            <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
+            <div key={theme} className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Priority queue</h3>
