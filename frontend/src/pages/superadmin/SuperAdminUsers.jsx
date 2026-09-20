@@ -38,6 +38,7 @@ const SuperAdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: PAGE_SIZE });
+  const [stats, setStats] = useState({ total: 0, citizens: 0, barangay: 0, admins: 0 });
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
@@ -84,9 +85,20 @@ const SuperAdminUsers = () => {
     }
   }, [debouncedSearch, page, token]);
 
+  const fetchStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await api.get('/users/stats', { headers: { Authorization: `Bearer ${token}` } });
+      setStats(response.data?.stats || { total: 0, citizens: 0, barangay: 0, admins: 0 });
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Unable to load user statistics.');
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchUsers().catch(() => {});
-  }, [fetchUsers]);
+    fetchStats().catch(() => {});
+  }, [fetchStats, fetchUsers]);
 
   const openEditor = (user) => {
     setSelectedUser(user);
@@ -110,7 +122,7 @@ const SuperAdminUsers = () => {
     if (form.role === 'barangay' && !form.barangay) { await showError('Barangay is required for Barangay users.'); return; }
     if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) { await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.'); return; }
     setSaving(true);
-    try { await api.post('/users', { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role, barangay: form.role === 'barangay' ? form.barangay : '' }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); closeCreator(); await showSuccess('User created successfully.'); } catch (error) { await showError(error.response?.data?.message || error.message || 'Failed to create user.'); } finally { setSaving(false); }
+    try { await api.post('/users', { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role, barangay: form.role === 'barangay' ? form.barangay : '' }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await fetchStats(); closeCreator(); await showSuccess('User created successfully.'); } catch (error) { await showError(error.response?.data?.message || error.message || 'Failed to create user.'); } finally { setSaving(false); }
   };
 
   const handleSave = async () => {
@@ -129,6 +141,7 @@ const SuperAdminUsers = () => {
       const body = response.data || {};
       if (!body) throw new Error(body.message || 'Unable to update user.');
       await fetchUsers();
+      await fetchStats();
       await showSuccess('User updated successfully.');
       closeEditor();
     } catch (error) {
@@ -148,6 +161,7 @@ const SuperAdminUsers = () => {
       const body = response.data || {};
       if (!body) throw new Error(body.message || 'Unable to delete user.');
       await fetchUsers();
+      await fetchStats();
       await showSuccess('User deleted successfully.');
     } catch (error) {
       await showError(error.message || 'Failed to delete user.');
@@ -168,7 +182,7 @@ const SuperAdminUsers = () => {
   const confirmSuspension = async (details) => {
     if (!suspendingUser) return;
     setSuspensionSaving(true);
-    try { await api.post(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
+    try { await api.post(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await fetchStats(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
   };
 
   const changeRestriction = async (targetUser, action) => {
@@ -176,15 +190,15 @@ const SuperAdminUsers = () => {
     if (action === 'suspend') { setSuspendingUser(targetUser); return; }
     const result = await confirmAction(`Unsuspend ${targetUser.name}'s account?`, 'Unsuspend user');
     if (!result.isConfirmed) return;
-    try { await api.post(`/users/${targetUser.id}/unsuspend`, {}, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await showSuccess('User unsuspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to unsuspend user.'); }
+    try { await api.post(`/users/${targetUser.id}/unsuspend`, {}, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await fetchStats(); await showSuccess('User unsuspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to unsuspend user.'); }
   };
 
   const visibleUsers = users;
   const userStats = [
-    ['Total users', users.length, 'border-blue-500'],
-    ['Citizens', users.filter((user) => user.role === 'user').length, 'border-gray-500'],
-    ['Barangay accounts', users.filter((user) => user.role === 'barangay').length, 'border-emerald-500'],
-    ['Admins', users.filter((user) => ['admin', 'superadmin'].includes(user.role)).length, 'border-red-500'],
+    ['Total users', stats.total, 'border-blue-500'],
+    ['Citizens', stats.citizens, 'border-gray-500'],
+    ['Barangay accounts', stats.barangay, 'border-emerald-500'],
+    ['Admins', stats.admins, 'border-red-500'],
   ];
   const canManageTarget = (targetUser) => {
     const levels = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };

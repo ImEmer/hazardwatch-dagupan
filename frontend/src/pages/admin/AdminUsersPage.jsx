@@ -9,6 +9,7 @@ import { DAGUPAN_BARANGAYS } from '../../services/reportOptions';
 import Skeleton from '../../components/common/Skeleton';
 import Pagination from '../../components/common/Pagination';
 import useDebounce from '../../hooks/useDebounce';
+import PasswordToggle from '../../components/PasswordToggle';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -42,6 +43,7 @@ const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: PAGE_SIZE });
+  const [stats, setStats] = useState({ total: 0, citizens: 0, barangay: 0, admins: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,7 @@ const AdminUsersPage = () => {
   const [suspensionSaving, setSuspensionSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showInlinePassword, setShowInlinePassword] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -89,8 +92,19 @@ const AdminUsersPage = () => {
     }
   }, [debouncedSearch, page, token]);
 
+  const fetchStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await api.get('/users/stats', { headers: { Authorization: `Bearer ${token}` } });
+      setStats(response.data?.stats || { total: 0, citizens: 0, barangay: 0, admins: 0 });
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Unable to load user statistics.');
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchUsers().catch(() => {});
+    fetchStats().catch(() => {});
     const interval = window.setInterval(() => fetchUsers().catch(() => {}), 30000);
     const handleFocus = () => fetchUsers().catch(() => {});
     window.addEventListener('focus', handleFocus);
@@ -98,7 +112,7 @@ const AdminUsersPage = () => {
       window.clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [fetchUsers]);
+  }, [fetchStats, fetchUsers]);
 
   const openEditor = (user) => {
     setSelectedUser(user);
@@ -151,6 +165,7 @@ const AdminUsersPage = () => {
       const body = response.data || {};
       if (!body) throw new Error(body.message || 'Unable to update user.');
       await fetchUsers();
+      await fetchStats();
       await showSuccess('User updated successfully.');
       closeEditor();
     } catch (error) {
@@ -182,6 +197,7 @@ const AdminUsersPage = () => {
         barangay: form.role === 'barangay' ? form.barangay.trim() : '',
       }, { headers: { Authorization: `Bearer ${token}` } });
       await fetchUsers();
+      await fetchStats();
       closeCreator();
       await showSuccess('User created successfully.');
     } catch (error) {
@@ -196,6 +212,7 @@ const AdminUsersPage = () => {
     try {
       await api.delete(`/users/${targetUser.id}`, { headers: { Authorization: `Bearer ${token}` } });
       setUsers((currentUsers) => currentUsers.filter((rowUser) => rowUser.id !== targetUser.id));
+      await fetchStats();
       await showSuccess('User deleted successfully.');
     } catch (error) {
       await showError(error.response?.data?.message || error.message || 'Failed to delete user.');
@@ -209,6 +226,7 @@ const AdminUsersPage = () => {
       await api.delete('/users/bulk', { data: { ids: selectedIds }, headers: { Authorization: `Bearer ${token}` } });
       setSelectedIds([]);
       await fetchUsers();
+      await fetchStats();
       await showSuccess('Selected users deleted successfully.');
     } catch (error) { await showError(error.response?.data?.message || 'Unable to delete selected users.'); }
   };
@@ -216,7 +234,7 @@ const AdminUsersPage = () => {
   const confirmSuspension = async (details) => {
     if (!suspendingUser) return;
     setSuspensionSaving(true);
-    try { await api.post(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
+    try { await api.post(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await fetchStats(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
   };
 
   const changeRestriction = async (targetUser, action) => {
@@ -224,15 +242,15 @@ const AdminUsersPage = () => {
     if (action === 'suspend') { setSuspendingUser(targetUser); return; }
     const result = await confirmAction(`Unsuspend ${targetUser.name}'s account?`, 'Unsuspend user');
     if (!result.isConfirmed) return;
-    try { await api.post(`/users/${targetUser.id}/unsuspend`, {}, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await showSuccess('User unsuspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to unsuspend user.'); }
+    try { await api.post(`/users/${targetUser.id}/unsuspend`, {}, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await fetchStats(); await showSuccess('User unsuspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to unsuspend user.'); }
   };
 
   const visibleUsers = users;
   const userStats = [
-    ['Total users', users.length, 'border-blue-500'],
-    ['Citizens', users.filter((user) => user.role === 'user').length, 'border-gray-500'],
-    ['Barangay accounts', users.filter((user) => user.role === 'barangay').length, 'border-emerald-500'],
-    ['Admins', users.filter((user) => ['admin', 'superadmin'].includes(user.role)).length, 'border-red-500'],
+    ['Total users', stats.total, 'border-blue-500'],
+    ['Citizens', stats.citizens, 'border-gray-500'],
+    ['Barangay accounts', stats.barangay, 'border-emerald-500'],
+    ['Admins', stats.admins, 'border-red-500'],
   ];
   const canManageTarget = (targetUser) => {
     const levels = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
@@ -362,7 +380,7 @@ const AdminUsersPage = () => {
               {isCreating && (
                 <label className="block text-sm">
                   <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Password</span>
-                  <input type="password" value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} />
+                  <div className="relative mt-1"><input type={showInlinePassword ? 'text' : 'password'} value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} className={`w-full rounded-lg border px-3 py-2 pr-10 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /><PasswordToggle visible={showInlinePassword} onToggle={() => setShowInlinePassword((value) => !value)} label="password" /></div>
                 </label>
               )}
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import ThemeToggle from '../../components/layout/ThemeToggle';
+import PasswordToggle from '../../components/PasswordToggle';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 
 const ProfilePage = () => {
@@ -10,6 +11,9 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   if (authLoading) {
     return (
@@ -115,9 +119,9 @@ const ProfilePage = () => {
         <section className={`rounded-2xl border p-6 ${panelClass}`}>
           <h2 className="text-xl font-semibold">Change password</h2>
           <form onSubmit={savePassword} className="mt-5 space-y-4">
-            <input type="password" placeholder="Current password" value={passwords.current} onChange={(event) => setPasswords({ ...passwords, current: event.target.value })} className={inputClass} />
-            <input type="password" placeholder="New password" value={passwords.next} onChange={(event) => setPasswords({ ...passwords, next: event.target.value })} className={inputClass} />
-            <input type="password" placeholder="Confirm new password" value={passwords.confirm} onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })} className={inputClass} />
+            <div className="relative"><input type={showCurrentPassword ? 'text' : 'password'} placeholder="Current password" value={passwords.current} onChange={(event) => setPasswords({ ...passwords, current: event.target.value })} className={`${inputClass} pr-10`} /><PasswordToggle visible={showCurrentPassword} onToggle={() => setShowCurrentPassword((value) => !value)} label="current password" /></div>
+            <div className="relative"><input type={showNewPassword ? 'text' : 'password'} placeholder="New password" value={passwords.next} onChange={(event) => setPasswords({ ...passwords, next: event.target.value })} className={`${inputClass} pr-10`} /><PasswordToggle visible={showNewPassword} onToggle={() => setShowNewPassword((value) => !value)} label="new password" /></div>
+            <div className="relative"><input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm new password" value={passwords.confirm} onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })} className={`${inputClass} pr-10`} /><PasswordToggle visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((value) => !value)} label="confirmed password" /></div>
             <button disabled={saving} className="auth-button md:w-auto md:px-6">Change password</button>
           </form>
         </section>

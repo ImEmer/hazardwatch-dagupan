@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { banUser, createUser, deleteUser, getUser, getUsers, suspendUser, toggleUserStatus, unsuspendUser, updateUser } from '../controllers/userController.js';
+import { banUser, createUser, deleteUser, getUser, getUsers, getUserStats, suspendUser, toggleUserStatus, unsuspendUser, updateUser } from '../controllers/userController.js';
 import { isAdmin, protect } from '../middleware/auth.js';
 import { validateId, validateRegister } from '../middleware/validate.js';
 
 const router = Router();
 router.use(protect, isAdmin);
+router.get('/stats', getUserStats);
 router.get('/', getUsers);
 router.get('/:id', validateId, getUser);
 router.post('/', validateRegister, createUser);

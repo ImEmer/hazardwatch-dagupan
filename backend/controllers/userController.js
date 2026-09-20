@@ -31,6 +31,25 @@ const normalizeUserStatus = (user) => {
 
 const isLastSuperadmin = async (user) => user.role === 'superadmin' && await User.countDocuments({ role: 'superadmin', status: { $ne: 'deleted' } }) <= 1;
 
+export const getUserStats = async (req, res, next) => {
+  try {
+    const stats = await User.aggregate([
+      { $match: { status: { $ne: 'deleted' } } },
+      { $group: { _id: '$role', count: { $sum: 1 } } },
+    ]);
+    const counts = Object.fromEntries(stats.map(({ _id, count }) => [_id, count]));
+    res.json({
+      success: true,
+      stats: {
+        total: stats.reduce((total, { count }) => total + count, 0),
+        citizens: counts.user || 0,
+        barangay: counts.barangay || 0,
+        admins: (counts.admin || 0) + (counts.superadmin || 0),
+      },
+    });
+  } catch (e) { next(e); }
+};
+
 export const getUsers = async (req, res, next) => {
   try {
     const requestedPage = Number.parseInt(req.query.page, 10) || 1;

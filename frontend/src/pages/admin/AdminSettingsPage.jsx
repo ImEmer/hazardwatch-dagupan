@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess } from '../../services/alerts';
+import PasswordToggle from '../../components/PasswordToggle';
 
 const AdminSettingsPage = () => {
   const { theme } = useTheme();
@@ -10,6 +11,9 @@ const AdminSettingsPage = () => {
   const [profile, setProfile] = useState({ name: '', email: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   useEffect(() => {
     setProfile({ name: user?.name || '', email: user?.email || '' });
   }, [user?.name, user?.email]);
@@ -65,7 +69,7 @@ const AdminSettingsPage = () => {
             ['current', 'Current password'],
             ['next', 'New password'],
             ['confirm', 'Confirm new password'],
-          ].map(([key, label]) => <input key={key} type="password" placeholder={label} autoComplete={key === 'current' ? 'current-password' : 'new-password'} value={passwords[key]} onChange={(event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))} className={inputClass} />)}
+          ].map(([key, label]) => <div key={key} className="relative"><input type={key === 'current' ? (showCurrentPassword ? 'text' : 'password') : key === 'next' ? (showNewPassword ? 'text' : 'password') : (showConfirmPassword ? 'text' : 'password')} placeholder={label} autoComplete={key === 'current' ? 'current-password' : 'new-password'} value={passwords[key]} onChange={(event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))} className={`${inputClass} pr-10`} /><PasswordToggle visible={key === 'current' ? showCurrentPassword : key === 'next' ? showNewPassword : showConfirmPassword} onToggle={() => (key === 'current' ? setShowCurrentPassword : key === 'next' ? setShowNewPassword : setShowConfirmPassword)((value) => !value)} label={label.toLowerCase()} /></div>)}
           <button type="submit" disabled={saving} className="rounded-lg border border-[#3b82f6] px-4 py-2 text-sm font-semibold text-[#60a5fa] disabled:opacity-50">Change password</button>
         </form>
       </div>
