@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { banUser, createUser, deleteUser, getUser, getUsers, getUserStats, suspendUser, toggleUserStatus, unsuspendUser, updateUser } from '../controllers/userController.js';
 import { isAdmin, protect } from '../middleware/auth.js';
-import { validateId, validateRegister } from '../middleware/validate.js';
+import { validateBulkIds, validateId, validateRegister, validateStatusAction, validateUserUpdate } from '../middleware/validate.js';
 
 const router = Router();
 router.use(protect, isAdmin);
@@ -9,12 +9,12 @@ router.get('/stats', getUserStats);
 router.get('/', getUsers);
 router.get('/:id', validateId, getUser);
 router.post('/', validateRegister, createUser);
-router.put('/:id', validateId, updateUser);
-router.patch('/:id/status', validateId, toggleUserStatus);
+router.put('/:id', validateId, validateUserUpdate, updateUser);
+router.patch('/:id/status', validateId, validateStatusAction, toggleUserStatus);
 router.post('/:id/suspend', validateId, suspendUser);
 router.post('/:id/ban', validateId, banUser);
 router.post('/:id/unsuspend', validateId, unsuspendUser);
-router.delete('/bulk', async (req, res) => {
+router.delete('/bulk', validateBulkIds, async (req, res) => {
   const { ids = [] } = req.body || {};
   if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, message: 'Please select at least one user.' });
   const User = (await import('../models/User.js')).default;

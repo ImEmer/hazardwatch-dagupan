@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { changePassword, checkEmail, deleteAccount, forgotPassword, getMe, login, logout, refresh, register, resetPassword, updateProfile, verifyResetCode } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
-import { passwordPolicy, validateBadRequest, validateLogin, validateRegister } from '../middleware/validate.js';
+import { passwordPolicy, validateBadRequest, validateEmail, validateLogin, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
 import { authLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../middleware/rateLimit.js';
 
@@ -14,9 +14,9 @@ router.post('/refresh', protect, refresh);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.post('/change-password', protect, passwordPolicy('newPassword'), validateBadRequest, changePassword);
-router.put('/profile', protect, updateProfile);
+router.put('/profile', protect, validateProfile, updateProfile);
 router.delete('/account', protect, deleteAccount);
-router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
-router.post('/verify-reset-code', verifyResetCode);
-router.post('/reset-password', resetPasswordLimiter, passwordPolicy(), validateBadRequest, resetPassword);
+router.post('/forgot-password', forgotPasswordLimiter, validateEmail, forgotPassword);
+router.post('/verify-reset-code', validateResetCode, verifyResetCode);
+router.post('/reset-password', resetPasswordLimiter, validateResetPassword, resetPassword);
 export default router;
