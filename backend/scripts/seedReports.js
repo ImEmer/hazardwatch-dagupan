@@ -11,7 +11,9 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BOUNDS } from '../utils/dagupanBarangays.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = path.resolve(__dirname, '../seeders/data/sf311_cases.csv');
-const MAX_REPORTS = Number.parseInt(process.env.MAX_REPORTS || '15000', 10);
+const MAX_REPORTS = Number.parseInt(process.env.MAX_REPORTS || '45000', 10);
+const MAX_TOTAL = MAX_REPORTS;
+const MAX_DATABASE_SIZE_MB = 400;
 const BATCH_SIZE = 500;
 const STATUSES = ['Pending', 'In Progress', 'Resolved', 'Closed'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
@@ -90,7 +92,10 @@ async function insertBatch(batch) {
   } catch (error) {
     const writeErrors = error.writeErrors || [];
     const onlyDuplicateErrors = error.code === 11000 || (writeErrors.length > 0 && writeErrors.every(({ code }) => code === 11000));
-    if (!onlyDuplicateErrors) throw error;
+    if (!onlyDuplicateErrors) {
+      console.error(`[seedReports] Batch failed: ${error.message}`);
+      return 0;
+    }
 
     const duplicateCount = writeErrors.filter(({ code }) => code === 11000).length || 1;
     const insertedCount = error.insertedDocs?.length || batch.length - duplicateCount;
@@ -104,9 +109,24 @@ async function seedReports() {
   if (!Number.isInteger(MAX_REPORTS) || MAX_REPORTS < 1) throw new Error('MAX_REPORTS must be a positive integer.');
   if (!fs.existsSync(CSV_PATH)) throw new Error(`CSV file not found: ${CSV_PATH}`);
 
-  console.log(`[seed-reports] Reading ${CSV_PATH}`);
-  console.log(`[seed-reports] Maximum reports: ${MAX_REPORTS}; batch size: ${BATCH_SIZE}`);
+  console.log(`[seedReports] Reading ${CSV_PATH}`);
+  console.log(`[seedReports] Target reports: ${MAX_TOTAL}`);
   await connectDB();
+
+  const existingReports = await Report.countDocuments();
+  const reportsToAdd = Math.max(0, MAX_TOTAL - existingReports);
+  console.log(`[seedReports] Existing reports: ${existingReports}`);
+  console.log(`[seedReports] Adding: ${reportsToAdd}`);
+  if (await getDatabaseSizeMb() >= MAX_DATABASE_SIZE_MB) {
+    console.warn('[seed] Database size is above 400 MB. Skipping.');
+    await mongoose.disconnect();
+    return;
+  }
+  if (reportsToAdd === 0) {
+    console.log(`[seedReports] Done. Total reports: ${existingReports}`);
+    await mongoose.disconnect();
+    return;
+  }
 
   const citizenUsers = await User.aggregate([
     { $match: { role: 'user' } },
@@ -120,10 +140,11 @@ async function seedReports() {
   let batch = [];
 
   try {
+    const totalBatches = Math.ceil(reportsToAdd / BATCH_SIZE);
+    let batchNumber = 0;
     for await (const row of fs.createReadStream(CSV_PATH).pipe(csv())) {
-      if (stats.inserted + batch.length >= MAX_REPORTS) break;
+      if (stats.inserted + batch.length >= reportsToAdd) break;
       stats.totalRead += 1;
-      if (stats.totalRead > MAX_REPORTS) break;
 
       if (!row['Request Type'] && !row.Category) {
         stats.skipped += 1;
@@ -131,35 +152,43 @@ async function seedReports() {
       }
 
       batch.push(mapReport(row, citizenUsers));
-      if (batch.length === BATCH_SIZE) {
+      if (batch.length === BATCH_SIZE || stats.inserted + batch.length >= reportsToAdd) {
+        if (await getDatabaseSizeMb() >= MAX_DATABASE_SIZE_MB) {
+          console.warn('[seed] Database size is above 400 MB. Stopping before the next batch.');
+          break;
+        }
         const inserted = await insertBatch(batch);
-        if (inserted === 0) throw new Error('A report batch inserted zero documents; stopping to prevent an unbounded import.');
         stats.inserted += inserted;
+        batchNumber += 1;
         batch = [];
-        console.log(`[seed-reports] Progress: ${stats.totalRead} read, ${stats.inserted} inserted.`);
+        console.log(`[seedReports] Inserted batch ${batchNumber} / ${totalBatches}`);
       }
     }
 
     if (batch.length > 0) {
-      const inserted = await insertBatch(batch);
-      if (inserted === 0) throw new Error('The final report batch inserted zero documents.');
-      stats.inserted += inserted;
+      if (await getDatabaseSizeMb() < MAX_DATABASE_SIZE_MB) {
+        const inserted = await insertBatch(batch);
+        stats.inserted += inserted;
+      } else {
+        console.warn('[seed] Database size is above 400 MB. Skipping final batch.');
+      }
     }
+    const finalCount = await Report.countDocuments();
+    console.log(`[seedReports] Done. Total reports: ${finalCount}`);
   } finally {
     await mongoose.disconnect();
   }
-
-  stats.skipped += stats.totalRead - stats.inserted - stats.skipped;
-  console.log('[seed-reports] Seeding complete.');
-  console.log(`Total read: ${stats.totalRead}`);
-  console.log(`Total skipped: ${stats.skipped}`);
-  console.log(`Total inserted: ${stats.inserted}`);
 }
 
 try {
   await seedReports();
 } catch (error) {
-  console.error(`[seed-reports] Failed: ${error.message}`);
+  console.error(`[seedReports] Failed: ${error.message}`);
   await mongoose.disconnect();
   process.exitCode = 1;
+}
+
+async function getDatabaseSizeMb() {
+  const stats = await mongoose.connection.db.stats();
+  return ((stats.dataSize || 0) + (stats.indexSize || 0)) / (1024 * 1024);
 }

@@ -17,7 +17,7 @@ const ToastContent = ({ id, type, title, description, duration }) => {
         type="button"
         onClick={() => toast.dismiss(id)}
         className="toast-close absolute right-3 top-3 text-lg leading-none text-slate-400 transition hover:text-slate-700"
-        aria-label="Close notification"
+        aria-label="Close alert"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />

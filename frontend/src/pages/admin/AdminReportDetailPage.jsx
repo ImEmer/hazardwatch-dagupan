@@ -6,6 +6,7 @@ import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
 import { HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
 import { showError } from '../../services/alerts';
+import ImageGallery from '../../components/common/ImageGallery';
 
 const priorityColors = {
   Low: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
@@ -31,15 +32,12 @@ const AdminReportDetailPage = () => {
   const isDark = theme === 'dark';
   const [fetchedReport, setFetchedReport] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [photoLoadError, setPhotoLoadError] = useState(false);
   const basePath = location.pathname.startsWith('/superadmin') ? '/superadmin' : '/admin';
   const report = reports.find((item) => String(item._id || item.id) === id) || fetchedReport;
   const reportSource = location.state?.from || (report?.archived ? 'archived' : report?.status === 'Resolved' ? 'resolved' : 'reports');
-  const photoUrl = typeof report?.photo === 'string' && report.photo.trim() ? report.photo.trim() : null;
-
-  useEffect(() => {
-    setPhotoLoadError(false);
-  }, [id, report?._id, report?.photo]);
+  const reportImages = Array.isArray(report?.images) && report.images.length
+    ? report.images
+    : [report?.photo].filter(Boolean);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,22 +156,10 @@ const AdminReportDetailPage = () => {
             </p>
           )}
 
-          {photoUrl && !photoLoadError ? (
+          {reportImages.length ? (
             <div className="mt-4">
               <p className={`mb-2 text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Evidence</p>
-              <button
-                type="button"
-                onClick={() => window.open(photoUrl, '_blank', 'noopener,noreferrer')}
-                className="inline-block overflow-hidden rounded-lg border border-[#2e303a] bg-[#0a0b0f] p-2 text-left"
-                aria-label="Open report evidence in a new tab"
-              >
-                <img
-                  src={photoUrl}
-                  alt="Submitted evidence"
-                  className="max-h-[180px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
-                  onError={() => setPhotoLoadError(true)}
-                />
-              </button>
+              <ImageGallery images={reportImages} alt="Submitted evidence" />
             </div>
           ) : (
             <p className={`mt-4 text-sm ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>No photo uploaded</p>

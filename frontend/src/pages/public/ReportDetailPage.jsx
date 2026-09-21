@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { showError } from '../../services/alerts';
 import { HAZARD_CATEGORY_COLORS } from '../../services/reportOptions';
+import ImageGallery from '../../components/common/ImageGallery';
 
 const statusStyles = {
   Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
@@ -25,7 +26,6 @@ const ReportDetailPage = () => {
   const navigate = useNavigate();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [photoLoadError, setPhotoLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,10 +58,6 @@ const ReportDetailPage = () => {
     return () => { cancelled = true; };
   }, [id, token]);
 
-  useEffect(() => {
-    setPhotoLoadError(false);
-  }, [id, report?.photo]);
-
   if (loading) {
     return (
       <main className="min-h-screen bg-[#0a0b0f] px-4 pb-16 pt-28 text-white">
@@ -92,7 +88,9 @@ const ReportDetailPage = () => {
     );
   }
 
-  const photoUrl = typeof report.photo === 'string' && report.photo.trim() ? report.photo.trim() : null;
+  const reportImages = Array.isArray(report.images) && report.images.length
+    ? report.images
+    : [report.photo].filter(Boolean);
   const formattedDate = report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown date';
 
   return (
@@ -103,9 +101,9 @@ const ReportDetailPage = () => {
             <button
               type="button"
               onClick={() => navigate('/my-reports')}
-              className="mb-3 inline-flex items-center text-sm font-medium text-[#3b82f6] hover:text-[#60a5fa]"
+              className="mb-3 inline-flex items-center rounded-lg border border-blue-500 bg-transparent px-4 py-2 text-blue-500 transition-colors hover:bg-blue-500/10"
             >
-              ← Back to My Reports
+              Back to My Reports
             </button>
             <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Report detail</p>
             <h1 className="mt-2 text-3xl font-bold text-white">{report.title || 'Hazard report'}</h1>
@@ -126,22 +124,10 @@ const ReportDetailPage = () => {
                 <p className="mt-4 text-sm text-gray-400">Location: {report.address}</p>
               )}
 
-              {photoUrl && !photoLoadError ? (
+              {reportImages.length ? (
                 <div className="mt-4">
                   <p className="mb-2 text-xs uppercase tracking-[0.2em] text-gray-400">Evidence</p>
-                  <button
-                    type="button"
-                    onClick={() => window.open(photoUrl, '_blank', 'noopener,noreferrer')}
-                    className="inline-block overflow-hidden rounded-lg border border-[#2e303a] bg-[#0a0b0f] p-2 text-left"
-                    aria-label="Open report evidence in a new tab"
-                  >
-                    <img
-                      src={photoUrl}
-                      alt="Report evidence"
-                      className="max-h-[180px] w-auto cursor-pointer rounded-md object-contain transition hover:opacity-90"
-                      onError={() => setPhotoLoadError(true)}
-                    />
-                  </button>
+                  <ImageGallery images={reportImages} alt="Report evidence" />
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-gray-500">No photo uploaded</p>

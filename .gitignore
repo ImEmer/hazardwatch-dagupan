@@ -7,20 +7,50 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 dist-ssr/
 build/
+
+# Environment
 .env
 .env.local
 .env.*.local
-.vite/
-uploads/
-*.local
 backend/.env
+!backend/.env.example
+
+# Vite
+.vite/
+
+# Uploads
+uploads/
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# CSV data
 backend/seeders/data/*.csv
+!backend/seeders/data/.gitkeep
+
+# Python
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Spark
+backend/spark/stream_input/
+backend/spark/checkpoints/
 
 # Editor directories and files
 .vscode/*
@@ -38,4 +68,3 @@ Thumbs.db
 ACCOUNTS.md
 credentials.local.md
 *.credentials.md
-.vscode/

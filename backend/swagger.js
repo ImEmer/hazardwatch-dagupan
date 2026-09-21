@@ -67,8 +67,6 @@ const paths = {
   '/analytics/tumbling-hourly': { get: operation('Get Spark tumbling hourly windows.', ['Analytics']) },
   '/analytics/sliding': { get: operation('Get Spark sliding windows.', ['Analytics']) },
   '/analytics/sessions': { get: operation('Get Spark session windows.', ['Analytics']) },
-  '/notifications': { get: operation('List current-role notifications.', ['Notifications']) },
-  '/notifications/{id}/read': { patch: operation('Mark a notification as read.', ['Notifications'], bearer, ['200', '401', '403', '404']) },
   '/activity/all': { get: operation('List all activity.', ['Activity'], bearer, ['200', '401', '403']) },
   '/activity/public': { get: operation('List public-scope activity.', ['Activity'], bearer, ['200', '401', '403']) },
   '/activity/barangay/{barangay}': { get: operation('List barangay activity.', ['Activity'], bearer, ['200', '401', '403']) },

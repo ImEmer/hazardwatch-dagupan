@@ -183,6 +183,7 @@ export const updatePriority = async (req, res, next) => {
 export const assignReport = async (req, res, next) => {
   try {
     const report = await Report.findByIdAndUpdate(req.params.id, { assignedTo: req.body.assignedTo, assignedBarangay: req.body.assignedBarangay }, { new: true });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
     await logActivity({ actor: req.user, action: 'report_assigned', message: `${req.user.name} assigned report ${report?._id} to ${req.body.assignedBarangay || 'a staff member'}`, entityType: 'report', entityId: report?._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }

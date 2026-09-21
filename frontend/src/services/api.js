@@ -68,3 +68,4 @@ export const analyticsApi = {
   getSliding: () => api.get('/analytics/sliding'),
   getSessions: () => api.get('/analytics/sessions'),
 };
+

@@ -85,13 +85,15 @@ const Navbar = () => {
           )}
         </div>
 
-        <button type="button" className={`rounded-lg border p-2 transition md:hidden ${isDark ? 'border-[#2e303a] text-gray-300 hover:bg-[#14151d] hover:text-white' : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`} onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen}>
+        <div className="flex items-center gap-2 md:hidden">
+          <button type="button" className={`rounded-lg border p-2 transition ${isDark ? 'border-[#2e303a] text-gray-300 hover:bg-[#14151d] hover:text-white' : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`} onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen}>
           {menuOpen ? (
             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
           ) : (
             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
           )}
-        </button>
+          </button>
+        </div>
       </div>
 
       <nav className={`overflow-hidden border-b px-4 transition-all duration-300 md:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'} ${menuOpen ? 'max-h-96 py-2 pb-4 opacity-100' : 'max-h-0 py-0 opacity-0'}`}>
