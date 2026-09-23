@@ -21,9 +21,11 @@ export const protect = async (req, res, next) => {
 };
 
 export const allowRoles = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) return res.status(403).json({ success: false, message: 'You do not have permission for this action.' });
+  if (!roles.includes(req.user.role)) 
+    return res.status(403).json({ success: false, message: 'You do not have permission for this action.' });
   next();
 };
 
 export const isAdmin = allowRoles('superadmin', 'admin');
 export const isStaff = allowRoles('superadmin', 'admin', 'staff', 'barangay');
+  

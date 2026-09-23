@@ -116,10 +116,18 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const handleDelete = async (report) => {
     const result = await confirmAction(`Delete "${report.title}"? This action cannot be undone.`, 'Delete');
     if (!result.isConfirmed) return;
+    const reportId = report.id || report._id;
     try {
-      await deleteReport(report.id || report._id, token);
+      await deleteReport(reportId, token);
+      setReports((previousReports) => previousReports.filter((item) => (item.id || item._id) !== reportId));
+      setPagination((previousPagination) => ({
+        ...previousPagination,
+        total: Math.max(0, previousPagination.total - 1),
+      }));
+      if (reports.length === 1 && page > 1) setPage((currentPage) => currentPage - 1);
+      showSuccess('Report Deleted', 'The report has been deleted successfully.');
     } catch (error) {
-      await showError(error.message || 'Unable to delete the report.');
+      showError('Delete Failed', error.message || 'Unable to delete the report.');
     }
   };
 
@@ -127,11 +135,19 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const deleteSelected = async () => {
     const result = await confirmAction(`Delete ${selectedIds.length} selected reports?`, 'Delete reports');
     if (!result.isConfirmed) return;
+    const idsToDelete = [...selectedIds];
     try {
-      await api.delete('/reports/bulk', { data: { ids: selectedIds }, headers: { Authorization: `Bearer ${token}` } });
+      await api.delete('/reports/bulk', { data: { ids: idsToDelete }, headers: { Authorization: `Bearer ${token}` } });
+      setReports((previousReports) => previousReports.filter((report) => !idsToDelete.includes(report.id || report._id)));
+      setPagination((previousPagination) => ({
+        ...previousPagination,
+        total: Math.max(0, previousPagination.total - idsToDelete.length),
+      }));
       setSelectedIds([]);
+      if (reports.length <= idsToDelete.length && page > 1) setPage((currentPage) => currentPage - 1);
+      showSuccess('Reports Deleted', `${idsToDelete.length} reports have been deleted.`);
       window.dispatchEvent(new Event('hw:reports-updated'));
-    } catch (error) { await showError(error.response?.data?.message || 'Unable to delete selected reports.'); }
+    } catch (error) { showError('Delete Failed', error.response?.data?.message || 'Unable to delete selected reports.'); }
   };
 
   return (
