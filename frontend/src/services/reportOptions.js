@@ -46,6 +46,27 @@ export const DAGUPAN_BARANGAYS = [
   'Tambac', 'Tapuac', 'Tebeng', 'Tondaligan',
 ].sort((left, right) => left.localeCompare(right));
 
+export const STREET_BARANGAY_MAP = {
+  'arellano st': 'Pantal',
+  'rizal st': 'Poblacion Oeste',
+  'magsaysay': 'Poblacion Oeste',
+  'bonuan': 'Bonuan Gueset',
+  'pantal road': 'Pantal',
+  'pogo chico': 'Pogo Chico',
+  'pogo grande': 'Pogo Grande',
+  'ab fernandez ave': 'Poblacion Oeste',
+  'alegre st': 'Poblacion Oeste',
+  'burgos st': 'Poblacion Oeste',
+  'roosevelt st': 'Poblacion Oeste',
+  'felix st': 'Pantal',
+  'torres bugallon': 'Pantal',
+  'mayombo': 'Mayombo',
+  'caranglaan': 'Caranglaan',
+  'malued': 'Malued',
+  'tap uac': 'Tapuac',
+  'tapuac': 'Tapuac',
+};
+
 export const DAGUPAN_BARANGAY_COORDINATES = {
   'Barangay I': [120.3340, 16.0430],
   'Barangay II': [120.3350, 16.0420],

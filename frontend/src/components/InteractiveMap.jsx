@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
-import { AlertTriangle, Construction, Droplets, Flame, Lightbulb, Trash2, TreePine } from 'lucide-react';
+import { AlertTriangle, Building2, Car, CircleDot, Construction, Droplets, Flame, Leaf, Lightbulb, PawPrint, Shield, Trash2, TreePine, Waves } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { HAZARD_CATEGORY_COLORS, STATUS_COLORS } from '../services/reportOptions';
+import { HAZARD_CATEGORY_COLORS, STATUS_COLORS, STREET_BARANGAY_MAP } from '../services/reportOptions';
 
 const CATEGORY_COLORS = {
     ...HAZARD_CATEGORY_COLORS,
@@ -51,9 +51,9 @@ const InteractiveMap = ({
                 address = address.replace(/^Dagupan, /, '');
 
                 const normalizedAddress = address.toLowerCase();
-                const detectedBarangay = normalizedAddress.includes('arellano')
-                    ? 'Pantal'
-                    : data.address?.suburb || data.address?.village || data.address?.neighbourhood || data.address?.town || '';
+                const mappedStreet = Object.entries(STREET_BARANGAY_MAP).find(([street]) => normalizedAddress.includes(street));
+                const detectedBarangay = mappedStreet?.[1]
+                    || data.address?.suburb || data.address?.village || data.address?.neighbourhood || data.address?.town || '';
                 return {
                     address,
                     barangay: detectedBarangay,
@@ -233,21 +233,27 @@ const InteractiveMap = ({
                 'Broken Streetlight': Lightbulb,
                 'Waste Disposal': Trash2,
                 'Fallen Tree': TreePine,
-                'Clogged Drainage': Droplets,
-                'Damaged Road': Construction,
-                'Traffic Obstruction': Construction,
+                'Traffic Obstruction': Car,
+                'Broken Traffic Light': Car,
+                'Damaged Public Facility': Building2,
+                Infrastructure: Building2,
+                'Public Safety Hazard': Shield,
+                'Blocked Fire Exit': Shield,
+                'Clogged Drainage': Waves,
+                'Clogged Canal (Waste)': Waves,
+                'Damaged Road': AlertTriangle,
+                'Animal Related': PawPrint,
+                'Air Pollution': Leaf,
+                Deforestation: Leaf,
+                'Noise Pollution': Waves,
                 'Gas Leak': AlertTriangle,
                 'Smoke Report': AlertTriangle,
-                'Blocked Fire Exit': AlertTriangle,
-                'Animal Related': AlertTriangle,
-                'Noise Pollution': AlertTriangle,
-                'Air Pollution': AlertTriangle,
-                'Broken Water Pipe': Droplets,
-                'Public Safety Hazard': AlertTriangle,
-                'Damaged Public Facility': AlertTriangle,
+                'Broken Water Pipe': Waves,
                 'Fallen Electrical Wire': AlertTriangle,
-                Other: AlertTriangle,
-            }[report.category] || AlertTriangle;
+                'Damaged Bridge': Building2,
+                'Damaged Sidewalk': Construction,
+                Other: CircleDot,
+            }[report.category] || CircleDot;
             const iconMarkup = renderToStaticMarkup(React.createElement(categoryIcon, { color: '#ffffff', size: 16, strokeWidth: 2.5, 'aria-hidden': true }));
 
             const el = document.createElement('div');

@@ -8,6 +8,26 @@ export const DAGUPAN_BARANGAYS = [
 
 export const DAGUPAN_BOUNDS = { minLat: 15.98, maxLat: 16.15, minLng: 120.25, maxLng: 120.45 };
 
+export const STREET_BARANGAY_MAP = {
+  'arellano st': 'Pantal',
+  'rizal st': 'Poblacion Oeste',
+  magsaysay: 'Poblacion Oeste',
+  bonuan: 'Bonuan Gueset',
+  'pantal road': 'Pantal',
+  'pogo chico': 'Pogo Chico',
+  'pogo grande': 'Pogo Grande',
+  'ab fernandez ave': 'Poblacion Oeste',
+  'alegre st': 'Poblacion Oeste',
+  'burgos st': 'Poblacion Oeste',
+  'roosevelt st': 'Poblacion Oeste',
+  'felix st': 'Pantal',
+  'torres bugallon': 'Pantal',
+  mayombo: 'Mayombo',
+  caranglaan: 'Caranglaan',
+  malued: 'Malued',
+  tapuac: 'Tapuac',
+};
+
 const BARANGAY_CENTERS = {
   'Barangay I': [120.3340, 16.0430], 'Barangay II': [120.3350, 16.0420], 'Barangay III': [120.3360, 16.0410], 'Barangay IV': [120.3370, 16.0400],
   'Bacayao Norte': [120.3480, 16.0380], 'Bacayao Sur': [120.3450, 16.0350], Banaoang: [120.3550, 16.0450], Bolosan: [120.3470, 16.0460],

@@ -7,7 +7,7 @@ import { confirmAction, showError, showSuccess, showWarning } from '../../servic
 import InteractiveMap from '../../components/InteractiveMap';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { DAGUPAN_BARANGAYS, HAZARD_CATEGORY_GROUPS } from '../../services/reportOptions';
+import { HAZARD_CATEGORY_GROUPS } from '../../services/reportOptions';
 
 const withinDagupanBounds = ({ lat, lng }) => {
     const latitude = Number(lat);
@@ -365,13 +365,11 @@ const SubmitReport = () => {
                         </svg>
                         <div className="min-w-0 flex-1">
                         <p className={`truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedAddress}</p>
-                        <label className={`mt-1 flex items-center gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Barangay
-                            <select value={selectedBarangay} onChange={(event) => setSelectedBarangay(event.target.value)} className={`rounded border px-2 py-1 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-gray-300 bg-white text-gray-900'}`}>
-                            <option value="">Select barangay</option>
-                            {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
-                            </select>
-                        </label>
+                        <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Detected Barangay: <span className="font-semibold text-[#3b82f6]">{selectedBarangay || 'Detecting...'}</span>
+                            {' '}
+                            <a href="/contact" className="ml-1 underline hover:text-[#60a5fa]">Report wrong barangay</a>
+                        </p>
                         </div>
                         <button
                         type="button"
