@@ -7,6 +7,8 @@ import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middle
 import { logActivity } from '../utils/logActivity.js';
 import { sendPasswordResetCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
+const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
+
 export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
@@ -42,8 +44,9 @@ export const register = async (req, res, next) => {
       status: 'pending',
       isActive: false,
       emailVerified: false,
+      verificationRequired: true,
       emailVerificationToken: crypto.createHash('sha256').update(verificationToken).digest('hex'),
-      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
+      emailVerificationExpires: Date.now() + 15 * 60 * 1000,
     });
 
     try {
@@ -113,7 +116,9 @@ export const login = async (req, res, next) => {
       const reason = user.suspensionReason ? ` Reason: ${user.suspensionReason}` : '';
       return res.status(403).json({ success: false, status: 'banned', suspendedUntil: null, daysRemaining: null, reason: user.suspensionReason || '', message: `Your account is permanently banned.${reason}` });
     }
-    if (!user.emailVerified) return res.status(403).json({ success: false, message: 'Please verify your email first.' });
+    const requiresVerification = user.verificationRequired !== false
+      && (!user.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF);
+    if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first.' });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     clearFailedLogins(req, normalizedEmail);
     user.lastLogin = new Date();
@@ -196,15 +201,17 @@ export const checkEmail = async (req, res) => {
 export const verifyEmail = async (req, res, next) => {
   try {
     const token = String(req.query.token || '').trim();
-    if (!token) return res.status(400).json({ success: false, message: 'Verification token is required.' });
+    const clientUrl = (process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
+    if (!token) return res.redirect(`${clientUrl}/login?verified=false&error=missing_token`);
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: { $gt: Date.now() },
-    });
+    const user = await User.findOne({ emailVerificationToken: hashedToken })
+      .select('+emailVerificationToken +emailVerificationExpires');
 
-    if (!user) return res.status(400).json({ success: false, message: 'This verification link is invalid or has expired.' });
+    if (!user) return res.redirect(`${clientUrl}/login?verified=false&error=invalid_or_expired`);
+    if (!user.emailVerificationExpires || user.emailVerificationExpires <= new Date()) {
+      return res.redirect(`${clientUrl}/login?verified=false&error=expired`);
+    }
 
     user.emailVerified = true;
     user.isActive = true;
@@ -213,7 +220,7 @@ export const verifyEmail = async (req, res, next) => {
     user.emailVerificationExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?verified=1`);
+    return res.redirect(`${clientUrl}/login?verified=true`);
   } catch (error) {
     return next(error);
   }

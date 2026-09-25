@@ -60,10 +60,10 @@ export const sendPasswordResetCode = (email, code, name) => {
 export const sendVerificationEmail = ({ email, name, token }) => {
     const safeName = escapeHtml(name || 'there');
     const safeToken = escapeHtml(token);
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const verificationUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
+    const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:5000/api';
+    const verificationUrl = `${apiUrl.replace(/\/$/, '')}/auth/verify-email?token=${encodeURIComponent(token)}`;
     const subject = 'Verify your HazardWatch account';
-    const text = `Hi ${name || 'there'},\n\nThanks for signing up for HazardWatch. Please verify your account by visiting: ${verificationUrl}\n\nIf you did not register for an account, you can ignore this email.`;
+    const text = `Verify your HazardWatch account\n\nHi ${name || 'there'},\n\nThanks for signing up for HazardWatch. Please verify your account by visiting: ${verificationUrl}\n\nThis link expires in 15 minutes.\n\nIf you did not register for an account, you can ignore this email.`;
     const html = `
         <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
             <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
@@ -76,6 +76,7 @@ export const sendVerificationEmail = ({ email, name, token }) => {
                     <div style="margin:0 0 24px;text-align:center;">
                         <a href="${verificationUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:700;">Verify Email</a>
                     </div>
+                    <p style="margin:0 0 16px;color:#ef4444;font-size:14px;font-weight:700;line-height:1.6;">This link expires in 15 minutes.</p>
                     <p style="margin:0;color:#52708f;font-size:14px;line-height:1.6;">If the button does not work, copy this link into your browser: ${safeToken ? verificationUrl : ''}</p>
                 </div>
             </div>

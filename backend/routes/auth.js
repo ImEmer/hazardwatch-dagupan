@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { changePassword, checkEmail, deleteAccount, forgotPassword, getMe, login, logout, refresh, register, resetPassword, updateProfile, verifyResetCode } from '../controllers/authController.js';
+import { changePassword, checkEmail, deleteAccount, forgotPassword, getMe, login, logout, refresh, register, resetPassword, updateProfile, verifyEmail, verifyResetCode } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import { passwordPolicy, validateBadRequest, validateEmail, validateLogin, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
@@ -8,6 +8,7 @@ import { authLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../mid
 const router = Router();
 router.use(authLimiter);
 router.get('/check-email', checkEmail);
+router.get('/verify-email', verifyEmail);
 router.post('/register', validateRegister, register);
 router.post('/login', validateLogin, login);
 router.post('/refresh', protect, refresh);

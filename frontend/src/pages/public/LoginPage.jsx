@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
@@ -14,6 +14,22 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const verified = searchParams.get('verified');
+  const verificationError = searchParams.get('error');
+
+  useEffect(() => {
+    if (verified === 'true') {
+      showSuccess('Account Verified', 'Your account has been verified. Please log in.');
+    } else if (verified === 'false') {
+      const message = verificationError === 'expired'
+        ? 'Your verification link has expired. Please register again or request a new verification email.'
+        : verificationError === 'invalid_or_expired'
+          ? 'The verification link is invalid or has expired. Please register again.'
+          : 'Something went wrong. Please try again.';
+      showError('Verification Failed', message);
+    }
+  }, [verified, verificationError]);
   const getFriendlyError = (message = '') => {
     const normalized = message.toLowerCase();
 
