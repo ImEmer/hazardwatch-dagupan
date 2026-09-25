@@ -28,9 +28,8 @@ const AdminMapPage = () => {
   const [flyTo, setFlyTo] = useState(null);
 
   const filteredReports = useMemo(() => {
-    const visible = reports.filter((report) => !['Resolved', 'Closed'].includes(report.status) || statusFilter !== 'all');
-    if (statusFilter === 'all') return visible.filter((report) => !['Resolved', 'Closed'].includes(report.status));
-    return visible.filter((report) => report.status === statusFilter);
+    const visible = reports.filter((report) => ['Pending', 'In Progress'].includes(report.status));
+    return statusFilter === 'all' ? visible : visible.filter((report) => report.status === statusFilter);
   }, [reports, statusFilter]);
   const toggleHeatmap = () => setShowHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
   const handleBarangayChange = (event) => {
@@ -48,7 +47,7 @@ const AdminMapPage = () => {
             <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Geo dashboard</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            {['all', 'Pending', 'In Progress', 'Resolved', 'Closed'].map((status) => (
+            {['all', 'Pending', 'In Progress'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -76,7 +75,7 @@ const AdminMapPage = () => {
               </select>
             </div>
             <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-            <InteractiveMap reports={filteredReports} height="100%" showHeatmap={showHeatmap} flyTo={flyTo} />
+            <InteractiveMap reports={filteredReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} />
             {!filteredReports.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-2xl border border-slate-700 bg-slate-950/80 px-6 py-5 text-center text-slate-200 shadow-xl"><div className="text-2xl" aria-hidden="true">⚠</div><h3 className="mt-2 font-semibold">No reports to show</h3><p className="mt-1 text-sm text-slate-400">There are no hazard reports yet.</p></div></div>}
           </div>
         </div>

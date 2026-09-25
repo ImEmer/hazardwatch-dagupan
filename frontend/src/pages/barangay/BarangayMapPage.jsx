@@ -5,7 +5,7 @@ import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
 import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/reportOptions';
 
-const statuses = ['all', 'Pending', 'In Progress', 'Resolved', 'Closed'];
+const statuses = ['all', 'Pending', 'In Progress'];
 
 const BarangayMapPage = () => {
   const { user, token } = useAuth();
@@ -28,7 +28,7 @@ const BarangayMapPage = () => {
   }, [token, user?.barangay]);
 
   const filtered = useMemo(() => {
-    const visible = reports.filter((report) => !['Resolved', 'Closed'].includes(report.status));
+    const visible = reports.filter((report) => ['Pending', 'In Progress'].includes(report.status));
     return status === 'all' ? visible : visible.filter((report) => report.status === status);
   }, [reports, status]);
   const toggleHeatmap = () => setHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
@@ -58,7 +58,7 @@ const BarangayMapPage = () => {
             </select>
           </div>
           <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg bg-[#14151d]/95 px-3 py-2 text-sm text-white">{heatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={filtered} height="100%" showHeatmap={heatmap} flyTo={flyTo} />
+          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={heatmap} flyTo={flyTo} />
           {!loading && !filtered.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-2xl border border-slate-700 bg-slate-950/80 px-6 py-5 text-center text-slate-200 shadow-xl"><div className="text-2xl" aria-hidden="true">⚠</div><h3 className="mt-2 font-semibold">No reports to show</h3><p className="mt-1 text-sm text-slate-400">There are no hazard reports for your barangay yet.</p></div></div>}
         </div>
         <div className="min-h-0 space-y-4 overflow-y-auto pr-1">

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
+import { AlertTriangle, Construction, Droplets, Flame, Lightbulb, Trash2, TreePine } from 'lucide-react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { HAZARD_CATEGORY_COLORS, STATUS_COLORS } from '../services/reportOptions';
 
@@ -181,27 +183,28 @@ const InteractiveMap = ({
             const description = (report.description || report.title || 'Hazard report').replace(/<[^>]*>/g, '').trim();
             const shortDescription = description.length > 120 ? `${description.slice(0, 117)}...` : description;
             const categoryIcon = {
-                'Fire Hazard': '🔥',
-                Flooding: '🌊',
-                Pothole: '🛣️',
-                'Broken Streetlight': '💡',
-                'Waste Disposal': '🗑️',
-                'Fallen Tree': '🌳',
-                'Clogged Drainage': '🚰',
-                'Damaged Road': '🛣️',
-                'Traffic Obstruction': '🚧',
-                'Gas Leak': '💨',
-                'Smoke Report': '🚨',
-                'Blocked Fire Exit': '🚪',
-                'Animal Related': '🐾',
-                'Noise Pollution': '🔊',
-                'Air Pollution': '🌫️',
-                'Broken Water Pipe': '💧',
-                'Public Safety Hazard': '⚠️',
-                'Damaged Public Facility': '🏢',
-                'Fallen Electrical Wire': '⚡',
-                Other: '⚠️',
-            }[report.category] || '⚠️';
+                'Fire Hazard': Flame,
+                Flooding: Droplets,
+                Pothole: Construction,
+                'Broken Streetlight': Lightbulb,
+                'Waste Disposal': Trash2,
+                'Fallen Tree': TreePine,
+                'Clogged Drainage': Droplets,
+                'Damaged Road': Construction,
+                'Traffic Obstruction': Construction,
+                'Gas Leak': AlertTriangle,
+                'Smoke Report': AlertTriangle,
+                'Blocked Fire Exit': AlertTriangle,
+                'Animal Related': AlertTriangle,
+                'Noise Pollution': AlertTriangle,
+                'Air Pollution': AlertTriangle,
+                'Broken Water Pipe': Droplets,
+                'Public Safety Hazard': AlertTriangle,
+                'Damaged Public Facility': AlertTriangle,
+                'Fallen Electrical Wire': AlertTriangle,
+                Other: AlertTriangle,
+            }[report.category] || AlertTriangle;
+            const iconMarkup = renderToStaticMarkup(React.createElement(categoryIcon, { color: '#ffffff', size: 16, strokeWidth: 2.5, 'aria-hidden': true }));
 
             const el = document.createElement('div');
             el.style.position = 'relative';
@@ -213,7 +216,7 @@ const InteractiveMap = ({
                 <svg width="36" height="42" viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg" aria-label="${report.category || 'Hazard'} marker" role="img">
                     <path d="M18 1C9.2 1 2 8.2 2 17c0 12 16 24 16 24s16-12 16-24C34 8.2 26.8 1 18 1Z" fill="${color}" stroke="white" stroke-width="3"/>
                     <circle cx="18" cy="16" r="10.5" fill="rgba(255,255,255,0.15)"/>
-                    <text x="18" y="21" text-anchor="middle" font-size="14" dominant-baseline="middle">${categoryIcon}</text>
+                    <g transform="translate(10 8)">${iconMarkup}</g>
                 </svg>
             `;
 

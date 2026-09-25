@@ -47,7 +47,7 @@
         const fetchPublicReports = useCallback(async () => {
             try {
                 const response = await api.get('/reports/public', {
-                    params: { page: 1, limit: 100 },
+                    params: { page: 1, limit: 100, includeResolved: true },
                 });
                 const nextReports = response.data?.reports || [];
                 setPublicReports(nextReports);

@@ -9,7 +9,7 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/
 const HazardMapPage = () => {
   const { publicReports, reports } = useReports();
   const mapReports = publicReports.length > 0 ? publicReports : reports;
-  const visibleReports = mapReports.filter((report) => !['Resolved', 'Closed'].includes(report.status));
+  const visibleReports = mapReports.filter((report) => ['Pending', 'In Progress', 'Resolved'].includes(report.status));
   console.log('[HazardMapPage] reports loaded:', { publicReports: publicReports.length, allReports: reports.length, visibleReports: visibleReports.length, mapReports: mapReports.length });
   const { theme } = useTheme();
   const isDark = theme === 'dark';

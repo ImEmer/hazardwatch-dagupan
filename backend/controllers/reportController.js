@@ -1,6 +1,7 @@
 import Report from '../models/Report.js';
 import { logActivity } from '../utils/logActivity.js';
 import { isDagupanBarangay } from '../utils/dagupanBarangays.js';
+import { calculatePriority } from '../utils/priorityCalculator.js';
 
 const barangayScope = (barangay) => ({ $or: [{ barangay }, { assignedBarangay: barangay }] });
 const scoped = (user) => user.role === 'barangay' ? barangayScope(user.barangay || '__unassigned_barangay__') : {};
@@ -25,9 +26,10 @@ const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export const getPublicReports = async (req, res, next) => {
   try {
-    const { page = 1, limit = 100, status, category, priority, barangay } = req.query;
-    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false } };
-    if (status) filter.status = status;
+    const { page = 1, limit = 100, status, category, priority, barangay, includeResolved } = req.query;
+    const statusFilter = includeResolved === 'true' ? { $nin: ['Closed'] } : { $nin: ['Resolved', 'Closed'] };
+    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false }, status: statusFilter };
+    if (status && status !== 'Closed' && (includeResolved === 'true' || status !== 'Resolved')) filter.status = status;
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
     if (barangay) filter.barangay = barangay;
@@ -119,7 +121,7 @@ export const createReport = async (req, res, next) => {
     const report = await Report.create({
       ...req.body,
       title: `${req.body.category} report - ${new Date().toLocaleDateString('en-PH')}`,
-      priority: 'Low',
+      priority: calculatePriority(req.body.category, req.body.description),
       customCategory: req.body.category === 'Other' ? String(req.body.customCategory || '').trim() : '',
       location,
       barangay: req.body.barangay || '',
