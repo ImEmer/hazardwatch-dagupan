@@ -27,7 +27,10 @@ const BarangayMapPage = () => {
     return () => { cancelled = true; };
   }, [token, user?.barangay]);
 
-  const filtered = useMemo(() => status === 'all' ? reports : reports.filter((report) => report.status === status), [reports, status]);
+  const filtered = useMemo(() => {
+    const visible = reports.filter((report) => !['Resolved', 'Closed'].includes(report.status));
+    return status === 'all' ? visible : visible.filter((report) => report.status === status);
+  }, [reports, status]);
   const toggleHeatmap = () => setHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
   const handleBarangayChange = (event) => {
     const name = event.target.value;

@@ -3,24 +3,10 @@ import { Link } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
 import { showError } from '../../services/alerts';
-import { HAZARD_CATEGORY_COLORS } from '../../services/reportOptions';
+import { HAZARD_CATEGORY_COLORS, PRIORITY_COLORS, STATUS_COLORS } from '../../services/reportOptions';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { SkeletonReportCard } from '../../components/common/Skeleton';
-
-const statusStyles = {
-  Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
-  'In Progress': 'bg-violet-500/10 text-violet-300 border-violet-500/30',
-  Resolved: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
-  Closed: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
-};
-
-const priorityStyles = {
-  Low: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
-  Medium: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-  High: 'bg-orange-500/10 text-orange-300 border-orange-500/30',
-  Urgent: 'bg-red-500/10 text-red-300 border-red-500/30',
-};
 
 const MyReportsPage = () => {
   const { token, user, isAuthenticated, loading: authLoading } = useAuth();
@@ -154,8 +140,8 @@ const MyReportsPage = () => {
                   <article className="p-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-semibold text-white">{reportTitle}</h2>
-                      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${statusStyles[report.status] || statusStyles.Pending}`}>{report.status || 'Pending'}</span>
-                      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${priorityStyles[report.priority] || priorityStyles.Medium}`}>{report.priority || 'Medium'}</span>
+                      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${STATUS_COLORS[report.status]?.pill || STATUS_COLORS.Pending.pill}`}>{report.status || 'Pending'}</span>
+                      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-wide ${PRIORITY_COLORS[report.priority]?.pill || PRIORITY_COLORS.Medium.pill}`}>{report.priority || 'Medium'}</span>
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.15em] text-gray-400">

@@ -2,18 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { HAZARD_CATEGORY_COLORS } from '../services/reportOptions';
+import { HAZARD_CATEGORY_COLORS, STATUS_COLORS } from '../services/reportOptions';
 
 const CATEGORY_COLORS = {
     ...HAZARD_CATEGORY_COLORS,
 };
 
-const STATUS_COLORS = {
-    Pending: '#F59E0B',
-    'In Progress': '#3B82F6',
-    Resolved: '#10B981',
-    Closed: '#6B7280',
-};
 
 const InteractiveMap = ({
     reports = [],
@@ -179,68 +173,66 @@ const InteractiveMap = ({
             const [lng, lat] = report.location.coordinates;
             if (typeof lng !== 'number' || typeof lat !== 'number' || Number.isNaN(lng) || Number.isNaN(lat)) return;
 
-            const color =
+                    const color =
                 colorBy === 'status'
-                    ? STATUS_COLORS[report.status] || '#6B7280'
+                    ? (typeof STATUS_COLORS[report.status] === 'object' ? STATUS_COLORS[report.status].hex : STATUS_COLORS[report.status] || '#6B7280')
                     : CATEGORY_COLORS[report.category] || '#6B7280';
 
             const description = (report.description || report.title || 'Hazard report').replace(/<[^>]*>/g, '').trim();
             const shortDescription = description.length > 120 ? `${description.slice(0, 117)}...` : description;
+            const categoryIcon = {
+                'Fire Hazard': '🔥',
+                Flooding: '🌊',
+                Pothole: '🛣️',
+                'Broken Streetlight': '💡',
+                'Waste Disposal': '🗑️',
+                'Fallen Tree': '🌳',
+                'Clogged Drainage': '🚰',
+                'Damaged Road': '🛣️',
+                'Traffic Obstruction': '🚧',
+                'Gas Leak': '💨',
+                'Smoke Report': '🚨',
+                'Blocked Fire Exit': '🚪',
+                'Animal Related': '🐾',
+                'Noise Pollution': '🔊',
+                'Air Pollution': '🌫️',
+                'Broken Water Pipe': '💧',
+                'Public Safety Hazard': '⚠️',
+                'Damaged Public Facility': '🏢',
+                'Fallen Electrical Wire': '⚡',
+                Other: '⚠️',
+            }[report.category] || '⚠️';
 
             const el = document.createElement('div');
-
-            el.className = 'flex items-center justify-center';
-
-            el.style.width = '32px';
-            el.style.height = '32px';
-            el.style.borderRadius = '50%';
-            el.style.backgroundColor = color;
-            el.style.border = '3px solid white';
-            el.style.boxShadow =
-                '0 4px 6px rgba(0,0,0,0.2)';
+            el.style.position = 'relative';
+            el.style.width = '36px';
+            el.style.height = '42px';
             el.style.cursor = 'pointer';
+            el.style.filter = 'drop-shadow(0 4px 8px rgba(15, 23, 42, 0.35))';
+            el.innerHTML = `
+                <svg width="36" height="42" viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg" aria-label="${report.category || 'Hazard'} marker" role="img">
+                    <path d="M18 1C9.2 1 2 8.2 2 17c0 12 16 24 16 24s16-12 16-24C34 8.2 26.8 1 18 1Z" fill="${color}" stroke="white" stroke-width="3"/>
+                    <circle cx="18" cy="16" r="10.5" fill="rgba(255,255,255,0.15)"/>
+                    <text x="18" y="21" text-anchor="middle" font-size="14" dominant-baseline="middle">${categoryIcon}</text>
+                </svg>
+            `;
 
             const popup = new maplibregl.Popup({
-                offset: 25,
-                closeButton: true
+                offset: [0, -18],
+                closeButton: true,
             }).setHTML(`
                 <div class="p-2 max-w-xs">
-                    <h3 class="font-bold text-gray-800">
-                        ${report.category || 'Hazard'}
-                    </h3>
-
-                    <p class="text-sm text-gray-600 mt-1">
-                        ${shortDescription}
-                    </p>
-
-                    <p class="text-xs text-gray-500 mt-2">
-                        Status:
-                        <span class="font-medium">
-                            ${report.status || 'Pending'}
-                        </span>
-                    </p>
-
-                    <p class="text-xs text-gray-400 mt-1">
-                        ${new Date(
-                            report.createdAt
-                        ).toLocaleDateString()}
-                    </p>
-
-                    ${
-                        report.address
-                            ? `
-                                <p class="text-xs text-gray-500 mt-1 break-words">
-                                    ${report.address}
-                                </p>
-                            `
-                            : ''
-                    }
+                    <h3 class="font-bold text-gray-800">${report.category || 'Hazard'}</h3>
+                    <p class="text-sm text-gray-600 mt-1">${shortDescription}</p>
+                    <p class="text-xs text-gray-500 mt-2">Status: <span class="font-medium">${report.status || 'Pending'}</span></p>
+                    <p class="text-xs text-gray-400 mt-1">${new Date(report.createdAt).toLocaleDateString()}</p>
+                    ${report.address ? `<p class="text-xs text-gray-500 mt-1 break-words">${report.address}</p>` : ''}
                 </div>
             `);
 
             const marker = new maplibregl.Marker({
                 element: el,
-                anchor: 'center'
+                anchor: 'bottom'
             })
                 .setLngLat([lng, lat])
                 .setPopup(popup)

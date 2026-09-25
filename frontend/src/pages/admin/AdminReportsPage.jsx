@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useTheme from '../../hooks/useTheme';
-import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
+import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, PRIORITY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
@@ -10,19 +10,6 @@ import Skeleton from '../../components/common/Skeleton';
 import Pagination from '../../components/common/Pagination';
 
 const PAGE_SIZE = 10;
-const priorityColors = {
-  Low: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
-  Medium: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-  High: 'bg-orange-500/10 text-orange-300 border-orange-500/30',
-  Urgent: 'bg-red-500/10 text-red-300 border-red-500/30',
-};
-
-const priorityColorsLight = {
-  Low: 'bg-slate-100 text-slate-700 border-slate-200',
-  Medium: 'bg-amber-50 text-amber-700 border-amber-200',
-  High: 'bg-orange-50 text-orange-700 border-orange-200',
-  Urgent: 'bg-red-50 text-red-700 border-red-200',
-};
 
 const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const { deleteReport } = useReports();
@@ -284,7 +271,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? priorityColors : priorityColorsLight)[report.priority] || (isDark ? priorityColors : priorityColorsLight).Medium}`}>
+                      <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium ${PRIORITY_COLORS[report.priority]?.pill || PRIORITY_COLORS.Medium.pill}`}>
                         {report.priority || 'Medium'}
                       </span>
                     </td>

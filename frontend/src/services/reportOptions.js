@@ -1,5 +1,43 @@
 export const REPORT_STATUSES = ['Pending', 'In Progress', 'Resolved', 'Closed'];
 
+export const STATUS_COLORS = {
+  Pending: {
+    bg: 'bg-yellow-500',
+    text: 'text-yellow-500',
+    border: 'border-yellow-500',
+    hex: '#eab308',
+    pill: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30',
+  },
+  'In Progress': {
+    bg: 'bg-blue-500',
+    text: 'text-blue-500',
+    border: 'border-blue-500',
+    hex: '#3b82f6',
+    pill: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+  },
+  Resolved: {
+    bg: 'bg-green-500',
+    text: 'text-green-500',
+    border: 'border-green-500',
+    hex: '#10b981',
+    pill: 'bg-green-500/10 text-green-500 border-green-500/30',
+  },
+  Closed: {
+    bg: 'bg-gray-500',
+    text: 'text-gray-500',
+    border: 'border-gray-500',
+    hex: '#6b7280',
+    pill: 'bg-gray-500/10 text-gray-500 border-gray-500/30',
+  },
+};
+
+export const PRIORITY_COLORS = {
+  Urgent: { hex: '#ef4444', pill: 'bg-red-500/10 text-red-500 border-red-500/30' },
+  High: { hex: '#f97316', pill: 'bg-orange-500/10 text-orange-500 border-orange-500/30' },
+  Medium: { hex: '#eab308', pill: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30' },
+  Low: { hex: '#6b7280', pill: 'bg-gray-500/10 text-gray-500 border-gray-500/30' },
+};
+
 export const DAGUPAN_BARANGAYS = [
   'Bacayao Norte', 'Bacayao Sur', 'Banaoang', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV',
   'Bolosan', 'Bonuan Binloc', 'Bonuan Boquig', 'Bonuan Gueset', 'Calmay', 'Carael', 'Caranglaan',
@@ -85,22 +123,22 @@ export const HAZARD_CATEGORY_COLORS = {
 };
 
 export const STATUS_BADGES = {
-  Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
-  'In Progress': 'bg-violet-500/10 text-violet-300 border-violet-500/30',
-  Resolved: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
-  Closed: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+  Pending: STATUS_COLORS.Pending.pill,
+  'In Progress': STATUS_COLORS['In Progress'].pill,
+  Resolved: STATUS_COLORS.Resolved.pill,
+  Closed: STATUS_COLORS.Closed.pill,
 };
 
 export const STATUS_BADGES_LIGHT = {
   Pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  'In Progress': 'bg-violet-50 text-violet-700 border-violet-200',
+  'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
   Resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Closed: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
 export const STATUS_CHART_COLORS = {
-  Pending: '#f59e0b',
-  'In Progress': '#8b5cf6',
-  Resolved: '#22c55e',
-  Closed: '#6b7280',
+  Pending: STATUS_COLORS.Pending.hex,
+  'In Progress': STATUS_COLORS['In Progress'].hex,
+  Resolved: STATUS_COLORS.Resolved.hex,
+  Closed: STATUS_COLORS.Closed.hex,
 };

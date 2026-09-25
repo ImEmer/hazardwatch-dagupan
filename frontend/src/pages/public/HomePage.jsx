@@ -28,7 +28,6 @@
     const isDark = theme === 'dark';
     const navigate = useNavigate();
     const sectionRefs = useRef([]);
-    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [publicStats, setPublicStats] = useState({ totalReports: 0, activeHazards: 0, resolvedCases: 0, areasCovered: 0, topCategories: [] });
     const [statsLoading, setStatsLoading] = useState(true);
 
@@ -68,15 +67,6 @@
                 if (!cancelled) setStatsLoading(false);
             });
         return () => { cancelled = true; };
-    }, []);
-
-    // Mouse move handler for cursor glow
-    useEffect(() => {
-        const handleMouseMove = (e) => {
-        setMousePos({ x: e.clientX, y: e.clientY });
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
     // Scroll animation observer
@@ -327,22 +317,6 @@
 
     return (
         <div className="homepage-container min-h-screen relative overflow-x-clip">
-        {/* ============================================================ */}
-        {/* CURSOR GLOW EFFECT - follows mouse */}
-        {/* ============================================================ */}
-        <div
-            className="fixed pointer-events-none z-[9999] rounded-full"
-            style={{
-            left: mousePos.x - 350,
-            top: mousePos.y - 350,
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 40%, transparent 70%)',
-            transition: 'left 0.05s ease-out, top 0.05s ease-out',
-            willChange: 'transform',
-            transform: 'translateZ(0)',
-            }}
-        />
 
         {/* ============================================================ */}
         {/* 1. HERO SECTION - DARK MAP BACKGROUND */}

@@ -16,6 +16,7 @@ import RegisterPage from './pages/public/RegisterPage';
 import ForgotPasswordPage from './pages/public/ForgotPasswordPage';
 import EnterResetCodePage from './pages/public/EnterResetCodePage';
 import ResetPasswordPage from './pages/public/ResetPasswordPage';
+import VerifyEmailPage from './pages/public/VerifyEmailPage';
 import AboutPage from './pages/public/AboutPage';
 import TrackReportPage from './pages/public/TrackReportPage';
 import HazardMapPage from './pages/public/HazardMapPage';
@@ -132,6 +133,7 @@ function App() {
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
             <Route path="/enter-reset-code" element={<PublicPage><EnterResetCodePage /></PublicPage>} />
+            <Route path="/verify-email" element={<PublicPage><VerifyEmailPage /></PublicPage>} />
             <Route path="/reset-password/:token" element={<PublicPage><ResetPasswordPage /></PublicPage>} />
 
             <Route path="/barangay" element={<ProtectedRoute allowedRoles={['barangay']}><BarangayLayout /></ProtectedRoute>}>

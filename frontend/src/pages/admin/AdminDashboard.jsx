@@ -19,7 +19,7 @@
     import useAuth from '../../hooks/useAuth';
     import useTheme from '../../hooks/useTheme';
     import api from '../../services/api';
-    import { REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
+    import { PRIORITY_COLORS, REPORT_STATUSES, STATUS_COLORS } from '../../services/reportOptions';
     import { SkeletonDashboard } from '../../components/common/Skeleton';
     import CountUp from '../../components/common/CountUp';
 
@@ -76,10 +76,12 @@
       const pending = statusCounts.Pending || 0;
       const inProgress = statusCounts['In Progress'] || 0;
       const resolved = statusCounts.Resolved || 0;
-      const statusData = REPORT_STATUSES.map((status) => ({
-        name: status,
-        value: statusCounts[status] || 0,
-      }));
+      const statusData = [
+        { name: 'Pending', value: pending },
+        { name: 'In Progress', value: inProgress },
+        { name: 'Resolved', value: resolved },
+        { name: 'Closed', value: statusCounts.Closed || 0 },
+      ];
       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
       const timelineData = Array.from({ length: daysInMonth }, (_, index) => {
         const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`;
@@ -101,14 +103,10 @@
         month,
         label: new Date(selectedYear, month, 1).toLocaleDateString('en-US', { month: 'long' }),
       }));
-      const priorityLevels = [
-        { name: 'Urgent', color: '#ef4444' },
-        { name: 'High', color: '#f97316' },
-        { name: 'Medium', color: '#f59e0b' },
-        { name: 'Low', color: '#64748b' },
-      ].map((level) => ({
-        ...level,
-        count: priorityCounts[level.name] || 0,
+      const priorityLevels = ['Urgent', 'High', 'Medium', 'Low'].map((name) => ({
+        name,
+        color: PRIORITY_COLORS[name].hex,
+        count: priorityCounts[name] || 0,
       }));
       const maxPriorityCount = Math.max(...priorityLevels.map((level) => level.count), 1);
 
@@ -138,7 +136,7 @@
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Pending</p>
               <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={pending} /></p>
             </div>
-            <div className={`rounded-2xl border-l-4 border-violet-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
+            <div className={`rounded-2xl border-l-4 border-blue-500 border-y border-r p-4 shadow-xl ${isDark ? 'border-y-[#2e303a] border-r-[#2e303a] bg-[#14151d]' : 'border-y-slate-200 border-r-slate-200 bg-white'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>In progress</p>
               <p className={`mt-3 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}><CountUp end={inProgress} /></p>
             </div>
@@ -154,7 +152,7 @@
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
-                    {statusData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}
+                    {statusData.map((entry) => <Cell key={entry.name} fill={STATUS_COLORS[entry.name]?.hex || '#6b7280'} />)}
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} />
                   <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />

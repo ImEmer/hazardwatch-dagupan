@@ -6,14 +6,14 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/
 
 const statusColors = {
   Pending: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
-  'In Progress': 'bg-violet-500/10 text-violet-300 border-violet-500/30',
+  'In Progress': 'bg-blue-500/10 text-blue-300 border-blue-500/30',
   Resolved: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
   Closed: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
 };
 
 const statusColorsLight = {
   Pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  'In Progress': 'bg-violet-50 text-violet-700 border-violet-200',
+  'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
   Resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Closed: 'bg-slate-100 text-slate-700 border-slate-200',
 };
@@ -28,8 +28,9 @@ const AdminMapPage = () => {
   const [flyTo, setFlyTo] = useState(null);
 
   const filteredReports = useMemo(() => {
-    if (statusFilter === 'all') return reports;
-    return reports.filter((report) => report.status === statusFilter);
+    const visible = reports.filter((report) => !['Resolved', 'Closed'].includes(report.status) || statusFilter !== 'all');
+    if (statusFilter === 'all') return visible.filter((report) => !['Resolved', 'Closed'].includes(report.status));
+    return visible.filter((report) => report.status === statusFilter);
   }, [reports, statusFilter]);
   const toggleHeatmap = () => setShowHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
   const handleBarangayChange = (event) => {
