@@ -13,7 +13,7 @@ const withinDagupanBounds = ({ lat, lng }) => {
     const latitude = Number(lat);
     const longitude = Number(lng);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
-    return latitude >= 16.02 && latitude <= 16.10 && longitude >= 120.30 && longitude <= 120.40;
+    return latitude >= 15.98 && latitude <= 16.15 && longitude >= 120.25 && longitude <= 120.45;
 };
 
 const SubmitReport = () => {
@@ -105,7 +105,9 @@ const SubmitReport = () => {
         }
         if (!images.length) newErrors.photo = 'Photo evidence is required.';
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
-        else if (!withinDagupanBounds(selectedLocation)) newErrors.location = 'Reports must be submitted within Dagupan City limits.';
+        else if (!withinDagupanBounds(selectedLocation)) {
+            newErrors.location = 'This location is outside Dagupan City. Please pick a point within the city limits.';
+        }
         return newErrors;
     };
 

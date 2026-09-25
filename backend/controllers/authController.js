@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
-import { sendPasswordResetCode } from '../utils/sendEmail.js';
+import { sendPasswordResetCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
@@ -22,7 +22,8 @@ const revokeToken = async (req, decodedToken = jwt.decode(req.headers.authorizat
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, role, barangay, phone } = req.body;
+    const { name, email, password, role, barangay, phone, agreedToTerms } = req.body;
+    if (agreedToTerms !== true) return res.status(400).json({ success: false, message: 'You must agree to the Terms of Service.' });
     if (typeof email === 'string' && /\s/.test(email)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
     if (typeof password === 'string' && /\s/.test(password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
 
@@ -30,9 +31,34 @@ export const register = async (req, res, next) => {
     if (exists) return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
 
     const safeRole = ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
-    const user = await User.create({ name, email: String(email).trim().toLowerCase(), password, role: safeRole, barangay, phone, status: 'active', isActive: true });
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const user = await User.create({
+      name,
+      email: String(email).trim().toLowerCase(),
+      password,
+      role: safeRole,
+      barangay,
+      phone,
+      status: 'pending',
+      isActive: false,
+      emailVerified: false,
+      emailVerificationToken: crypto.createHash('sha256').update(verificationToken).digest('hex'),
+      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
+    });
+
+    try {
+      const verificationResult = await sendVerificationEmail({
+        email: user.email,
+        name: user.name,
+        token: verificationToken,
+      });
+      console.log('[register] Verification email sent:', { email: user.email, token: verificationToken, result: verificationResult });
+    } catch (emailError) {
+      console.error('[register] Verification email failed:', emailError.message);
+    }
+
     await logActivity({ actor: user, action: 'registered', message: `${user.name} registered a new account`, scope: user.role === 'barangay' ? 'barangay' : 'user', entityType: 'auth', entityId: user._id }).catch(() => {});
-    res.status(201).json({ success: true, user: publicUser(user) });
+    res.status(201).json({ success: true, message: 'Check your email to verify your account.', user: publicUser(user) });
   } catch (error) { next(error); }
 };
 
@@ -87,6 +113,7 @@ export const login = async (req, res, next) => {
       const reason = user.suspensionReason ? ` Reason: ${user.suspensionReason}` : '';
       return res.status(403).json({ success: false, status: 'banned', suspendedUntil: null, daysRemaining: null, reason: user.suspensionReason || '', message: `Your account is permanently banned.${reason}` });
     }
+    if (!user.emailVerified) return res.status(403).json({ success: false, message: 'Please verify your email first.' });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     clearFailedLogins(req, normalizedEmail);
     user.lastLogin = new Date();
@@ -164,6 +191,32 @@ export const checkEmail = async (req, res) => {
   const email = String(req.query.email || '').trim().toLowerCase();
   const exists = Boolean(email) && Boolean(await User.findOne({ email }));
   res.json({ success: true, exists });
+};
+
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const token = String(req.query.token || '').trim();
+    if (!token) return res.status(400).json({ success: false, message: 'Verification token is required.' });
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ success: false, message: 'This verification link is invalid or has expired.' });
+
+    user.emailVerified = true;
+    user.isActive = true;
+    user.status = 'active';
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?verified=1`);
+  } catch (error) {
+    return next(error);
+  }
 };
 
 export const forgotPassword = async (req, res) => {

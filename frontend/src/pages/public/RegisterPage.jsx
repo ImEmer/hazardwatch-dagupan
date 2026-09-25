@@ -13,6 +13,7 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const passwordCriteria = [
     form.password.length >= 8,
     /[a-z]/.test(form.password) && /[A-Z]/.test(form.password),
@@ -45,8 +46,14 @@ const RegisterPage = () => {
         await showError('Email already registered. Please use a different email.');
         return;
       }
-      await register({ name: form.name.trim(), email: trimmedEmail, password: form.password, role: 'user' });
-      await showSuccess('Account created! Please login.');
+      if (!agreedToTerms) {
+        setErrors((prev) => ({ ...prev, agreedToTerms: 'You must agree to the Terms of Service.' }));
+        await showError('You must agree to the Terms of Service.');
+        return;
+      }
+
+      await register({ name: form.name.trim(), email: trimmedEmail, password: form.password, role: 'user', agreedToTerms: true });
+      await showSuccess('Account created! Check your email to verify your account.');
       navigate('/login');
     } catch (error) {
       const message = error.message && error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('exist')
@@ -85,7 +92,22 @@ const RegisterPage = () => {
           </div>
           {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}
         </label>
-        <button disabled={submitting} className="auth-button">{submitting ? 'Creating account...' : 'Register'}</button>
+        <label className="flex items-start gap-3 rounded-lg border border-[#2e303a] bg-[#111318] p-3 text-sm text-gray-300">
+          <input
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(event) => {
+              setAgreedToTerms(event.target.checked);
+              setErrors((prev) => ({ ...prev, agreedToTerms: '' }));
+            }}
+            className="mt-1 h-4 w-4 rounded border-gray-600 bg-[#0a0b0f] text-blue-500 focus:ring-blue-500"
+          />
+          <span>
+            I agree to the <a href="/terms" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300">Privacy Policy</a>.
+          </span>
+        </label>
+        {errors.agreedToTerms && <span className="mt-1 block text-xs text-red-400">{errors.agreedToTerms}</span>}
+        <button disabled={submitting || !agreedToTerms} className="auth-button disabled:cursor-not-allowed disabled:opacity-50">{submitting ? 'Creating account...' : 'Register'}</button>
         <p className="text-center text-sm text-gray-400">Already have an account? <Link className="auth-link" to="/login">Login</Link></p>
       </form>
     </AuthCard>

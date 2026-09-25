@@ -8,7 +8,9 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/
 
 const HazardMapPage = () => {
   const { publicReports, reports } = useReports();
-  const visibleReports = publicReports.length > 0 ? publicReports : reports;
+  const mapReports = publicReports.length > 0 ? publicReports : reports;
+  const visibleReports = mapReports.filter((report) => !['Resolved', 'Closed'].includes(report.status));
+  console.log('[HazardMapPage] reports loaded:', { publicReports: publicReports.length, allReports: reports.length, visibleReports: visibleReports.length, mapReports: mapReports.length });
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
@@ -36,7 +38,11 @@ const HazardMapPage = () => {
           <p className="mt-2 text-gray-400">Explore reported hazards and their locations across the city.</p>
         </div>
         <div data-aos="zoom-in" data-aos-delay="100" className="relative h-[calc(100vh-220px)] min-h-[480px] overflow-hidden rounded-2xl border border-[#2e303a] bg-[#14151d] p-2 shadow-xl">
-          <div className={`absolute left-5 top-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+          <div className="absolute left-5 top-5 z-10 max-w-sm rounded-xl border border-[#2e303a] bg-[#14151d]/90 p-3 text-sm text-gray-200 shadow-lg">
+            <p className="font-semibold text-white">See a hazard? Log in to report it.</p>
+            <p className="mt-1 text-gray-400">Public map view shows live reports already submitted by the community.</p>
+          </div>
+          <div className={`absolute left-5 top-28 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
             <label htmlFor="public-map-barangay" className="block text-xs font-semibold">Find Barangay</label>
             <select id="public-map-barangay" value={selectedBarangay} onChange={handleBarangayChange} className={`mt-2 w-52 rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
               <option value="">Select a barangay...</option>

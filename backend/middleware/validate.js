@@ -24,7 +24,7 @@ export const passwordPolicy = (field = 'password') => body(field)
 
 export const validateRegister = [
   body().custom((value) => {
-    const allowed = ['name', 'email', 'password', 'role', 'barangay', 'phone'];
+    const allowed = ['name', 'email', 'password', 'role', 'barangay', 'phone', 'agreedToTerms'];
     const unknown = Object.keys(value || {}).find((key) => !allowed.includes(key));
     if (unknown) throw new Error(`Field ${unknown} is not allowed.`);
     return true;
@@ -38,6 +38,10 @@ export const validateRegister = [
   body('role').optional().isIn(['superadmin', 'admin', 'staff', 'barangay', 'user']),
   body('barangay').optional().trim().escape().isLength({ max: 100 }),
   body('phone').optional().trim().escape().isLength({ max: 30 }),
+  body('agreedToTerms').custom((value) => {
+    if (value !== true) throw new Error('You must agree to the Terms of Service.');
+    return true;
+  }),
   validateBadRequest,
 ];
 export const validateLogin = [body('email').trim().isEmail().normalizeEmail(), body('password').notEmpty(), validate];

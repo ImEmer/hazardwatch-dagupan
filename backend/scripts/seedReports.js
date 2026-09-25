@@ -47,13 +47,33 @@ function randomDateWithinLast30Days() {
   return new Date(randomBetween(thirtyDaysAgo, now));
 }
 
+const STREET_NAMES = [
+  'Arellano', 'Avenida', 'Bonuan', 'Cacandungan', 'Fronda', 'Gomez', 'Luna', 'Mabini', 'Natividad', 'Pangasinan',
+  'Perez', 'Quezon', 'Roxas', 'Sampaloc', 'Tapuac', 'Talon', 'Villanueva', 'Zamora', 'Rizal', 'Bautista', 'Gonzales'
+];
+
+const GENERIC_DESCRIPTIONS = {
+  'Fire Hazard': 'Fire hazard reported in the area.',
+  Flooding: 'Flooding reported in the area.',
+  Pothole: 'Pothole reported on the road.',
+  'Broken Streetlight': 'Broken streetlight reported.',
+  'Waste Disposal': 'Waste accumulation reported.',
+  'Fallen Tree': 'Fallen tree reported.',
+  Other: 'Hazard reported in the area.',
+};
+
 function randomLocation() {
+  const barangay = randomItem(DAGUPAN_BARANGAYS);
+  const [minLng, maxLng] = [DAGUPAN_BOUNDS.minLng, DAGUPAN_BOUNDS.maxLng];
+  const [minLat, maxLat] = [DAGUPAN_BOUNDS.minLat, DAGUPAN_BOUNDS.maxLat];
+
   return {
     type: 'Point',
     coordinates: [
-      randomBetween(DAGUPAN_BOUNDS.minLng, DAGUPAN_BOUNDS.maxLng),
-      randomBetween(DAGUPAN_BOUNDS.minLat, DAGUPAN_BOUNDS.maxLat),
+      randomBetween(minLng, maxLng),
+      randomBetween(minLat, maxLat),
     ],
+    barangay,
   };
 }
 
@@ -61,14 +81,18 @@ function mapReport(row, citizenUsers) {
   const reportedBy = randomItem(citizenUsers);
   const createdAt = randomDateWithinLast30Days();
   const title = String(row['Request Type'] || row.Category || 'General Hazard').trim() || 'General Hazard';
+  const category = CATEGORY_MAPPING[String(row.Category || '').trim()] || 'Other';
+  const barangay = randomItem(DAGUPAN_BARANGAYS);
+  const streetName = randomItem(STREET_NAMES);
+  const location = randomLocation();
 
   return {
     title: title.slice(0, 100),
-    category: CATEGORY_MAPPING[String(row.Category || '').trim()] || 'Other',
-    description: '',
-    location: randomLocation(),
-    address: '',
-    barangay: randomItem(DAGUPAN_BARANGAYS),
+    category,
+    description: GENERIC_DESCRIPTIONS[category] || 'Hazard reported in the area.',
+    location,
+    address: `${streetName} St, ${barangay}, Dagupan City`,
+    barangay,
     images: [],
     comments: [],
     status: randomItem(STATUSES),

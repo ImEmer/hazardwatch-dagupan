@@ -164,7 +164,7 @@
 
             const latitude = Number(normalizedLocation.coordinates[1]);
             const longitude = Number(normalizedLocation.coordinates[0]);
-            if (latitude < 16.02 || latitude > 16.10 || longitude < 120.30 || longitude > 120.40) {
+            if (latitude < 15.98 || latitude > 16.15 || longitude < 120.25 || longitude > 120.45) {
             throw new Error('Reports must be submitted within Dagupan City limits.');
             }
 
