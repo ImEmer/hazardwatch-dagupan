@@ -42,7 +42,7 @@ export const DAGUPAN_BARANGAYS = [
   'Bacayao Norte', 'Bacayao Sur', 'Banaoang', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV',
   'Bolosan', 'Bonuan Binloc', 'Bonuan Boquig', 'Bonuan Gueset', 'Calmay', 'Carael', 'Caranglaan',
   'Herrero', 'Herrero-Perez', 'Lasip Chico', 'Lasip Grande', 'Lomboy', 'Lucao', 'Malued', 'Mamalingling',
-  'Mangin', 'Mayombo', 'Pantal', 'Pogo Chico', 'Pogo Grande', 'Salapingao', 'San Fabian', 'Sapanglang',
+  'Mangin', 'Mayombo', 'Pantal', 'Poblacion Oeste', 'Pogo Chico', 'Pogo Grande', 'Salapingao', 'San Fabian', 'Sapanglang',
   'Tambac', 'Tapuac', 'Tebeng', 'Tondaligan',
 ].sort((left, right) => left.localeCompare(right));
 
@@ -72,6 +72,7 @@ export const DAGUPAN_BARANGAY_COORDINATES = {
   Mangin: [120.3320, 16.0350],
   Mayombo: [120.3380, 16.0500],
   Pantal: [120.3450, 16.0450],
+  'Poblacion Oeste': [120.3350, 16.0430],
   'Pogo Chico': [120.3330, 16.0380],
   'Pogo Grande': [120.3350, 16.0400],
   Pugaro: [120.3130, 16.0470],

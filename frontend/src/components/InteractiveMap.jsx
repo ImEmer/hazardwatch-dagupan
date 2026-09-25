@@ -29,6 +29,7 @@ const InteractiveMap = ({
     const selectedLabelRef = useRef(null);
     const markerElementRef = useRef(null);
     const labelElementRef = useRef(null);
+    const clusteredRef = useRef(false);
     const [mapReady, setMapReady] = useState(false);
 
     const [lng] = useState(120.3333);
@@ -49,9 +50,13 @@ const InteractiveMap = ({
                 address = address.replace(/, Philippines$/, '');
                 address = address.replace(/^Dagupan, /, '');
 
+                const normalizedAddress = address.toLowerCase();
+                const detectedBarangay = normalizedAddress.includes('arellano')
+                    ? 'Pantal'
+                    : data.address?.suburb || data.address?.village || data.address?.neighbourhood || data.address?.town || '';
                 return {
                     address,
-                    barangay: data.address?.suburb || data.address?.village || data.address?.neighbourhood || data.address?.town || '',
+                    barangay: detectedBarangay,
                 };
             }
 
@@ -163,17 +168,56 @@ const InteractiveMap = ({
 
     // Update report markers
     useEffect(() => {
-        if (!map.current) return;
+        if (!map.current || !mapReady) return;
 
         markersRef.current.forEach((marker) => marker.remove());
         markersRef.current = [];
+        const clusterLayers = ['reports-cluster-count', 'reports-cluster-points', 'reports-unclustered-points'];
+        clusterLayers.forEach((layerId) => {
+            if (map.current.getLayer(layerId)) map.current.removeLayer(layerId);
+        });
+        if (map.current.getSource('reports-clustered')) map.current.removeSource('reports-clustered');
+        clusteredRef.current = false;
         if (showHeatmap) return;
+
+        if (reports.length > 1000) {
+            const features = reports.flatMap((report) => {
+                const coordinates = report.location?.coordinates;
+                if (!Array.isArray(coordinates) || coordinates.length !== 2) return [];
+                let [reportLng, reportLat] = coordinates.map(Number);
+                if (Math.abs(reportLng) <= 90 && Math.abs(reportLat) > 90) [reportLng, reportLat] = [reportLat, reportLng];
+                if (!Number.isFinite(reportLng) || !Number.isFinite(reportLat)) return [];
+                return [{ type: 'Feature', geometry: { type: 'Point', coordinates: [reportLng, reportLat] }, properties: { status: report.status || 'Pending' } }];
+            });
+            map.current.addSource('reports-clustered', { type: 'geojson', data: { type: 'FeatureCollection', features }, cluster: true, clusterMaxZoom: 14, clusterRadius: 45 });
+            map.current.addLayer({ id: 'reports-cluster-points', type: 'circle', source: 'reports-clustered', filter: ['has', 'point_count'], paint: { 'circle-color': '#3b82f6', 'circle-radius': ['step', ['get', 'point_count'], 18, 100, 24, 750, 32], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+            map.current.addLayer({ id: 'reports-cluster-count', type: 'symbol', source: 'reports-clustered', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } });
+            map.current.addLayer({ id: 'reports-unclustered-points', type: 'circle', source: 'reports-clustered', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['match', ['get', 'status'], 'Pending', '#eab308', 'In Progress', '#3b82f6', 'Resolved', '#10b981', '#6b7280'], 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+            const expandClusters = (event) => {
+                const features = map.current.queryRenderedFeatures(event.point, { layers: ['reports-cluster-points'] });
+                if (!features.length) return;
+                map.current.getSource('reports-clustered').getClusterExpansionZoom(features[0].properties.cluster_id, (error, zoom) => {
+                    if (!error) map.current.easeTo({ center: features[0].geometry.coordinates, zoom });
+                });
+            };
+            map.current.on('click', 'reports-cluster-points', expandClusters);
+            map.current.on('mouseenter', 'reports-cluster-points', () => { map.current.getCanvas().style.cursor = 'pointer'; });
+            map.current.on('mouseleave', 'reports-cluster-points', () => { map.current.getCanvas().style.cursor = ''; });
+            clusteredRef.current = true;
+            return () => {
+                map.current?.off('click', 'reports-cluster-points', expandClusters);
+                map.current?.off('mouseenter', 'reports-cluster-points');
+                map.current?.off('mouseleave', 'reports-cluster-points');
+            };
+        }
 
         reports.forEach((report) => {
             if (!report.location || !report.location.coordinates) return;
 
-            const [lng, lat] = report.location.coordinates;
+            let [lng, lat] = report.location.coordinates.map(Number);
+            if (Math.abs(lng) <= 90 && Math.abs(lat) > 90) [lng, lat] = [lat, lng];
             if (typeof lng !== 'number' || typeof lat !== 'number' || Number.isNaN(lng) || Number.isNaN(lat)) return;
+            if (import.meta.env.DEV) console.debug('Report coords:', report.location.coordinates, 'normalized:', [lng, lat]);
 
                     const color =
                 colorBy === 'status'

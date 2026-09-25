@@ -26,7 +26,7 @@ const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export const getPublicReports = async (req, res, next) => {
   try {
-    const { page = 1, limit = 100, status, category, priority, barangay, includeResolved } = req.query;
+    const { page = 1, limit = 5000, status, category, priority, barangay, includeResolved } = req.query;
     const statusFilter = includeResolved === 'true' ? { $nin: ['Closed'] } : { $nin: ['Resolved', 'Closed'] };
     const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false }, status: statusFilter };
     if (status && status !== 'Closed' && (includeResolved === 'true' || status !== 'Resolved')) filter.status = status;
@@ -40,7 +40,8 @@ export const getPublicReports = async (req, res, next) => {
         .select('_id category description status priority location address barangay createdAt')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Report.countDocuments(filter),
     ]);
 

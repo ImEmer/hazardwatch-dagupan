@@ -7,7 +7,7 @@ import { confirmAction, showError, showSuccess, showWarning } from '../../servic
 import InteractiveMap from '../../components/InteractiveMap';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { HAZARD_CATEGORY_GROUPS } from '../../services/reportOptions';
+import { DAGUPAN_BARANGAYS, HAZARD_CATEGORY_GROUPS } from '../../services/reportOptions';
 
 const withinDagupanBounds = ({ lat, lng }) => {
     const latitude = Number(lat);
@@ -363,9 +363,16 @@ const SubmitReport = () => {
                         <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                         </svg>
-                        <span className={`flex-1 truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {selectedAddress}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                        <p className={`truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedAddress}</p>
+                        <label className={`mt-1 flex items-center gap-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Barangay
+                            <select value={selectedBarangay} onChange={(event) => setSelectedBarangay(event.target.value)} className={`rounded border px-2 py-1 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-gray-300 bg-white text-gray-900'}`}>
+                            <option value="">Select barangay</option>
+                            {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
+                            </select>
+                        </label>
+                        </div>
                         <button
                         type="button"
                         onClick={() => {

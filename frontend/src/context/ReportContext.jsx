@@ -46,10 +46,17 @@
 
         const fetchPublicReports = useCallback(async () => {
             try {
-                const response = await api.get('/reports/public', {
-                    params: { page: 1, limit: 100, includeResolved: true },
-                });
-                const nextReports = response.data?.reports || [];
+                const nextReports = [];
+                let page = 1;
+                let pages = 1;
+                do {
+                    const response = await api.get('/reports/public', {
+                        params: { page, limit: 5000, includeResolved: true },
+                    });
+                    nextReports.push(...(response.data?.reports || []));
+                    pages = Number(response.data?.pagination?.pages || page);
+                    page += 1;
+                } while (page <= pages);
                 setPublicReports(nextReports);
                 if (!canAccessStaffReports) {
                     setReports(nextReports);
