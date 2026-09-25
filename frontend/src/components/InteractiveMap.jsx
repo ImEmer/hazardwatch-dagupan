@@ -55,7 +55,7 @@ const InteractiveMap = ({
                 const detectedBarangay = mappedStreet?.[1]
                     || data.address?.suburb || data.address?.village || data.address?.neighbourhood || data.address?.town || '';
                 return {
-                    address,
+                    address: detectedBarangay ? `${detectedBarangay}, Dagupan City, Pangasinan` : address,
                     barangay: detectedBarangay,
                 };
             }
