@@ -306,10 +306,16 @@ const InteractiveMap = ({
         if (!map.current || !mapReady) return undefined;
 
         const sourceId = 'reports-clustered';
+        const sourceLayerId = 'reports-cluster-source-loader';
         markersRef.current.forEach((marker) => marker.remove());
         markersRef.current = [];
+        if (map.current.getLayer(sourceLayerId)) map.current.removeLayer(sourceLayerId);
         if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
         if (showHeatmap) return undefined;
+
+        const markerStyle = ['pin', 'circle', 'danger'].includes(mapPreferences.markerStyle)
+            ? mapPreferences.markerStyle
+            : 'circle';
 
         const features = reports.flatMap((report) => {
             const coordinates = report.location?.coordinates;
@@ -344,7 +350,12 @@ const InteractiveMap = ({
                 resolved_count: ['+', ['case', ['==', ['get', 'status'], 'Resolved'], 1, 0]],
             },
         });
-
+        map.current.addLayer({
+            id: sourceLayerId,
+            type: 'circle',
+            source: sourceId,
+            paint: { 'circle-radius': 1, 'circle-opacity': 0 },
+        });
         const renderVisibleMarkers = () => {
             if (!map.current?.getSource(sourceId) || !map.current.isSourceLoaded(sourceId)) return;
             markersRef.current.forEach((marker) => marker.remove());
@@ -366,7 +377,7 @@ const InteractiveMap = ({
                     ? clusterStatusColor(properties)
                     : STATUS_MARKER_COLORS[properties.status] || '#6b7280';
                 const element = isCluster
-                    ? createClusterMarkerElement(mapPreferences.markerStyle || 'circle', markerColor, properties.point_count)
+                    ? createClusterMarkerElement(markerStyle, markerColor, properties.point_count)
                     : document.createElement('button');
 
                 if (!isCluster) {
@@ -383,14 +394,14 @@ const InteractiveMap = ({
                     element.style.placeItems = 'center';
                     element.style.filter = 'drop-shadow(0 2px 3px rgba(15,23,42,.4))';
 
-                    if (mapPreferences.markerStyle === 'danger') {
+                    if (markerStyle === 'danger') {
                         element.appendChild(createDangerIcon(markerColor, '', 26));
                     } else {
                         const visual = document.createElement('span');
-                        visual.style.width = mapPreferences.markerStyle === 'pin' ? '16px' : '20px';
-                        visual.style.height = mapPreferences.markerStyle === 'pin' ? '16px' : '20px';
-                        visual.style.borderRadius = mapPreferences.markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
-                        visual.style.transform = mapPreferences.markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
+                        visual.style.width = markerStyle === 'pin' ? '16px' : '20px';
+                        visual.style.height = markerStyle === 'pin' ? '16px' : '20px';
+                        visual.style.borderRadius = markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
+                        visual.style.transform = markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
                         visual.style.backgroundColor = markerColor;
                         visual.style.border = '2px solid #ffffff';
                         element.appendChild(visual);
@@ -419,6 +430,7 @@ const InteractiveMap = ({
             map.current?.off('idle', renderVisibleMarkers);
             markersRef.current.forEach((marker) => marker.remove());
             markersRef.current = [];
+            if (map.current?.getLayer(sourceLayerId)) map.current.removeLayer(sourceLayerId);
             if (map.current?.getSource(sourceId)) map.current.removeSource(sourceId);
         };
     }, [mapReady, mapPreferences.markerStyle, reports, showHeatmap]);
