@@ -10,7 +10,7 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/
 
 const HazardMapPage = () => {
   const { token, user } = useAuth();
-  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'circle', ...user?.preferences?.map };
+  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'danger', ...user?.preferences?.map };
   const { reports: mapReports, loading, error: fetchError, onBoundsChange, retry } = useViewportReports({ endpoint: '/reports/public', includeResolved: mapPreferences.showResolved });
   const visibleStatuses = mapPreferences.showResolved ? ['Pending', 'In Progress', 'Resolved'] : ['Pending', 'In Progress'];
   const visibleReports = mapReports.filter((report) => visibleStatuses.includes(report.status));

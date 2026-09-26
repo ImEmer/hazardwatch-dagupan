@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import InteractiveMap from '../../components/InteractiveMap';
+import MapReportList from '../../components/common/MapReportList';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import useViewportReports from '../../hooks/useViewportReports';
@@ -9,7 +10,7 @@ const statuses = ['all', 'Pending', 'In Progress'];
 
 const BarangayMapPage = () => {
   const { user, token } = useAuth();
-  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'circle', ...user?.preferences?.map };
+  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'danger', ...user?.preferences?.map };
   const { reports, loading, error, onBoundsChange, retry } = useViewportReports({
     endpoint: '/reports',
     token,
@@ -21,6 +22,7 @@ const BarangayMapPage = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [status, setStatus] = useState('all');
+  const [selectedReport, setSelectedReport] = useState(null);
   const [heatmap, setHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [flyTo, setFlyTo] = useState(null);
@@ -43,7 +45,7 @@ const BarangayMapPage = () => {
       <section className={`rounded-2xl border p-4 shadow-xl ${panel}`}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div><p className="text-xs uppercase tracking-[0.25em] text-[#3b82f6]">{user?.barangay} response map</p><h1 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Map View</h1></div>
-          <div className="flex flex-wrap gap-2">{statuses.map((item) => <button type="button" key={item} onClick={() => setStatus(item)} className={`rounded-lg px-3 py-1.5 text-sm ${status === item ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-300' : 'bg-slate-100 text-slate-700'}`}>{item === 'all' ? 'All' : item}</button>)}</div>
+          <div className="flex flex-wrap gap-2">{statuses.map((item) => <button type="button" key={item} onClick={() => { setStatus(item); setSelectedReport(null); }} className={`rounded-lg px-3 py-1.5 text-sm ${status === item ? 'bg-[#3b82f6] text-white' : isDark ? 'bg-[#0a0b0f] text-gray-300' : 'bg-slate-100 text-slate-700'}`}>{item === 'all' ? 'All' : item}</button>)}</div>
         </div>
       </section>
 
@@ -57,14 +59,12 @@ const BarangayMapPage = () => {
             </select>
           </div>
           <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg bg-[#14151d]/95 px-3 py-2 text-sm text-white">{heatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={heatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} />
+          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={heatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} onReportSelect={setSelectedReport} />
           {loading && <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">Loading reports...</div>}
           {error && <div role="alert" className="absolute right-5 top-16 z-20 max-w-sm rounded-lg bg-red-600 px-4 py-3 text-sm text-white shadow-lg"><p>{error}</p><button type="button" className="mt-2 rounded border border-white/70 px-3 py-1 font-semibold hover:bg-white/10" onClick={retry}>Retry</button></div>}
           {!loading && !error && !filtered.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-2xl border border-slate-700 bg-slate-950/80 px-6 py-5 text-center text-slate-200 shadow-xl"><div className="text-2xl" aria-hidden="true">⚠</div><h3 className="mt-2 font-semibold">No reports to show</h3><p className="mt-1 text-sm text-slate-400">There are no active reports in this map view.</p></div></div>}
         </div>
-        <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
-          {loading ? <p className="text-gray-400">Loading reports...</p> : filtered.map((report) => <div key={report._id} className={`rounded-2xl border p-4 shadow-xl ${panel}`}><p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category} report`}</p><p className="mt-1 text-xs text-[#60a5fa]">{report.status}</p><p className={`mt-3 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{report.address || 'Dagupan City area'}</p></div>)}
-        </div>
+        <MapReportList endpoint="/reports" token={token} includeResolved={mapPreferences.showResolved} status={status} selectedReport={selectedReport} onSelectReport={setSelectedReport} />
       </div>
     </div>
   );

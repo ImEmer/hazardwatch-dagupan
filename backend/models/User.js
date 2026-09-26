@@ -14,7 +14,7 @@ const mapPreferencesSchema = new mongoose.Schema({
   showResolved: { type: Boolean, default: false },
   defaultZoom: { type: Number, min: 1, max: 18, default: 13 },
   mapStyle: { type: String, enum: ['streets', 'satellite', 'terrain'], default: 'streets' },
-  markerStyle: { type: String, enum: ['pin', 'circle', 'danger'], default: 'circle' },
+  markerStyle: { type: String, enum: ['pin', 'circle', 'danger'], default: 'danger' },
 }, { _id: false });
 
 const preferencesSchema = new mongoose.Schema({

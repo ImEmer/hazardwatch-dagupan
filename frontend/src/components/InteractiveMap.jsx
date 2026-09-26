@@ -107,11 +107,19 @@ const createReportPopupContent = (report) => {
         content.appendChild(element);
     };
 
-    appendText('h3', 'font-bold text-gray-800', report.category || 'Hazard');
+    const category = typeof report.category === 'string' ? report.category : report.category?.name;
+    appendText('h3', 'font-bold text-gray-800', category || 'Uncategorized');
     appendText('p', 'text-sm font-semibold text-gray-700 mt-1', report.title || 'Hazard report');
+    if (report.description) appendText('p', 'text-xs text-gray-600 mt-2 whitespace-pre-wrap break-words', report.description);
     appendText('p', 'text-xs text-gray-500 mt-2', `Status: ${report.status || 'Pending'}`);
+    if (report.priority) appendText('p', 'text-xs text-gray-500 mt-1', `Priority: ${report.priority}`);
     if (report.createdAt) appendText('p', 'text-xs text-gray-400 mt-1', new Date(report.createdAt).toLocaleDateString());
-    if (report.address || report.barangay) appendText('p', 'text-xs text-gray-500 mt-1 break-words', report.address || report.barangay);
+    const coordinates = report.location?.coordinates || report.coordinates;
+    const coordinateText = Array.isArray(coordinates) && coordinates.length === 2
+        ? `${Number(coordinates[1]).toFixed(5)}, ${Number(coordinates[0]).toFixed(5)}`
+        : '';
+    const location = report.locationText || report.address || report.barangay || coordinateText || 'Location unavailable';
+    appendText('p', 'text-xs text-gray-500 mt-1 break-words', `Location: ${location}`);
 
     return content;
 };
@@ -146,6 +154,7 @@ const InteractiveMap = ({
     showHeatmap = false,
     flyTo = null,
     onBoundsChange,
+    onReportSelect,
     mapPreferences = {},
     defaultCenter = [120.3333, 16.0433],
 }) => {
@@ -157,7 +166,12 @@ const InteractiveMap = ({
     const markerElementRef = useRef(null);
     const labelElementRef = useRef(null);
     const appliedMapStyleRef = useRef(mapPreferences.mapStyle || 'streets');
+    const reportSelectCallbackRef = useRef(onReportSelect);
     const [mapReady, setMapReady] = useState(false);
+
+    useEffect(() => {
+        reportSelectCallbackRef.current = onReportSelect;
+    }, [onReportSelect]);
 
     const [lng] = useState(defaultCenter[0]);
     const [lat] = useState(defaultCenter[1]);
@@ -329,10 +343,13 @@ const InteractiveMap = ({
                 properties: {
                     id: String(report._id || report.id || ''),
                     status: report.status || 'Pending',
+                    priority: report.priority || '',
                     category: report.category || 'Hazard',
                     title: report.title || 'Hazard report',
+                    description: report.description || '',
                     address: report.address || '',
                     barangay: report.barangay || '',
+                    locationText: report.address || report.barangay || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
                     createdAt: report.createdAt || '',
                 },
             }];
@@ -406,6 +423,19 @@ const InteractiveMap = ({
                         visual.style.border = '2px solid #ffffff';
                         element.appendChild(visual);
                     }
+                    element.addEventListener('click', () => reportSelectCallbackRef.current?.({
+                        _id: properties.id,
+                        title: properties.title,
+                        category: properties.category,
+                        description: properties.description,
+                        status: properties.status,
+                        priority: properties.priority,
+                        address: properties.address,
+                        barangay: properties.barangay,
+                        locationText: properties.locationText,
+                        createdAt: properties.createdAt,
+                        coordinates: [longitude, latitude],
+                    }));
                 } else {
                     element.addEventListener('click', (event) => {
                         event.preventDefault();
