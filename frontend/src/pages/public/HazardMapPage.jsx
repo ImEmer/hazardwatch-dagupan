@@ -16,7 +16,7 @@ const HazardMapPage = () => {
         let page = 1;
         let pages = 1;
         while (page <= pages) {
-          const { data } = await api.get('/reports/public', { params: { page, limit: 5000, includeResolved: true } });
+          const { data } = await api.get('/reports/public', { params: { page, limit: 5000, includeResolved: 'true' } });
           allReports.push(...(data.reports || []));
           pages = Number(data.pagination?.pages || page);
           page += 1;
@@ -26,7 +26,7 @@ const HazardMapPage = () => {
           console.log('[user map] Reports loaded:', allReports.length);
         }
       } catch (error) {
-        if (!cancelled) console.error('[user map] Error:', error);
+        if (!cancelled) console.error('[user map] Error:', error.response?.data || error.message);
       }
     };
     fetchReports();
