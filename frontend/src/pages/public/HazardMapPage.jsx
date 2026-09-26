@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import InteractiveMap from '../../components/InteractiveMap';
 import api from '../../services/api';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/reportOptions';
 
 const HazardMapPage = () => {
   const [mapReports, setMapReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+  const { token } = useAuth();
   useEffect(() => {
     let cancelled = false;
     const fetchReports = async () => {
       try {
+        setLoading(true);
+        setFetchError('');
         const allReports = [];
         let page = 1;
         let pages = 1;
@@ -26,7 +33,12 @@ const HazardMapPage = () => {
           console.log('[user map] Reports loaded:', allReports.length);
         }
       } catch (error) {
-        if (!cancelled) console.error('[user map] Error:', error.response?.data || error.message);
+        if (!cancelled) {
+          console.error('[user map] Error:', error.response?.data || error.message);
+          setFetchError(error.response?.data?.message || error.message || 'Unable to load reports.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
     fetchReports();
@@ -60,10 +72,16 @@ const HazardMapPage = () => {
           <p className="mt-2 text-gray-400">Explore reported hazards and their locations across the city.</p>
         </div>
         <div data-aos="zoom-in" data-aos-delay="100" className="relative h-[calc(100vh-220px)] min-h-[480px] overflow-hidden rounded-2xl border border-[#2e303a] bg-[#14151d] p-2 shadow-xl">
-          <div className="absolute left-5 top-5 z-10 max-w-sm rounded-xl border border-[#2e303a] bg-[#14151d]/90 p-3 text-sm text-gray-200 shadow-lg">
-            <p className="font-semibold text-white">See a hazard? Log in to report it.</p>
-            <p className="mt-1 text-gray-400">Public map view shows live reports already submitted by the community.</p>
-          </div>
+          {!token ? (
+            <div className="absolute left-5 top-5 z-10 max-w-sm rounded-xl border border-[#2e303a] bg-[#14151d]/90 p-3 text-sm text-gray-200 shadow-lg">
+              <p className="font-semibold text-white">See a hazard? Log in to report it.</p>
+              <p className="mt-1 text-gray-400">Public map view shows live reports already submitted by the community.</p>
+            </div>
+          ) : (
+            <Link to="/submit" className="absolute left-5 top-5 z-10 rounded-lg border border-blue-400 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-blue-500">
+              Report a Hazard
+            </Link>
+          )}
           <div className={`absolute left-5 top-28 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
             <label htmlFor="public-map-barangay" className="block text-xs font-semibold">Find Barangay</label>
             <select id="public-map-barangay" value={selectedBarangay} onChange={handleBarangayChange} className={`mt-2 w-52 rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
@@ -73,12 +91,16 @@ const HazardMapPage = () => {
           </div>
           <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
           <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} />
-          {visibleReports.length === 0 && (
+          {(loading || fetchError || visibleReports.length === 0) && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
               <div className="rounded-2xl border border-slate-700 bg-slate-900/80 px-6 py-5 text-center text-slate-200 shadow-xl">
-                <div className="text-2xl" aria-hidden="true">⚠</div>
-                <h2 className="mt-2 font-semibold">No reports to show</h2>
-                <p className="mt-1 text-sm text-slate-400">There are no hazard reports yet.</p>
+                {!loading && !fetchError && <div className="text-2xl" aria-hidden="true">⚠</div>}
+                <h2 className="mt-2 font-semibold">
+                  {loading ? 'Loading reports...' : fetchError ? 'Unable to load reports' : 'No reports to show'}
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  {loading ? 'Fetching the latest community reports.' : fetchError || 'There are no hazard reports yet.'}
+                </p>
               </div>
             </div>
           )}

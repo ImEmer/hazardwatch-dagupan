@@ -40,10 +40,6 @@
             setReports([]);
         }, []);
 
-        useEffect(() => {
-            localStorage.setItem('hazardwatch_reports', JSON.stringify(reports));
-        }, [reports]);
-
         const fetchPublicReports = useCallback(async () => {
             try {
                 const nextReports = [];
@@ -51,7 +47,7 @@
                 let pages = 1;
                 do {
                     const response = await api.get('/reports/public', {
-                        params: { page, limit: 5000, includeResolved: true },
+                        params: { page, limit: 5000, includeResolved: 'true' },
                     });
                     nextReports.push(...(response.data?.reports || []));
                     pages = Number(response.data?.pagination?.pages || page);
