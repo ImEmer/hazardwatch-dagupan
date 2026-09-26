@@ -1,16 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import InteractiveMap from '../../components/InteractiveMap';
-import { useReports } from '../../context/ReportContext';
+import api from '../../services/api';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import useTheme from '../../hooks/useTheme';
 import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/reportOptions';
 
 const HazardMapPage = () => {
-  const { publicReports, reports } = useReports();
-  const mapReports = publicReports.length > 0 ? publicReports : reports;
+  const [mapReports, setMapReports] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchReports = async () => {
+      try {
+        const allReports = [];
+        let page = 1;
+        let pages = 1;
+        while (page <= pages) {
+          const { data } = await api.get('/reports/public', { params: { page, limit: 5000, includeResolved: true } });
+          allReports.push(...(data.reports || []));
+          pages = Number(data.pagination?.pages || page);
+          page += 1;
+        }
+        if (!cancelled) {
+          setMapReports(allReports);
+          console.log('[user map] Reports loaded:', allReports.length);
+        }
+      } catch (error) {
+        if (!cancelled) console.error('[user map] Error:', error);
+      }
+    };
+    fetchReports();
+    return () => { cancelled = true; };
+  }, []);
   const visibleReports = mapReports.filter((report) => ['Pending', 'In Progress', 'Resolved'].includes(report.status));
-  console.log('[HazardMapPage] reports loaded:', { publicReports: publicReports.length, allReports: reports.length, visibleReports: visibleReports.length, mapReports: mapReports.length });
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');

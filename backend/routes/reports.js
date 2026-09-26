@@ -6,7 +6,7 @@ import { validateBulkIds, validateId, validatePagination, validateReport, valida
 import { reportSubmitLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.get('/public', validatePagination, getPublicReports);
+router.get('/public', getPublicReports);
 router.get('/export', protect, allowRoles('admin', 'superadmin'), exportReportsCsv);
 router.get('/', protect, isStaff, validatePagination, getReports);
 router.get('/mine', protect, getMyReports);

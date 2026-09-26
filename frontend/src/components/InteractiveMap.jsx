@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
-import { AlertTriangle, Building2, Car, CircleDot, Construction, Droplets, Flame, Leaf, Lightbulb, PawPrint, Shield, Trash2, TreePine, Waves } from 'lucide-react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { HAZARD_CATEGORY_COLORS, STATUS_COLORS, STREET_BARANGAY_MAP } from '../services/reportOptions';
 
@@ -226,36 +224,6 @@ const InteractiveMap = ({
 
             const description = (report.description || report.title || 'Hazard report').replace(/<[^>]*>/g, '').trim();
             const shortDescription = description.length > 120 ? `${description.slice(0, 117)}...` : description;
-            const categoryIcon = {
-                'Fire Hazard': Flame,
-                Flooding: Droplets,
-                Pothole: Construction,
-                'Broken Streetlight': Lightbulb,
-                'Waste Disposal': Trash2,
-                'Fallen Tree': TreePine,
-                'Traffic Obstruction': Car,
-                'Broken Traffic Light': Car,
-                'Damaged Public Facility': Building2,
-                Infrastructure: Building2,
-                'Public Safety Hazard': Shield,
-                'Blocked Fire Exit': Shield,
-                'Clogged Drainage': Waves,
-                'Clogged Canal (Waste)': Waves,
-                'Damaged Road': AlertTriangle,
-                'Animal Related': PawPrint,
-                'Air Pollution': Leaf,
-                Deforestation: Leaf,
-                'Noise Pollution': Waves,
-                'Gas Leak': AlertTriangle,
-                'Smoke Report': AlertTriangle,
-                'Broken Water Pipe': Waves,
-                'Fallen Electrical Wire': AlertTriangle,
-                'Damaged Bridge': Building2,
-                'Damaged Sidewalk': Construction,
-                Other: CircleDot,
-            }[report.category] || CircleDot;
-            const iconMarkup = renderToStaticMarkup(React.createElement(categoryIcon, { color: '#ffffff', size: 16, strokeWidth: 2.5, 'aria-hidden': true }));
-
             const el = document.createElement('div');
             el.style.position = 'relative';
             el.style.width = '36px';
@@ -263,10 +231,9 @@ const InteractiveMap = ({
             el.style.cursor = 'pointer';
             el.style.filter = 'drop-shadow(0 4px 8px rgba(15, 23, 42, 0.35))';
             el.innerHTML = `
-                <svg width="36" height="42" viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg" aria-label="${report.category || 'Hazard'} marker" role="img">
-                    <path d="M18 1C9.2 1 2 8.2 2 17c0 12 16 24 16 24s16-12 16-24C34 8.2 26.8 1 18 1Z" fill="${color}" stroke="white" stroke-width="3"/>
-                    <circle cx="18" cy="16" r="10.5" fill="rgba(255,255,255,0.15)"/>
-                    <g transform="translate(10 8)">${iconMarkup}</g>
+                <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg" aria-label="${report.status || 'Pending'} hazard marker" role="img">
+                    <path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 24 16 24s16-12 16-24C32 7.2 24.8 0 16 0Z" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="5" fill="#ffffff"/>
                 </svg>
             `;
 

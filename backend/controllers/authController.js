@@ -29,14 +29,40 @@ export const register = async (req, res, next) => {
     if (typeof email === 'string' && /\s/.test(email)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
     if (typeof password === 'string' && /\s/.test(password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
 
-    const exists = await User.findOne({ email: String(email || '').trim().toLowerCase() });
-    if (exists) return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
-
+    const normalizedEmail = String(email || '').trim().toLowerCase();
     const safeRole = ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      if (existingUser.status !== 'deleted') {
+        return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
+      }
+
+      existingUser.name = name;
+      existingUser.email = normalizedEmail;
+      existingUser.password = password;
+      existingUser.role = safeRole;
+      existingUser.barangay = barangay;
+      existingUser.phone = phone;
+      existingUser.status = 'pending';
+      existingUser.isActive = false;
+      existingUser.deletedAt = undefined;
+      existingUser.emailVerified = false;
+      existingUser.verificationRequired = true;
+      existingUser.emailVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+      existingUser.emailVerificationExpires = Date.now() + 15 * 60 * 1000;
+      await existingUser.save();
+      try {
+        await sendVerificationEmail({ email: existingUser.email, name: existingUser.name, token: verificationToken });
+      } catch (emailError) {
+        console.error('[register] Verification email failed:', emailError.message);
+      }
+      return res.status(201).json({ success: true, message: 'Account re-created. Check your email to verify your account.', user: publicUser(existingUser) });
+    }
+
     const user = await User.create({
       name,
-      email: String(email).trim().toLowerCase(),
+      email: normalizedEmail,
       password,
       role: safeRole,
       barangay,
