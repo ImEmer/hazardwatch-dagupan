@@ -1,19 +1,47 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import ThemeToggle from '../../components/layout/ThemeToggle';
 import PasswordToggle from '../../components/PasswordToggle';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
+import MapPreferencesSection, { normalizeMapPreferences } from '../../components/settings/MapPreferencesSection';
+import { preferencesApi } from '../../services/api';
 
 const ProfilePage = () => {
-  const { user, updateProfile, changePassword, deleteAccount, logout, loading: authLoading } = useAuth();
+  const { user, updateProfile, changePassword, updatePreferences, deleteAccount, logout, loading: authLoading } = useAuth();
   const { theme } = useTheme();
   const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+  const [mapPreferences, setMapPreferences] = useState(() => normalizeMapPreferences(user?.preferences?.map));
+  const [savedMapPreferences, setSavedMapPreferences] = useState(() => normalizeMapPreferences(user?.preferences?.map));
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const [savingMapPreferences, setSavingMapPreferences] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    preferencesApi.getMine().then(({ data }) => {
+      if (active) {
+        const saved = normalizeMapPreferences(data.preferences?.map);
+        setMapPreferences(saved);
+        setSavedMapPreferences(saved);
+      }
+    }).catch((error) => {
+      if (active) showError(error.response?.data?.message || 'Unable to load map preferences.');
+    }).finally(() => {
+      if (active) setPreferencesLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const saved = normalizeMapPreferences(user?.preferences?.map);
+    setMapPreferences(saved);
+    setSavedMapPreferences(saved);
+  }, [user?.preferences?.map]);
 
   if (authLoading) {
     return (
@@ -78,6 +106,22 @@ const ProfilePage = () => {
     }
   };
 
+  const saveMapPreferences = async () => {
+    setSavingMapPreferences(true);
+    try {
+      const normalized = normalizeMapPreferences(mapPreferences);
+      const preferences = await updatePreferences({ map: normalized });
+      const saved = normalizeMapPreferences(preferences?.map || normalized);
+      setMapPreferences(saved);
+      setSavedMapPreferences(saved);
+      await showSuccess('Map preferences saved.');
+    } catch (error) {
+      await showError(error.response?.data?.message || 'Unable to save map preferences.');
+    } finally {
+      setSavingMapPreferences(false);
+    }
+  };
+
   const removeAccount = async () => {
     const result = await confirmAction('This permanently deletes your account and cannot be undone.', 'Delete account');
     if (!result.isConfirmed) return;
@@ -125,6 +169,14 @@ const ProfilePage = () => {
             <button disabled={saving} className="auth-button md:w-auto md:px-6">Change password</button>
           </form>
         </section>
+        <MapPreferencesSection
+          value={mapPreferences}
+          onChange={(key, value) => setMapPreferences((current) => ({ ...current, [key]: value }))}
+          onSave={saveMapPreferences}
+          onCancel={() => setMapPreferences(savedMapPreferences)}
+          saving={savingMapPreferences}
+          loading={preferencesLoading}
+        />
         <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6">
           <h2 className="text-xl font-semibold text-red-600">Delete account</h2><p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>This removes your account permanently.</p>
           <button type="button" onClick={removeAccount} className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Delete account</button>

@@ -12,9 +12,6 @@ const preferenceKeys = {
 
 const mergePreferences = (current, updates) => {
   if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return { error: 'Preferences must be an object.' };
-  const allowedSections = ['theme', 'notifications', 'map'];
-  const unknownSection = Object.keys(updates).find((key) => !allowedSections.includes(key));
-  if (unknownSection) return { error: `Unknown preference section: ${unknownSection}.` };
   const next = current?.toObject ? current.toObject() : { ...(current || {}) };
 
   if (Object.hasOwn(updates, 'theme')) {
@@ -26,10 +23,9 @@ const mergePreferences = (current, updates) => {
     if (!Object.hasOwn(updates, section)) continue;
     const values = updates[section];
     if (!values || typeof values !== 'object' || Array.isArray(values)) return { error: `${section} preferences must be an object.` };
-    const unknownKey = Object.keys(values).find((key) => !preferenceKeys[section].includes(key));
-    if (unknownKey) return { error: `Unknown ${section} preference: ${unknownKey}.` };
     next[section] = { ...(next[section]?.toObject?.() || next[section] || {}) };
     for (const [key, value] of Object.entries(values)) {
+      if (!preferenceKeys[section].includes(key)) continue;
       if (['showResolved', 'newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'].includes(key) && typeof value !== 'boolean') {
         return { error: `${key} must be a boolean.` };
       }

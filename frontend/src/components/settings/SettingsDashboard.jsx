@@ -6,6 +6,7 @@ import useTheme from '../../hooks/useTheme';
 import PasswordToggle from '../PasswordToggle';
 import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
+import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
 
 const DEFAULT_PREFERENCES = {
   theme: 'dark',
@@ -17,12 +18,7 @@ const DEFAULT_PREFERENCES = {
     emailNotifications: false,
     inAppNotifications: true,
   },
-  map: {
-    showResolved: false,
-    defaultZoom: 13,
-    mapStyle: 'streets',
-    markerStyle: 'circle',
-  },
+  map: DEFAULT_MAP_PREFERENCES,
 };
 
 const inputBase = 'w-full rounded-md border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
@@ -49,7 +45,7 @@ const SettingsDashboard = () => {
   useEffect(() => {
     setProfile({ name: user?.name || '', email: user?.email || '' });
     setNotifications({ ...DEFAULT_PREFERENCES.notifications, ...user?.preferences?.notifications });
-    setMapPreferences({ ...DEFAULT_PREFERENCES.map, ...user?.preferences?.map });
+    setMapPreferences(normalizeMapPreferences(user?.preferences?.map));
     setAppearanceDraft(user?.preferences?.theme || themePreference);
     setSavedAppearance(user?.preferences?.theme || themePreference);
   }, [user?.email, user?.name, user?.preferences]);
@@ -95,7 +91,7 @@ const SettingsDashboard = () => {
 
   const savePreferences = (key, values, successMessage) => runSave(key, () => updatePreferences(values), successMessage);
   const restoreNotifications = () => setNotifications({ ...DEFAULT_PREFERENCES.notifications, ...user?.preferences?.notifications });
-  const restoreMapPreferences = () => setMapPreferences({ ...DEFAULT_PREFERENCES.map, ...user?.preferences?.map });
+  const restoreMapPreferences = () => setMapPreferences(normalizeMapPreferences(user?.preferences?.map));
   const changeAppearance = (value) => {
     setAppearanceDraft(value);
     setTheme(value);
@@ -151,18 +147,13 @@ const SettingsDashboard = () => {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Map preferences" description="Set the initial map view and how hazard reports are displayed." actions={preferenceSaveActions('map', () => savePreferences('map', { map: mapPreferences }, 'Map preferences saved.'), restoreMapPreferences)}>
-        <div className="divide-y divide-slate-200/70 dark:divide-[#2e303a]">
-          <div className="grid gap-4 py-3 sm:grid-cols-2">
-            <SettingsToggle label="Show resolved reports" checked={mapPreferences.showResolved} onChange={(showResolved) => setMapPreferences((current) => ({ ...current, showResolved }))} />
-          </div>
-          <div className="grid gap-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
-            <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Default zoom<input type="number" min="1" max="18" value={mapPreferences.defaultZoom} onChange={(event) => setMapPreferences((current) => ({ ...current, defaultZoom: Number(event.target.value) }))} className={`${inputClass} mt-1.5`} /><span className={`mt-1 block text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Zoom {mapPreferences.defaultZoom} of 18</span></label>
-            <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Map style<select value={mapPreferences.mapStyle} onChange={(event) => setMapPreferences((current) => ({ ...current, mapStyle: event.target.value }))} className={`${inputClass} mt-1.5`}><option value="streets">Streets</option><option value="satellite">Satellite</option><option value="terrain">Terrain</option></select></label>
-            <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Hazard marker style<select value={mapPreferences.markerStyle} onChange={(event) => setMapPreferences((current) => ({ ...current, markerStyle: event.target.value }))} className={`${inputClass} mt-1.5`}><option value="circle">Circle</option><option value="pin">Pin</option><option value="danger">Danger</option></select></label>
-          </div>
-        </div>
-      </SettingsSection>
+      <MapPreferencesSection
+        value={mapPreferences}
+        onChange={(key, value) => setMapPreferences((current) => ({ ...current, [key]: value }))}
+        onSave={() => savePreferences('map', { map: normalizeMapPreferences(mapPreferences) }, 'Map preferences saved.')}
+        onCancel={restoreMapPreferences}
+        saving={saving === 'map'}
+      />
 
     </div>
   );

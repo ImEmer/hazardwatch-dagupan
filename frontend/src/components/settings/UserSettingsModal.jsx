@@ -4,14 +4,7 @@ import useTheme from '../../hooks/useTheme';
 import api, { preferencesApi } from '../../services/api';
 import PasswordToggle from '../PasswordToggle';
 import SettingsSection from './SettingsSection';
-import SettingsToggle from './SettingsToggle';
-
-const DEFAULT_MAP_PREFERENCES = {
-  showResolved: false,
-  defaultZoom: 13,
-  mapStyle: 'streets',
-  markerStyle: 'circle',
-};
+import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
 
 const UserSettingsModal = ({ user, onClose, onSaved }) => {
   const { theme } = useTheme();
@@ -34,7 +27,7 @@ const UserSettingsModal = ({ user, onClose, onSaved }) => {
     setLoading(true);
     preferencesApi.getForUser(userId).then(({ data }) => {
       if (active) {
-        const saved = { ...DEFAULT_MAP_PREFERENCES, ...data.preferences?.map };
+        const saved = normalizeMapPreferences(data.preferences?.map);
         setMapPreferences(saved);
         setSavedMapPreferences(saved);
       }
@@ -74,8 +67,10 @@ const UserSettingsModal = ({ user, onClose, onSaved }) => {
   const saveMapPreferences = async () => {
     setSaving('map');
     try {
-      await preferencesApi.updateForUser(userId, { map: mapPreferences });
-      setSavedMapPreferences(mapPreferences);
+      const saved = normalizeMapPreferences(mapPreferences);
+      await preferencesApi.updateForUser(userId, { map: saved });
+      setMapPreferences(saved);
+      setSavedMapPreferences(saved);
       toast.success('Map preferences saved.');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to save map preferences.');
@@ -111,16 +106,15 @@ const UserSettingsModal = ({ user, onClose, onSaved }) => {
             </form>
           </SettingsSection>
 
-          <SettingsSection title="Map Preferences" description="Configure how this user’s map displays reports." actions={<><button type="button" onClick={resetMapPreferences} className={cancelButton}>Cancel</button><button type="button" onClick={saveMapPreferences} disabled={loading || saving === 'map'} className={actionButton}>{saving === 'map' ? 'Saving...' : 'Save map preferences'}</button></>}>
-            {loading ? <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Loading preferences...</p> : <div className="space-y-4">
-              <SettingsToggle label="Show resolved reports" checked={mapPreferences.showResolved} onChange={(showResolved) => setMapPreferences((current) => ({ ...current, showResolved }))} />
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Default zoom<input type="number" min="1" max="18" value={mapPreferences.defaultZoom} onChange={(event) => setMapPreferences((current) => ({ ...current, defaultZoom: Number(event.target.value) }))} className={`${inputClass} mt-1.5`} /></label>
-                <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Map style<select value={mapPreferences.mapStyle} onChange={(event) => setMapPreferences((current) => ({ ...current, mapStyle: event.target.value }))} className={`${inputClass} mt-1.5`}><option value="streets">Streets</option><option value="satellite">Satellite</option><option value="terrain">Terrain</option></select></label>
-                <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Hazard marker style<select value={mapPreferences.markerStyle} onChange={(event) => setMapPreferences((current) => ({ ...current, markerStyle: event.target.value }))} className={`${inputClass} mt-1.5`}><option value="circle">Circle</option><option value="pin">Pin</option><option value="danger">Danger</option></select></label>
-              </div>
-            </div>}
-          </SettingsSection>
+          <MapPreferencesSection
+            value={mapPreferences}
+            onChange={(key, value) => setMapPreferences((current) => ({ ...current, [key]: value }))}
+            onSave={saveMapPreferences}
+            onCancel={resetMapPreferences}
+            saving={saving === 'map'}
+            loading={loading}
+            saveLabel="Save map preferences"
+          />
         </div>
       </div>
     </div>
