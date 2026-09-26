@@ -48,48 +48,60 @@ All user endpoints require admin or superadmin authorization.
 
 | # | Method | Endpoint | Purpose |
 |---:|---|---|---|
-| 27 | GET | `/users` | List non-deleted users. |
-| 28 | GET | `/users/:id` | Get user. |
-| 29 | POST | `/users` | Create managed user. |
-| 30 | PUT | `/users/:id` | Update managed user under hierarchy rules. |
-| 31 | PATCH | `/users/:id/status` | Toggle active/suspended status. |
-| 32 | POST | `/users/:id/suspend` | Suspend for allowed duration/custom date. |
-| 33 | POST | `/users/:id/ban` | Permanently ban user. |
-| 34 | POST | `/users/:id/unsuspend` | Restore active status. |
-| 35 | DELETE | `/users/bulk` | Soft-delete selected users. |
-| 36 | DELETE | `/users/:id` | Soft-delete user. |
+| 27 | GET | `/users/me/preferences` | Authenticated | Get the caller's preferences. |
+| 28 | PATCH | `/users/me/preferences` | Authenticated | Update the caller's preferences. |
+| 29 | GET | `/users/:id/preferences` | Superadmin | Get another user's preferences. |
+| 30 | PATCH | `/users/:id/preferences` | Superadmin | Update another user's preferences. |
+| 31 | GET | `/users` | Admin/superadmin | List non-deleted users. |
+| 32 | GET | `/users/:id` | Admin/superadmin | Get user. |
+| 33 | POST | `/users` | Admin/superadmin | Create managed user. |
+| 34 | PUT | `/users/:id` | Admin/superadmin | Update managed user under hierarchy rules. |
+| 35 | PATCH | `/users/:id/status` | Admin/superadmin | Toggle active/suspended status. |
+| 36 | POST | `/users/:id/suspend` | Admin/superadmin | Suspend for allowed duration/custom date. |
+| 37 | POST | `/users/:id/ban` | Admin/superadmin | Permanently ban user. |
+| 38 | POST | `/users/:id/unsuspend` | Admin/superadmin | Restore active status. |
+| 39 | DELETE | `/users/bulk` | Admin/superadmin | Soft-delete selected users. |
+| 40 | DELETE | `/users/:id` | Admin/superadmin | Soft-delete user. |
 
 ## Statistics
 
 | # | Method | Endpoint | Access | Purpose |
 |---:|---|---|---|---|
-| 37 | GET | `/statistics/public` | Public | Public totals and top categories. |
-| 38 | GET | `/statistics/overview` | Staff | Scoped totals/status/priority. |
-| 39 | GET | `/statistics/categories` | Staff | Category counts. |
-| 40 | GET | `/statistics/status` | Staff | Status counts. |
-| 41 | GET | `/statistics/timeline` | Staff | Daily report counts. |
-| 42 | GET | `/statistics/barangay` | Staff | Barangay counts. |
-| 43 | GET | `/statistics/barangay/:barangay` | Staff | Barangay overview; self-only for barangay role. |
-| 44 | GET | `/statistics/barangay/:barangay/status` | Staff | Barangay status counts. |
-| 45 | GET | `/statistics/barangay/:barangay/priority` | Staff | Barangay priority counts. |
-| 46 | GET | `/statistics/barangay/:barangay/timeline` | Staff | Barangay daily counts. |
+| 41 | GET | `/statistics/public` | Public | Public totals and top categories. |
+| 42 | GET | `/statistics/overview` | Staff | Scoped totals/status/priority. |
+| 43 | GET | `/statistics/categories` | Staff | Category counts. |
+| 44 | GET | `/statistics/status` | Staff | Status counts. |
+| 45 | GET | `/statistics/timeline` | Staff | Daily report counts. |
+| 46 | GET | `/statistics/barangay` | Staff | Barangay counts. |
+| 47 | GET | `/statistics/barangay/:barangay` | Staff | Barangay overview; self-only for barangay role. |
+| 48 | GET | `/statistics/barangay/:barangay/status` | Staff | Barangay status counts. |
+| 49 | GET | `/statistics/barangay/:barangay/priority` | Staff | Barangay priority counts. |
+| 50 | GET | `/statistics/barangay/:barangay/timeline` | Staff | Barangay daily counts. |
 
 ## Notifications, activity, and contact
 
 | # | Method | Endpoint | Access | Purpose |
 |---:|---|---|---|---|
-| 47 | GET | `/notifications` | Admin/superadmin/barangay | List caller-owned notifications with filter and pagination. |
-| 48 | PATCH | `/notifications/read-all` | Admin/superadmin/barangay | Mark all caller-owned notifications as read. |
-| 49 | PATCH | `/notifications/:id/read` | Admin/superadmin/barangay | Mark an owned notification as read. |
-| 50 | PATCH | `/notifications/:id/unread` | Admin/superadmin/barangay | Mark an owned notification as unread. |
-| 51 | GET | `/activity/all` | Superadmin | Full activity log. |
-| 52 | GET | `/activity/public` | Admin/superadmin | User/barangay activity. |
-| 53 | GET | `/activity/barangay/:barangay` | Staff | Barangay activity; barangay self-only. |
-| 54 | GET | `/activity/me` | Authenticated | Current-user activity. |
-| 55 | GET | `/activity` | Authenticated | Role-dispatched activity view. |
-| 56 | POST | `/contact` | Public | Submit validated contact message. |
-| 57 | GET | `/contact` | Admin/superadmin | List contact messages. |
-| 58 | PATCH | `/contact/:id/status` | Admin/superadmin | Change contact status. |
+| 51 | GET | `/notifications` | Admin/superadmin/barangay | List caller-owned notifications with filter and pagination. |
+| 52 | PATCH | `/notifications/read-all` | Admin/superadmin/barangay | Mark all caller-owned notifications as read. |
+| 53 | PATCH | `/notifications/:id/read` | Admin/superadmin/barangay | Mark an owned notification as read. |
+| 54 | PATCH | `/notifications/:id/unread` | Admin/superadmin/barangay | Mark an owned notification as unread. |
+| 55 | GET | `/activity/all` | Superadmin | Full activity log. |
+| 56 | GET | `/activity/public` | Admin/superadmin | User/barangay activity. |
+| 57 | GET | `/activity/barangay/:barangay` | Staff | Barangay activity; barangay self-only. |
+| 58 | GET | `/activity/me` | Authenticated | Current-user activity. |
+| 59 | GET | `/activity` | Authenticated | Role-dispatched activity view. |
+| 60 | POST | `/contact` | Public | Submit validated contact message. |
+| 61 | GET | `/contact` | Admin/superadmin | List contact messages. |
+| 62 | PATCH | `/contact/:id/status` | Admin/superadmin | Change contact status. |
+
+## System settings
+
+| # | Method | Endpoint | Access | Purpose |
+|---:|---|---|---|---|
+| 63 | GET | `/system/settings` | Superadmin | Read the singleton system configuration. |
+| 64 | PATCH | `/system/settings` | Superadmin | Update system and role settings. |
+| 65 | PATCH | `/system/settings/logo` | Superadmin | Upload the system logo to Cloudinary. |
 
 ## Common responses
 

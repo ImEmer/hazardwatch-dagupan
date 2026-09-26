@@ -11,6 +11,7 @@ import activityRoutes from './routes/activity.js';
 import contactRoutes from './routes/contact.js';
 import analyticsRoutes from './routes/analytics.js';
 import notificationRoutes from './routes/notifications.js';
+import systemRoutes from './routes/system.js';
 import User from './models/User.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import swaggerUi from 'swagger-ui-express';
@@ -36,8 +37,8 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://tile.openstreetmap.org'],
-      connectSrc: ["'self'", ...allowedOrigins, 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', 'https://hazardwatch-dagupan.onrender.com'],
+      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://tile.openstreetmap.org', 'https://server.arcgisonline.com', 'https://tile.opentopomap.org'],
+      connectSrc: ["'self'", ...allowedOrigins, 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', 'https://hazardwatch-dagupan.onrender.com', 'https://server.arcgisonline.com', 'https://tile.opentopomap.org'],
       fontSrc: ["'self'", 'data:'],
       frameAncestors: ["'none'"],
     },
@@ -71,6 +72,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/system', systemRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, service: 'hazardwatch-api' }));
 app.use(notFound);
 app.use(errorHandler);

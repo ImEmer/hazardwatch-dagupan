@@ -9,7 +9,7 @@ import { sendPasswordResetCode, sendVerificationEmail } from '../utils/sendEmail
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
-export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive });
+export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, preferences: user.preferences });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 const revokeToken = async (req, decodedToken = jwt.decode(req.headers.authorization.slice(7))) => {
@@ -203,7 +203,22 @@ export const updateProfile = async (req, res, next) => {
     const nameChanged = req.user.name !== name.trim();
     req.user.name = name.trim();
     req.user.email = normalizedEmail;
+    let verificationCode;
+    if (emailChanged) {
+      verificationCode = crypto.randomInt(100000, 1000000).toString();
+      req.user.emailVerified = false;
+      req.user.verificationRequired = true;
+      req.user.emailVerificationCode = await bcrypt.hash(verificationCode, 12);
+      req.user.emailVerificationExpires = Date.now() + 15 * 60 * 1000;
+    }
     await req.user.save({ validateBeforeSave: false });
+    if (verificationCode) {
+      try {
+        await sendVerificationEmail({ email: req.user.email, name: req.user.name, code: verificationCode });
+      } catch (emailError) {
+        console.error('[profile] Verification email failed:', emailError.message);
+      }
+    }
     const action = nameChanged && emailChanged ? 'profile_updated' : nameChanged ? 'name_updated' : 'email_updated';
     const message = action === 'profile_updated' ? `${req.user.name} updated their profile` : `${req.user.name} updated their ${action === 'name_updated' ? 'name' : 'email'}`;
     await logActivity({ actor: req.user, action, message, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: req.user._id }).catch(() => {});

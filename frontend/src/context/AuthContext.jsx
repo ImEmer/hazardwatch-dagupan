@@ -207,6 +207,15 @@ export const AuthProvider = ({ children }) => {
     }, token);
   }, [token]);
 
+  const verifyEmail = useCallback(async (email, code) => {
+    const response = await request('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    }, token);
+    await getCurrentUser();
+    return response;
+  }, [getCurrentUser, token]);
+
   const updateProfile = useCallback(async (name, email) => {
     const response = await request('/auth/profile', { 
       method: 'PUT',
@@ -217,6 +226,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     return nextUser;
   }, [token]);
+
+  const updatePreferences = useCallback(async (preferences) => {
+    const response = await api.patch('/users/me/preferences', preferences, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    const nextUser = { ...user, preferences: response.data.preferences };
+    setUser(nextUser);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    return response.data.preferences;
+  }, [token, user]);
 
   const deleteAccount = useCallback(async () => {
     await request('/auth/account', { method: 'DELETE' }, token); 
@@ -261,12 +280,14 @@ export const AuthProvider = ({ children }) => {
     register,
     getCurrentUser,
     changePassword,
+    verifyEmail,
     updateProfile,
+    updatePreferences,
     deleteAccount,
     forgotPassword,
     verifyResetCode,
     resetPassword,
-  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updateProfile, user, verifyResetCode]);
+  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyResetCode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

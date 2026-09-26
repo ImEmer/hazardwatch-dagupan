@@ -22,6 +22,7 @@ const notifyReportStaff = async (report, type, title, message) => {
       message,
       reference: report._id,
       referenceModel: 'Report',
+      priority: report.priority,
     })));
   } catch (error) {
     console.error('[notification] Failed to notify report recipients:', error.message);
@@ -81,13 +82,16 @@ const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export const getPublicReports = async (req, res, next) => {
   try {
-    const { page = 1, limit = 500, status, category, priority, barangay, bounds } = req.query;
+    const { page = 1, limit = 500, status, category, priority, barangay, bounds, includeResolved } = req.query;
     const requestedPage = Number(page);
     const requestedLimit = Number(limit);
     const pageNumber = Math.max(1, Number.isFinite(requestedPage) ? Math.floor(requestedPage) : 1);
     const pageSize = Math.min(500, Math.max(1, Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 500));
-    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false }, status: { $nin: ['Resolved', 'Closed'] } };
+    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false } };
+    if (includeResolved !== 'true') filter.status = { $nin: ['Resolved', 'Closed'] };
+    else filter.status = { $ne: 'Closed' };
     if (status && ['Pending', 'In Progress'].includes(status)) filter.status = status;
+    else if (status === 'Resolved' && includeResolved === 'true') filter.status = status;
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
     if (barangay) filter.barangay = barangay;

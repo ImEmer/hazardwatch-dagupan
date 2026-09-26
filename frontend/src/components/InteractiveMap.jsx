@@ -28,6 +28,24 @@ const createReportPopupContent = (report) => {
     return content;
 };
 
+const createRasterStyle = (mapStyle) => {
+    const tiles = mapStyle === 'satellite'
+        ? ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}']
+        : mapStyle === 'terrain'
+            ? ['https://tile.opentopomap.org/{z}/{x}/{y}.png']
+            : ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
+    const attribution = mapStyle === 'satellite'
+        ? 'Tiles &copy; Esri'
+        : mapStyle === 'terrain'
+            ? 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
+            : '&copy; OpenStreetMap Contributors';
+    return {
+        version: 8,
+        sources: { osm: { type: 'raster', tiles, tileSize: 256, attribution } },
+        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+    };
+};
+
 
 const InteractiveMap = ({
     reports = [],
@@ -40,6 +58,8 @@ const InteractiveMap = ({
     showHeatmap = false,
     flyTo = null,
     onBoundsChange,
+    mapPreferences = {},
+    defaultCenter = [120.3333, 16.0433],
 }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
@@ -49,11 +69,13 @@ const InteractiveMap = ({
     const markerElementRef = useRef(null);
     const labelElementRef = useRef(null);
     const clusteredRef = useRef(false);
+    const appliedMapStyleRef = useRef(mapPreferences.mapStyle || 'streets');
+    const appliedViewKeyRef = useRef('');
     const [mapReady, setMapReady] = useState(false);
 
-    const [lng] = useState(120.3333);
-    const [lat] = useState(16.0433);
-    const [zoom] = useState(14);
+    const [lng] = useState(defaultCenter[0]);
+    const [lat] = useState(defaultCenter[1]);
+    const [zoom] = useState(mapPreferences.defaultZoom || 13);
 
     const reverseGeocode = async (lng, lat) => {
         try {
@@ -91,28 +113,11 @@ const InteractiveMap = ({
 
         map.current = new maplibregl.Map({
             container: mapContainer.current,
-            style: {
-                version: 8,
-                sources: {
-                    osm: {
-                        type: 'raster',
-                        tiles: [
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-                        ],
-                        tileSize: 256,
-                        attribution: '&copy; OpenStreetMap Contributors'
-                    }
-                },
-                layers: [
-                    {
-                        id: 'osm',
-                        type: 'raster',
-                        source: 'osm'
-                    }
-                ]
-            },
+            style: createRasterStyle(mapPreferences.mapStyle || 'streets'),
             center: [lng, lat],
             zoom: zoom,
+            minZoom: 1,
+            maxZoom: 18,
             maxBounds: [
                 [120.25, 16.00],
                 [120.42, 16.10]
@@ -176,6 +181,34 @@ const InteractiveMap = ({
     }, []);
 
     useEffect(() => {
+        if (!map.current || !mapReady) return;
+        const nextStyle = mapPreferences.mapStyle || 'streets';
+        if (appliedMapStyleRef.current === nextStyle) return;
+        appliedMapStyleRef.current = nextStyle;
+        setMapReady(false);
+        const markReady = () => setMapReady(true);
+        map.current.once('style.load', markReady);
+        map.current.setStyle(createRasterStyle(nextStyle));
+    }, [mapReady, mapPreferences.mapStyle]);
+
+    useEffect(() => {
+        if (!map.current || !mapReady) return;
+        const view = mapPreferences.defaultView || 'city';
+        const targetCenter = view === 'barangay' ? defaultCenter : [120.3333, 16.0433];
+        const targetZoom = Math.min(18, Math.max(1, Number(mapPreferences.defaultZoom) || 13));
+        const viewKey = `${view}:${targetCenter[0]}:${targetCenter[1]}:${targetZoom}`;
+        if (appliedViewKeyRef.current === viewKey) return;
+        appliedViewKeyRef.current = viewKey;
+        if (view === 'my-location' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(({ coords }) => {
+                map.current?.easeTo({ center: [coords.longitude, coords.latitude], zoom: targetZoom });
+            }, () => map.current?.easeTo({ center: targetCenter, zoom: targetZoom }));
+            return;
+        }
+        map.current.easeTo({ center: targetCenter, zoom: targetZoom, duration: 500 });
+    }, [defaultCenter, mapReady, mapPreferences.defaultView, mapPreferences.defaultZoom]);
+
+    useEffect(() => {
         if (!map.current || !mapReady || !flyTo?.center) return;
         map.current.flyTo({
             center: flyTo.center,
@@ -207,7 +240,7 @@ const InteractiveMap = ({
         clusteredRef.current = false;
         if (showHeatmap) return;
 
-        if (reports.length > 100) {
+        if (reports.length > 100 && mapPreferences.showClusters !== false) {
             const features = reports.flatMap((report) => {
                 const coordinates = report.location?.coordinates;
                 if (!Array.isArray(coordinates) || coordinates.length !== 2) return [];
@@ -231,7 +264,25 @@ const InteractiveMap = ({
             map.current.addSource('reports-clustered', { type: 'geojson', data: { type: 'FeatureCollection', features }, cluster: true, clusterMaxZoom: 14, clusterRadius: 45 });
             map.current.addLayer({ id: 'reports-cluster-points', type: 'circle', source: 'reports-clustered', filter: ['has', 'point_count'], paint: { 'circle-color': ['step', ['get', 'point_count'], '#3b82f6', 10, '#eab308', 50, '#ef4444'], 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 20, 50, 25], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
             map.current.addLayer({ id: 'reports-cluster-count', type: 'symbol', source: 'reports-clustered', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } });
-            map.current.addLayer({ id: 'reports-unclustered-points', type: 'circle', source: 'reports-clustered', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['match', ['get', 'status'], 'Pending', '#eab308', 'In Progress', '#3b82f6', 'Resolved', '#10b981', '#6b7280'], 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+            if (mapPreferences.markerStyle === 'pin') {
+                if (!map.current.hasImage('hazard-pin')) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 32;
+                    canvas.height = 40;
+                    const context = canvas.getContext('2d');
+                    context.fillStyle = '#ffffff';
+                    context.beginPath();
+                    context.moveTo(16, 39);
+                    context.bezierCurveTo(13, 34, 2, 22, 2, 15);
+                    context.arc(16, 15, 14, Math.PI, 0);
+                    context.bezierCurveTo(30, 22, 19, 34, 16, 39);
+                    context.fill();
+                    map.current.addImage('hazard-pin', context.getImageData(0, 0, 32, 40), { sdf: true });
+                }
+                map.current.addLayer({ id: 'reports-unclustered-points', type: 'symbol', source: 'reports-clustered', filter: ['!', ['has', 'point_count']], layout: { 'icon-image': 'hazard-pin', 'icon-size': 0.65, 'icon-anchor': 'bottom', 'icon-allow-overlap': true }, paint: { 'icon-color': ['match', ['get', 'status'], 'Pending', '#eab308', 'In Progress', '#3b82f6', 'Resolved', '#10b981', '#6b7280'], 'icon-halo-color': '#ffffff', 'icon-halo-width': 1 } });
+            } else {
+                map.current.addLayer({ id: 'reports-unclustered-points', type: 'circle', source: 'reports-clustered', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['match', ['get', 'status'], 'Pending', '#eab308', 'In Progress', '#3b82f6', 'Resolved', '#10b981', '#6b7280'], 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+            }
             const expandClusters = (event) => {
                 const features = map.current.queryRenderedFeatures(event.point, { layers: ['reports-cluster-points'] });
                 if (!features.length) return;
@@ -283,13 +334,21 @@ const InteractiveMap = ({
             const el = document.createElement('div');
             el.style.width = '16px';
             el.style.height = '16px';
-            el.style.borderRadius = '50%';
-            el.style.backgroundColor = color;
-            el.style.border = '2px solid #ffffff';
+            el.style.display = 'grid';
+            el.style.placeItems = 'center';
             el.style.cursor = 'pointer';
             el.setAttribute('role', 'img');
             el.setAttribute('aria-label', `${report.status || 'Pending'} hazard marker`);
             el.style.boxShadow = '0 2px 5px rgba(15, 23, 42, 0.35)';
+            const visual = document.createElement('span');
+            visual.style.display = 'block';
+            visual.style.width = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
+            visual.style.height = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
+            visual.style.borderRadius = mapPreferences.markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
+            visual.style.transform = mapPreferences.markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
+            visual.style.backgroundColor = color;
+            visual.style.border = '2px solid #ffffff';
+            el.appendChild(visual);
 
             const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
                 .setDOMContent(createReportPopupContent(report));
@@ -304,7 +363,7 @@ const InteractiveMap = ({
 
             markersRef.current.push(marker);
         });
-    }, [mapReady, reports, showHeatmap]);
+    }, [mapReady, mapPreferences.markerStyle, mapPreferences.showClusters, reports, showHeatmap]);
 
     useEffect(() => {
         if (!map.current || !mapReady) return;

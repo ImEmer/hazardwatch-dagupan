@@ -76,3 +76,20 @@ export const notificationApi = {
   markAllAsRead: () => api.patch('/notifications/read-all'),
 };
 
+export const preferencesApi = {
+  getMine: () => api.get('/users/me/preferences'),
+  updateMine: (preferences) => api.patch('/users/me/preferences', preferences),
+  getForUser: (id) => api.get(`/users/${id}/preferences`),
+  updateForUser: (id, preferences) => api.patch(`/users/${id}/preferences`, preferences),
+};
+
+export const systemSettingsApi = {
+  get: () => api.get('/system/settings'),
+  update: (settings) => api.patch('/system/settings', settings),
+  uploadLogo: (file) => {
+    const body = new FormData();
+    body.append('logo', file);
+    return api.patch('/system/settings/logo', body);
+  },
+};
+

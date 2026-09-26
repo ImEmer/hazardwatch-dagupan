@@ -28,17 +28,17 @@ const NotificationDropdown = ({ open, setOpen, bellRef, notifications, onMarkAsR
       const rect = bellRef.current?.getBoundingClientRect();
       if (!rect) return;
       const width = Math.min(360, window.innerWidth - 24);
-      const sidebarRight = bellRef.current.closest('aside')?.getBoundingClientRect().right || 0;
-      const anchorRight = window.innerWidth >= 1024 ? Math.max(rect.right, sidebarRight) : rect.right;
-      const left = Math.min(Math.max(12, anchorRight + 8), window.innerWidth - width - 12);
+      const left = Math.min(Math.max(12, rect.right + 8), window.innerWidth - width - 12);
       setPosition({ top: Math.min(rect.bottom + 8, window.innerHeight - 480), left });
     };
     updatePosition();
+    const repositionTimer = window.setTimeout(updatePosition, 320);
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
     return () => {
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
+      window.clearTimeout(repositionTimer);
     };
   }, [open, bellRef]);
 

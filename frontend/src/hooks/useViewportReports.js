@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 
-const useViewportReports = ({ endpoint, token, scopeParam, scopeValue, enabled = true }) => {
+const useViewportReports = ({ endpoint, token, scopeParam, scopeValue, includeResolved = false, enabled = true }) => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -9,8 +9,11 @@ const useViewportReports = ({ endpoint, token, scopeParam, scopeValue, enabled =
   const fetchTimerRef = useRef(null);
   const requestControllerRef = useRef(null);
   const scopeParams = useMemo(
-    () => (scopeParam && scopeValue ? { [scopeParam]: scopeValue } : {}),
-    [scopeParam, scopeValue],
+    () => ({
+      ...(scopeParam && scopeValue ? { [scopeParam]: scopeValue } : {}),
+      ...(includeResolved ? { includeResolved: 'true' } : {}),
+    }),
+    [includeResolved, scopeParam, scopeValue],
   );
 
   const fetchReportsByBounds = useCallback(async (bounds) => {

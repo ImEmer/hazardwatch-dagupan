@@ -1,6 +1,30 @@
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 
+const notificationPreferencesSchema = new mongoose.Schema({
+  newHazardReports: { type: Boolean, default: true },
+  criticalReports: { type: Boolean, default: true },
+  statusUpdates: { type: Boolean, default: true },
+  systemNotifications: { type: Boolean, default: true },
+  emailNotifications: { type: Boolean, default: false },
+  inAppNotifications: { type: Boolean, default: true },
+}, { _id: false });
+
+const mapPreferencesSchema = new mongoose.Schema({
+  showResolved: { type: Boolean, default: false },
+  showClusters: { type: Boolean, default: true },
+  defaultView: { type: String, enum: ['city', 'barangay', 'my-location'], default: 'city' },
+  defaultZoom: { type: Number, min: 1, max: 18, default: 13 },
+  mapStyle: { type: String, enum: ['streets', 'satellite', 'terrain'], default: 'streets' },
+  markerStyle: { type: String, enum: ['pin', 'circle'], default: 'circle' },
+}, { _id: false });
+
+const preferencesSchema = new mongoose.Schema({
+  theme: { type: String, enum: ['light', 'dark', 'system'], default: 'dark' },
+  notifications: { type: notificationPreferencesSchema, default: () => ({}) },
+  map: { type: mapPreferencesSchema, default: () => ({}) },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -19,6 +43,7 @@ const userSchema = new mongoose.Schema({
   deletedAt: { type: Date },
   lastLogin: Date,
   profileImage: String,
+  preferences: { type: preferencesSchema, default: () => ({}) },
   emailVerified: { type: Boolean, default: false },
   verificationRequired: { type: Boolean, default: true },
   emailVerificationCode: { type: String, select: false },

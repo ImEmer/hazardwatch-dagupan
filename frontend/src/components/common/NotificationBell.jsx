@@ -4,7 +4,7 @@ import useTheme from '../../hooks/useTheme';
 import { notificationApi } from '../../services/api';
 import NotificationDropdown from './NotificationDropdown';
 
-const NotificationBell = () => {
+const NotificationBell = ({ onOpen }) => {
   const { theme } = useTheme();
   const bellRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
@@ -68,7 +68,11 @@ const NotificationBell = () => {
       <button
         ref={bellRef}
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setOpen((current) => {
+          const next = !current;
+          if (next) onOpen?.();
+          return next;
+        })}
         className={`relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${isDark ? 'text-gray-200 hover:bg-white/10 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'}`}
         aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-expanded={open}

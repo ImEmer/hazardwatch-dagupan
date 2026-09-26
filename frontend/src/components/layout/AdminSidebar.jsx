@@ -23,7 +23,7 @@ const LogoutIcon = () => <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none
 
 const AdminSidebar = () => {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,13 +62,10 @@ const AdminSidebar = () => {
   const linkClass = ({ isActive }) => `flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive ? isDark ? 'bg-[#3b82f6]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-700' : isDark ? 'text-gray-300 hover:bg-[#14151d] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
 
   const sidebar = <aside className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r transition-transform duration-300 lg:z-40 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-800'}`}>
-    <div className={`flex items-center justify-between border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+    <div className={`flex items-center justify-between border-b py-4 pl-5 pr-1 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
       <p className="text-lg font-bold tracking-tight">HazardWatch</p>
-      <div className="flex items-center gap-1"><NotificationBell />
-      <button type="button" onClick={() => setIsOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-white/10 lg:hidden" aria-label="Close menu"><MenuIcon close /></button>
-      <button type="button" onClick={toggleTheme} className={`relative hidden h-8 w-14 items-center rounded-full border p-1 transition lg:flex ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-slate-100'}`} aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`} title={`Switch to ${isDark ? 'light' : 'dark'} theme`}>
-        <span className={`flex h-6 w-6 items-center justify-center rounded-full transition-transform ${isDark ? 'translate-x-0 bg-slate-800 text-blue-200' : 'translate-x-6 bg-white text-amber-500 shadow-sm'}`}><span aria-hidden="true">{isDark ? '◐' : '☼'}</span></span>
-      </button>
+      <div className="flex items-center gap-1">
+      <button type="button" onClick={() => setIsOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-white/10 lg:hidden" aria-label="Close menu"><MenuIcon close /></button><NotificationBell onOpen={() => { if (window.innerWidth < 1024) setIsOpen(false); }} />
       </div>
     </div>
     <div className={`border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><p className="text-xs uppercase tracking-[0.2em] text-gray-400">Signed in as</p><p className="mt-2 font-semibold">{user?.name || 'User'}</p><p className={`text-xs capitalize ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>{user?.role || 'staff'}</p></div>

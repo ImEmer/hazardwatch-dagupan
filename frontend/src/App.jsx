@@ -29,7 +29,6 @@ import AdminResolvedReportsPage from './pages/admin/AdminResolvedReportsPage';
 import AdminReportDetailPage from './pages/admin/AdminReportDetailPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminMapPage from './pages/admin/AdminMapPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminActivityPage from './pages/admin/AdminActivityPage';
 import AdminArchivedPage from './pages/admin/AdminArchivedPage';
 import MyReportsPage from './pages/public/MyReportsPage';
@@ -41,11 +40,10 @@ import BarangayDashboard from './pages/barangay/BarangayDashboard';
 import BarangayReportsPage from './pages/barangay/BarangayReportsPage';
 import BarangayReportDetail from './pages/barangay/BarangayReportDetail';
 import BarangayMapPage from './pages/barangay/BarangayMapPage';
-import BarangaySettingsPage from './pages/barangay/BarangaySettingsPage';
 import BarangayArchivedPage from './pages/barangay/BarangayArchivedPage';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
-import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
+import SettingsDashboard from './components/settings/SettingsDashboard';
 import SuperAdminActivityPage from './pages/superadmin/SuperAdminActivityPage';
 import SuperAdminReportsPage from './pages/superadmin/SuperAdminReportsPage';
 import SuperAdminReportDetailPage from './pages/superadmin/SuperAdminReportDetailPage';
@@ -149,7 +147,7 @@ function App() {
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="map" element={<BarangayMapPage />} />
-              <Route path="settings" element={<BarangaySettingsPage />} />
+              <Route path="settings" element={<SettingsDashboard />} />
               <Route path="notifications" element={<BarangayNotificationsPage />} />
             </Route>
 
@@ -162,7 +160,7 @@ function App() {
               <Route path="map" element={<AdminMapPage />} />
               <Route path="reports/resolved" element={<AdminResolvedReportsPage basePath="/superadmin" />} />
               <Route path="users" element={<SuperAdminUsers />} />
-              <Route path="settings" element={<SuperAdminSettings />} />
+              <Route path="settings" element={<SettingsDashboard superAdminOnly />} />
               <Route path="activity" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminActivityPage /></ProtectedRoute>} />
               <Route path="notifications" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminNotificationsPage /></ProtectedRoute>} />
             </Route>
@@ -178,7 +176,7 @@ function App() {
               <Route path="activity" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminActivityPage /></ProtectedRoute>} />
               <Route path="notifications" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminNotificationsPage /></ProtectedRoute>} />
               <Route path="users" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminUsersPage /></ProtectedRoute>} />
-              <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff']}><AdminSettingsPage /></ProtectedRoute>} />
+              <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff']}><SettingsDashboard /></ProtectedRoute>} />
             </Route>
 
             <Route path="/logout" element={<Navigate to="/" replace />} />

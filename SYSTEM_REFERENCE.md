@@ -230,10 +230,14 @@ Base URL: `/api` in local proxy deployments, or the configured `VITE_API_URL`/de
 
 ### Users
 
-All `/users` routes first require authentication and `admin` or `superadmin` role.
+User-management routes require authentication and `admin` or `superadmin`; self-service preference routes require any authenticated user.
 
 | Method | Path | Access | Behavior |
 |---|---|---|---|
+| GET | `/users/me/preferences` | Any authenticated role | Returns the caller's theme, notification, and map preferences. |
+| PATCH | `/users/me/preferences` | Any authenticated role | Validates and updates the caller's partial preferences. |
+| GET | `/users/:id/preferences` | `superadmin` | Returns another user's preferences. |
+| PATCH | `/users/:id/preferences` | `superadmin` | Validates and updates another user's partial preferences. |
 | GET | `/users` | Admin roles | Lists non-deleted users with selected public-management fields and normalizes expired suspensions. |
 | GET | `/users/:id` | Admin roles | Retrieves one user by Mongo ID and normalizes expired suspension. |
 | POST | `/users` | Admin roles | Reuses registration validation, applies role-creation restrictions, creates an active user, and logs creation. |
@@ -244,6 +248,14 @@ All `/users` routes first require authentication and `admin` or `superadmin` rol
 | POST | `/users/:id/unsuspend` | Admin roles | Restores active state and clears suspension fields. |
 | DELETE | `/users/bulk` | Admin roles | Validates target hierarchy/self/superadmin restrictions, then soft-deletes allowed targets. It does not write activity entries for each bulk deletion. |
 | DELETE | `/users/:id` | Admin roles | Soft-deletes a target after hierarchy, self, superadmin, and last-superadmin checks. |
+
+### System settings
+
+| Method | Path | Access | Behavior |
+|---|---|---|---|
+| GET | `/system/settings` | `superadmin` | Loads the singleton configuration, creating its defaults on first access. |
+| PATCH | `/system/settings` | `superadmin` | Validates and updates system identity, reference lists, notification switch, maintenance flag, default role, hierarchy, and permission matrix. |
+| PATCH | `/system/settings/logo` | `superadmin` | Uploads one image through the existing Cloudinary image middleware and stores its URL. |
 
 ### Statistics
 

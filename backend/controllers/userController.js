@@ -5,6 +5,67 @@ import { createNotification } from '../utils/createNotification.js';
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
 const listFields = 'name email role barangay status isActive lastLogin createdAt';
 const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
+const preferenceKeys = {
+  notifications: ['newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'],
+  map: ['showResolved', 'showClusters', 'defaultView', 'defaultZoom', 'mapStyle', 'markerStyle'],
+};
+
+const mergePreferences = (current, updates) => {
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return { error: 'Preferences must be an object.' };
+  const allowedSections = ['theme', 'notifications', 'map'];
+  const unknownSection = Object.keys(updates).find((key) => !allowedSections.includes(key));
+  if (unknownSection) return { error: `Unknown preference section: ${unknownSection}.` };
+  const next = current?.toObject ? current.toObject() : { ...(current || {}) };
+
+  if (Object.hasOwn(updates, 'theme')) {
+    if (!['light', 'dark', 'system'].includes(updates.theme)) return { error: 'Theme must be light, dark, or system.' };
+    next.theme = updates.theme;
+  }
+
+  for (const section of ['notifications', 'map']) {
+    if (!Object.hasOwn(updates, section)) continue;
+    const values = updates[section];
+    if (!values || typeof values !== 'object' || Array.isArray(values)) return { error: `${section} preferences must be an object.` };
+    const unknownKey = Object.keys(values).find((key) => !preferenceKeys[section].includes(key));
+    if (unknownKey) return { error: `Unknown ${section} preference: ${unknownKey}.` };
+    next[section] = { ...(next[section]?.toObject?.() || next[section] || {}) };
+    for (const [key, value] of Object.entries(values)) {
+      if (['showResolved', 'showClusters', 'newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'].includes(key) && typeof value !== 'boolean') {
+        return { error: `${key} must be a boolean.` };
+      }
+      if (key === 'defaultView' && !['city', 'barangay', 'my-location'].includes(value)) return { error: 'Default map view is invalid.' };
+      if (key === 'mapStyle' && !['streets', 'satellite', 'terrain'].includes(value)) return { error: 'Map style is invalid.' };
+      if (key === 'markerStyle' && !['pin', 'circle'].includes(value)) return { error: 'Marker style is invalid.' };
+      if (key === 'defaultZoom' && (!Number.isInteger(value) || value < 1 || value > 18)) return { error: 'Default zoom must be an integer from 1 to 18.' };
+      next[section][key] = value;
+    }
+  }
+  return { preferences: next };
+};
+
+export const getMyPreferences = (req, res) => res.json({ success: true, preferences: req.user.preferences });
+
+export const updateMyPreferences = async (req, res, next) => {
+  try {
+    const result = mergePreferences(req.user.preferences, req.body);
+    if (result.error) return res.status(400).json({ success: false, message: result.error });
+    req.user.preferences = result.preferences;
+    await req.user.save({ validateBeforeSave: false });
+    res.json({ success: true, preferences: req.user.preferences });
+  } catch (error) { next(error); }
+};
+
+export const updateUserPreferences = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    const result = mergePreferences(user.preferences, req.body);
+    if (result.error) return res.status(400).json({ success: false, message: result.error });
+    user.preferences = result.preferences;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, preferences: user.preferences });
+  } catch (error) { next(error); }
+};
 
 const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
   if (actor.role !== 'admin' && actor.role !== 'superadmin') return false;
