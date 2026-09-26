@@ -1,31 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import InteractiveMap from '../../components/InteractiveMap';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
-import api from '../../services/api';
+import useViewportReports from '../../hooks/useViewportReports';
 import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/reportOptions';
 
 const statuses = ['all', 'Pending', 'In Progress'];
 
 const BarangayMapPage = () => {
   const { user, token } = useAuth();
+  const { reports, loading, error, onBoundsChange, retry } = useViewportReports({
+    endpoint: '/reports',
+    token,
+    scopeParam: 'barangay',
+    scopeValue: user?.barangay,
+    enabled: Boolean(token && user?.barangay),
+  });
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const [reports, setReports] = useState([]);
   const [status, setStatus] = useState('all');
   const [heatmap, setHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [flyTo, setFlyTo] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!token || !user?.barangay) return undefined;
-    let cancelled = false;
-    api.get('/reports', { params: { barangay: user.barangay, page: 1, limit: 100 }, headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => { if (!cancelled) setReports(response.data?.reports || []); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [token, user?.barangay]);
 
   const filtered = useMemo(() => {
     const visible = reports.filter((report) => ['Pending', 'In Progress'].includes(report.status));
@@ -58,8 +54,10 @@ const BarangayMapPage = () => {
             </select>
           </div>
           <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg bg-[#14151d]/95 px-3 py-2 text-sm text-white">{heatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={heatmap} flyTo={flyTo} />
-          {!loading && !filtered.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-2xl border border-slate-700 bg-slate-950/80 px-6 py-5 text-center text-slate-200 shadow-xl"><div className="text-2xl" aria-hidden="true">⚠</div><h3 className="mt-2 font-semibold">No reports to show</h3><p className="mt-1 text-sm text-slate-400">There are no hazard reports for your barangay yet.</p></div></div>}
+          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={heatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} />
+          {loading && <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">Loading reports...</div>}
+          {error && <div role="alert" className="absolute right-5 top-16 z-20 max-w-sm rounded-lg bg-red-600 px-4 py-3 text-sm text-white shadow-lg"><p>{error}</p><button type="button" className="mt-2 rounded border border-white/70 px-3 py-1 font-semibold hover:bg-white/10" onClick={retry}>Retry</button></div>}
+          {!loading && !error && !filtered.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-2xl border border-slate-700 bg-slate-950/80 px-6 py-5 text-center text-slate-200 shadow-xl"><div className="text-2xl" aria-hidden="true">⚠</div><h3 className="mt-2 font-semibold">No reports to show</h3><p className="mt-1 text-sm text-slate-400">There are no active reports in this map view.</p></div></div>}
         </div>
         <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
           {loading ? <p className="text-gray-400">Loading reports...</p> : filtered.map((report) => <div key={report._id} className={`rounded-2xl border p-4 shadow-xl ${panel}`}><p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category} report`}</p><p className="mt-1 text-xs text-[#60a5fa]">{report.status}</p><p className={`mt-3 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{report.address || 'Dagupan City area'}</p></div>)}

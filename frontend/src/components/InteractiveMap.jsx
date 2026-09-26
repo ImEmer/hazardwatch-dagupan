@@ -8,6 +8,26 @@ const CATEGORY_COLORS = {
     ...HAZARD_CATEGORY_COLORS,
 };
 
+const createReportPopupContent = (report) => {
+    const content = document.createElement('div');
+    content.className = 'p-2 max-w-xs';
+
+    const appendText = (tag, className, value) => {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.textContent = value;
+        content.appendChild(element);
+    };
+
+    appendText('h3', 'font-bold text-gray-800', report.category || 'Hazard');
+    appendText('p', 'text-sm font-semibold text-gray-700 mt-1', report.title || 'Hazard report');
+    appendText('p', 'text-xs text-gray-500 mt-2', `Status: ${report.status || 'Pending'}`);
+    if (report.createdAt) appendText('p', 'text-xs text-gray-400 mt-1', new Date(report.createdAt).toLocaleDateString());
+    if (report.address || report.barangay) appendText('p', 'text-xs text-gray-500 mt-1 break-words', report.address || report.barangay);
+
+    return content;
+};
+
 
 const InteractiveMap = ({
     reports = [],
@@ -201,8 +221,9 @@ const InteractiveMap = ({
                         id: String(report._id || report.id || ''),
                         status: report.status || 'Pending',
                         category: report.category || 'Hazard',
-                        description: report.description || report.title || 'Hazard report',
+                        title: report.title || 'Hazard report',
                         address: report.address || '',
+                        barangay: report.barangay || '',
                         createdAt: report.createdAt || '',
                     },
                 }];
@@ -222,50 +243,9 @@ const InteractiveMap = ({
                 const features = map.current.queryRenderedFeatures(event.point, { layers: ['reports-unclustered-points'] });
                 if (!features.length) return;
                 const feature = features[0];
-                const properties = feature.properties;
-                const content = document.createElement('div');
-                content.className = 'p-2 max-w-xs';
-
-                const heading = document.createElement('h3');
-                heading.className = 'font-bold text-gray-800';
-                heading.textContent = properties.category || 'Hazard';
-                content.appendChild(heading);
-
-                const description = document.createElement('p');
-                description.className = 'text-sm text-gray-600 mt-1';
-                description.textContent = properties.description || 'Hazard report';
-                content.appendChild(description);
-
-                const status = document.createElement('p');
-                status.className = 'text-xs text-gray-500 mt-2';
-                status.textContent = `Status: ${properties.status || 'Pending'}`;
-                content.appendChild(status);
-
-                if (properties.createdAt) {
-                    const createdAt = document.createElement('p');
-                    createdAt.className = 'text-xs text-gray-400 mt-1';
-                    createdAt.textContent = new Date(properties.createdAt).toLocaleDateString();
-                    content.appendChild(createdAt);
-                }
-
-                if (properties.address) {
-                    const address = document.createElement('p');
-                    address.className = 'text-xs text-gray-500 mt-1 break-words';
-                    address.textContent = properties.address;
-                    content.appendChild(address);
-                }
-
-                if (properties.id) {
-                    const link = document.createElement('a');
-                    link.className = 'mt-2 inline-block text-sm font-medium text-blue-600';
-                    link.href = `/reports/${encodeURIComponent(properties.id)}`;
-                    link.textContent = 'View report';
-                    content.appendChild(link);
-                }
-
                 new maplibregl.Popup({ offset: 8, closeButton: true })
                     .setLngLat(feature.geometry.coordinates.slice())
-                    .setDOMContent(content)
+                    .setDOMContent(createReportPopupContent(feature.properties))
                     .addTo(map.current);
             };
             const setClusterCursor = () => { map.current.getCanvas().style.cursor = 'pointer'; };
@@ -300,37 +280,23 @@ const InteractiveMap = ({
                     ? (typeof STATUS_COLORS[report.status] === 'object' ? STATUS_COLORS[report.status].hex : STATUS_COLORS[report.status] || '#6B7280')
                     : CATEGORY_COLORS[report.category] || '#6B7280';
 
-            const description = (report.description || report.title || 'Hazard report').replace(/<[^>]*>/g, '').trim();
-            const shortDescription = description.length > 120 ? `${description.slice(0, 117)}...` : description;
             const el = document.createElement('div');
-            el.style.position = 'relative';
-            el.style.width = '36px';
-            el.style.height = '42px';
+            el.style.width = '16px';
+            el.style.height = '16px';
+            el.style.borderRadius = '50%';
+            el.style.backgroundColor = color;
+            el.style.border = '2px solid #ffffff';
             el.style.cursor = 'pointer';
-            el.style.filter = 'drop-shadow(0 4px 8px rgba(15, 23, 42, 0.35))';
-            el.innerHTML = `
-                <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg" aria-label="${report.status || 'Pending'} hazard marker" role="img">
-                    <path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 24 16 24s16-12 16-24C32 7.2 24.8 0 16 0Z" fill="${color}" stroke="#ffffff" stroke-width="2"/>
-                    <circle cx="16" cy="16" r="5" fill="#ffffff"/>
-                </svg>
-            `;
+            el.setAttribute('role', 'img');
+            el.setAttribute('aria-label', `${report.status || 'Pending'} hazard marker`);
+            el.style.boxShadow = '0 2px 5px rgba(15, 23, 42, 0.35)';
 
-            const popup = new maplibregl.Popup({
-                offset: [0, -18],
-                closeButton: true,
-            }).setHTML(`
-                <div class="p-2 max-w-xs">
-                    <h3 class="font-bold text-gray-800">${report.category || 'Hazard'}</h3>
-                    <p class="text-sm text-gray-600 mt-1">${shortDescription}</p>
-                    <p class="text-xs text-gray-500 mt-2">Status: <span class="font-medium">${report.status || 'Pending'}</span></p>
-                    <p class="text-xs text-gray-400 mt-1">${new Date(report.createdAt).toLocaleDateString()}</p>
-                    ${report.address ? `<p class="text-xs text-gray-500 mt-1 break-words">${report.address}</p>` : ''}
-                </div>
-            `);
+            const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
+                .setDOMContent(createReportPopupContent(report));
 
             const marker = new maplibregl.Marker({
                 element: el,
-                anchor: 'bottom'
+                anchor: 'center'
             })
                 .setLngLat([lng, lat])
                 .setPopup(popup)

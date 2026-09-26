@@ -8,8 +8,39 @@ const scoped = (user) => user.role === 'barangay' ? barangayScope(user.barangay 
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const parseBounds = (bounds) => {
+  if (bounds === undefined) return undefined;
+  const values = typeof bounds === 'string' ? bounds.split(',').map(Number) : [];
+  if (
+    values.length !== 4
+    || !values.every(Number.isFinite)
+    || values[0] < -90 || values[0] > 90
+    || values[2] < -90 || values[2] > 90
+    || values[1] < -180 || values[1] > 180
+    || values[3] < -180 || values[3] > 180
+    || values[0] >= values[2]
+    || values[1] >= values[3]
+  ) return null;
+
+  const [swLat, swLng, neLat, neLng] = values;
+  return {
+    $geoWithin: {
+      $geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [swLng, swLat],
+          [neLng, swLat],
+          [neLng, neLat],
+          [swLng, neLat],
+          [swLng, swLat],
+        ]],
+      },
+    },
+  };
+};
+
 const reportFilter = (req) => {
-  const { search, status, category, priority, barangay, startDate, endDate, includeResolved } = req.query;
+  const { search, status, category, priority, barangay, startDate, endDate, includeResolved, bounds } = req.query;
   const filter = { deletedAt: null, isActive: true, archived: { $ne: true } };
   if (status) filter.status = status;
   else if (includeResolved !== 'true') filter.status = { $nin: ['Resolved', 'Closed'] };
@@ -17,6 +48,8 @@ const reportFilter = (req) => {
   if (priority) filter.priority = priority;
   if (req.user.role === 'barangay') filter.$and = [barangayScope(req.user.barangay || '__unassigned_barangay__')];
   else if (barangay) filter.$and = [barangayScope(barangay)];
+  const locationFilter = parseBounds(bounds);
+  if (locationFilter) filter.location = locationFilter;
   if (search) { const pattern = new RegExp(escapeRegex(search), 'i'); filter.$and = [...(filter.$and || []), { $or: [{ title: pattern }, { description: pattern }, { address: pattern }] }]; }
   if (startDate || endDate) filter.createdAt = { ...(startDate ? { $gte: new Date(startDate) } : {}), ...(endDate ? { $lte: new Date(`${endDate}T23:59:59.999Z`) } : {}) };
   return filter;
@@ -26,49 +59,20 @@ const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export const getPublicReports = async (req, res, next) => {
   try {
-    const { page = 1, limit = 500, status, category, priority, barangay, includeResolved, bounds } = req.query;
+    const { page = 1, limit = 500, status, category, priority, barangay, bounds } = req.query;
     const requestedPage = Number(page);
     const requestedLimit = Number(limit);
     const pageNumber = Math.max(1, Number.isFinite(requestedPage) ? Math.floor(requestedPage) : 1);
     const pageSize = Math.min(500, Math.max(1, Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 500));
-    const statusFilter = includeResolved === 'true' ? { $nin: ['Closed'] } : { $nin: ['Resolved', 'Closed'] };
-    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false }, status: statusFilter };
-    if (status && status !== 'Closed' && (includeResolved === 'true' || status !== 'Resolved')) filter.status = status;
+    const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false }, status: { $nin: ['Resolved', 'Closed'] } };
+    if (status && ['Pending', 'In Progress'].includes(status)) filter.status = status;
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
     if (barangay) filter.barangay = barangay;
 
-    if (bounds !== undefined) {
-      const values = typeof bounds === 'string' ? bounds.split(',').map(Number) : [];
-      if (
-        values.length !== 4
-        || !values.every(Number.isFinite)
-        || values[0] < -90 || values[0] > 90
-        || values[2] < -90 || values[2] > 90
-        || values[1] < -180 || values[1] > 180
-        || values[3] < -180 || values[3] > 180
-        || values[0] >= values[2]
-        || values[1] >= values[3]
-      ) {
-        return res.status(400).json({ success: false, message: 'Bounds must be valid swLat,swLng,neLat,neLng coordinates.' });
-      }
-
-      const [swLat, swLng, neLat, neLng] = values;
-      filter.location = {
-        $geoWithin: {
-          $geometry: {
-            type: 'Polygon',
-            coordinates: [[
-              [swLng, swLat],
-              [neLng, swLat],
-              [neLng, neLat],
-              [swLng, neLat],
-              [swLng, swLat],
-            ]],
-          },
-        },
-      };
-    }
+    const locationFilter = parseBounds(bounds);
+    if (bounds !== undefined && !locationFilter) return res.status(400).json({ success: false, message: 'Bounds must be valid swLat,swLng,neLat,neLng coordinates.' });
+    if (locationFilter) filter.location = locationFilter;
 
     const skip = (pageNumber - 1) * pageSize;
     const [reports, total] = await Promise.all([
@@ -93,13 +97,17 @@ export const getPublicReports = async (req, res, next) => {
 
 export const getReports = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, assignedTo, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const { page = 1, limit = 10, assignedTo, sortBy = 'createdAt', sortOrder = 'desc', bounds } = req.query;
+    const locationFilter = parseBounds(bounds);
+    if (bounds !== undefined && !locationFilter) return res.status(400).json({ success: false, message: 'Bounds must be valid swLat,swLng,neLat,neLng coordinates.' });
     const filter = reportFilter(req);
     if (assignedTo) filter.assignedTo = assignedTo;
-    const skip = (Number(page) - 1) * Number(limit);
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const pageSize = Math.min(500, Math.max(1, Number(limit) || 10));
+    const skip = (pageNumber - 1) * pageSize;
     const sort = sortBy === 'priority' ? { priority: sortOrder === 'asc' ? 1 : -1 } : sortBy === 'status' ? { status: sortOrder === 'asc' ? 1 : -1 } : { createdAt: sortOrder === 'asc' ? 1 : -1 };
-    const [reports, total] = await Promise.all([Report.find(filter).populate('assignedTo', 'name email').sort(sort).skip(skip).limit(Number(limit)), Report.countDocuments(filter)]);
-    res.json({ success: true, reports, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } });
+    const [reports, total] = await Promise.all([Report.find(filter).populate('assignedTo', 'name email').sort(sort).skip(skip).limit(pageSize), Report.countDocuments(filter)]);
+    res.json({ success: true, reports, pagination: { page: pageNumber, limit: pageSize, total, pages: Math.ceil(total / pageSize) } });
   } catch (error) { next(error); }
 };
 

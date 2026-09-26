@@ -23,7 +23,7 @@
 
             try {
                 const response = await api.get('/reports/public', {
-                    params: { bounds, limit: 500, includeResolved: 'true' },
+                    params: { bounds, limit: 500 },
                     timeout: 30000,
                 });
                 const nextReports = response.data?.reports || [];

@@ -114,7 +114,7 @@ export const validateReportUpdate = [
 export const validateId = [param('id').isMongoId().withMessage('Invalid id.'), validate];
 export const validatePagination = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer.'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be an integer between 1 and 100.'),
+  query('limit').optional().isInt({ min: 1, max: 500 }).withMessage('Limit must be an integer between 1 and 500.'),
   validateBadRequest,
 ];
 
