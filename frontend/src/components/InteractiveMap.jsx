@@ -8,6 +8,33 @@ const CATEGORY_COLORS = {
     ...HAZARD_CATEGORY_COLORS,
 };
 
+const PRIORITY_MARKER_COLORS = { Urgent: '#dc2626', High: '#f97316', Medium: '#eab308', Low: '#84cc16' };
+
+const addDangerMarkerImage = (mapInstance) => {
+    if (mapInstance.hasImage('hazard-danger')) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 36;
+    canvas.height = 36;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#ffffff';
+    context.beginPath();
+    context.moveTo(18, 2);
+    context.lineTo(34, 32);
+    context.lineTo(2, 32);
+    context.closePath();
+    context.fill();
+    context.globalCompositeOperation = 'destination-out';
+    context.beginPath();
+    context.moveTo(18, 7);
+    context.lineTo(29, 28);
+    context.lineTo(7, 28);
+    context.closePath();
+    context.fill();
+    context.fillRect(16, 13, 4, 8);
+    context.fillRect(16, 23, 4, 3);
+    mapInstance.addImage('hazard-danger', context.getImageData(0, 0, 36, 36), { sdf: true });
+};
+
 const createReportPopupContent = (report) => {
     const content = document.createElement('div');
     content.className = 'p-2 max-w-xs';
@@ -70,7 +97,6 @@ const InteractiveMap = ({
     const labelElementRef = useRef(null);
     const clusteredRef = useRef(false);
     const appliedMapStyleRef = useRef(mapPreferences.mapStyle || 'streets');
-    const appliedViewKeyRef = useRef('');
     const [mapReady, setMapReady] = useState(false);
 
     const [lng] = useState(defaultCenter[0]);
@@ -192,23 +218,6 @@ const InteractiveMap = ({
     }, [mapReady, mapPreferences.mapStyle]);
 
     useEffect(() => {
-        if (!map.current || !mapReady) return;
-        const view = mapPreferences.defaultView || 'city';
-        const targetCenter = view === 'barangay' ? defaultCenter : [120.3333, 16.0433];
-        const targetZoom = Math.min(18, Math.max(1, Number(mapPreferences.defaultZoom) || 13));
-        const viewKey = `${view}:${targetCenter[0]}:${targetCenter[1]}:${targetZoom}`;
-        if (appliedViewKeyRef.current === viewKey) return;
-        appliedViewKeyRef.current = viewKey;
-        if (view === 'my-location' && navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(({ coords }) => {
-                map.current?.easeTo({ center: [coords.longitude, coords.latitude], zoom: targetZoom });
-            }, () => map.current?.easeTo({ center: targetCenter, zoom: targetZoom }));
-            return;
-        }
-        map.current.easeTo({ center: targetCenter, zoom: targetZoom, duration: 500 });
-    }, [defaultCenter, mapReady, mapPreferences.defaultView, mapPreferences.defaultZoom]);
-
-    useEffect(() => {
         if (!map.current || !mapReady || !flyTo?.center) return;
         map.current.flyTo({
             center: flyTo.center,
@@ -240,7 +249,7 @@ const InteractiveMap = ({
         clusteredRef.current = false;
         if (showHeatmap) return;
 
-        if (reports.length > 100 && mapPreferences.showClusters !== false) {
+        if (reports.length > 100) {
             const features = reports.flatMap((report) => {
                 const coordinates = report.location?.coordinates;
                 if (!Array.isArray(coordinates) || coordinates.length !== 2) return [];
@@ -253,6 +262,7 @@ const InteractiveMap = ({
                     properties: {
                         id: String(report._id || report.id || ''),
                         status: report.status || 'Pending',
+                        priority: report.priority || 'Medium',
                         category: report.category || 'Hazard',
                         title: report.title || 'Hazard report',
                         address: report.address || '',
@@ -264,7 +274,21 @@ const InteractiveMap = ({
             map.current.addSource('reports-clustered', { type: 'geojson', data: { type: 'FeatureCollection', features }, cluster: true, clusterMaxZoom: 14, clusterRadius: 45 });
             map.current.addLayer({ id: 'reports-cluster-points', type: 'circle', source: 'reports-clustered', filter: ['has', 'point_count'], paint: { 'circle-color': ['step', ['get', 'point_count'], '#3b82f6', 10, '#eab308', 50, '#ef4444'], 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 20, 50, 25], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
             map.current.addLayer({ id: 'reports-cluster-count', type: 'symbol', source: 'reports-clustered', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } });
-            if (mapPreferences.markerStyle === 'pin') {
+            if (mapPreferences.markerStyle === 'danger') {
+                addDangerMarkerImage(map.current);
+                map.current.addLayer({
+                    id: 'reports-unclustered-points',
+                    type: 'symbol',
+                    source: 'reports-clustered',
+                    filter: ['!', ['has', 'point_count']],
+                    layout: { 'icon-image': 'hazard-danger', 'icon-size': 0.8, 'icon-allow-overlap': true },
+                    paint: {
+                        'icon-color': ['match', ['get', 'priority'], 'Urgent', PRIORITY_MARKER_COLORS.Urgent, 'High', PRIORITY_MARKER_COLORS.High, 'Low', PRIORITY_MARKER_COLORS.Low, PRIORITY_MARKER_COLORS.Medium],
+                        'icon-halo-color': '#ffffff',
+                        'icon-halo-width': 1,
+                    },
+                });
+            } else if (mapPreferences.markerStyle === 'pin') {
                 if (!map.current.hasImage('hazard-pin')) {
                     const canvas = document.createElement('canvas');
                     canvas.width = 32;
@@ -326,10 +350,13 @@ const InteractiveMap = ({
             if (typeof lng !== 'number' || typeof lat !== 'number' || Number.isNaN(lng) || Number.isNaN(lat)) return;
             if (import.meta.env.DEV) console.debug('Report coords:', report.location.coordinates, 'normalized:', [lng, lat]);
 
-                    const color =
+                    const baseColor =
                 colorBy === 'status'
                     ? (typeof STATUS_COLORS[report.status] === 'object' ? STATUS_COLORS[report.status].hex : STATUS_COLORS[report.status] || '#6B7280')
                     : CATEGORY_COLORS[report.category] || '#6B7280';
+                    const color = mapPreferences.markerStyle === 'danger'
+                        ? PRIORITY_MARKER_COLORS[report.priority] || PRIORITY_MARKER_COLORS.Medium
+                        : baseColor;
 
             const el = document.createElement('div');
             el.style.width = '16px';
@@ -340,15 +367,36 @@ const InteractiveMap = ({
             el.setAttribute('role', 'img');
             el.setAttribute('aria-label', `${report.status || 'Pending'} hazard marker`);
             el.style.boxShadow = '0 2px 5px rgba(15, 23, 42, 0.35)';
-            const visual = document.createElement('span');
-            visual.style.display = 'block';
-            visual.style.width = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
-            visual.style.height = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
-            visual.style.borderRadius = mapPreferences.markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
-            visual.style.transform = mapPreferences.markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
-            visual.style.backgroundColor = color;
-            visual.style.border = '2px solid #ffffff';
-            el.appendChild(visual);
+            if (mapPreferences.markerStyle === 'danger') {
+                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                icon.setAttribute('viewBox', '0 0 24 24');
+                icon.setAttribute('width', '22');
+                icon.setAttribute('height', '22');
+                icon.setAttribute('aria-hidden', 'true');
+                const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                triangle.setAttribute('d', 'M12 3.5 21 20H3L12 3.5Z');
+                triangle.setAttribute('fill', color);
+                triangle.setAttribute('stroke', '#ffffff');
+                triangle.setAttribute('stroke-width', '1.5');
+                triangle.setAttribute('stroke-linejoin', 'round');
+                const exclamation = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                exclamation.setAttribute('d', 'M12 9v5m0 2.5v.1');
+                exclamation.setAttribute('stroke', '#ffffff');
+                exclamation.setAttribute('stroke-width', '2');
+                exclamation.setAttribute('stroke-linecap', 'round');
+                icon.append(triangle, exclamation);
+                el.appendChild(icon);
+            } else {
+                const visual = document.createElement('span');
+                visual.style.display = 'block';
+                visual.style.width = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
+                visual.style.height = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
+                visual.style.borderRadius = mapPreferences.markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
+                visual.style.transform = mapPreferences.markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
+                visual.style.backgroundColor = color;
+                visual.style.border = '2px solid #ffffff';
+                el.appendChild(visual);
+            }
 
             const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
                 .setDOMContent(createReportPopupContent(report));
@@ -363,7 +411,7 @@ const InteractiveMap = ({
 
             markersRef.current.push(marker);
         });
-    }, [mapReady, mapPreferences.markerStyle, mapPreferences.showClusters, reports, showHeatmap]);
+    }, [mapReady, mapPreferences.markerStyle, reports, showHeatmap]);
 
     useEffect(() => {
         if (!map.current || !mapReady) return;

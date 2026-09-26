@@ -12,11 +12,9 @@ const notificationPreferencesSchema = new mongoose.Schema({
 
 const mapPreferencesSchema = new mongoose.Schema({
   showResolved: { type: Boolean, default: false },
-  showClusters: { type: Boolean, default: true },
-  defaultView: { type: String, enum: ['city', 'barangay', 'my-location'], default: 'city' },
   defaultZoom: { type: Number, min: 1, max: 18, default: 13 },
   mapStyle: { type: String, enum: ['streets', 'satellite', 'terrain'], default: 'streets' },
-  markerStyle: { type: String, enum: ['pin', 'circle'], default: 'circle' },
+  markerStyle: { type: String, enum: ['pin', 'circle', 'danger'], default: 'circle' },
 }, { _id: false });
 
 const preferencesSchema = new mongoose.Schema({

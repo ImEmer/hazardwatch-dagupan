@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { banUser, createUser, deleteUser, getMyPreferences, getUser, getUsers, getUserStats, suspendUser, toggleUserStatus, unsuspendUser, updateMyPreferences, updateUser, updateUserPreferences } from '../controllers/userController.js';
+import { banUser, createUser, deleteUser, getMyPreferences, getUser, getUserPreferences, getUsers, getUserStats, suspendUser, toggleUserStatus, unsuspendUser, updateMyPreferences, updateUser, updateUserPassword, updateUserPreferences } from '../controllers/userController.js';
 import { allowRoles, isAdmin, protect } from '../middleware/auth.js';
-import { validateBulkIds, validateId, validateRegister, validateStatusAction, validateUserUpdate } from '../middleware/validate.js';
+import { passwordPolicy, validateBadRequest, validateBulkIds, validateId, validateRegister, validateStatusAction, validateUserUpdate } from '../middleware/validate.js';
 
 const router = Router();
 router.get('/me/preferences', protect, getMyPreferences);
@@ -13,14 +13,9 @@ router.get('/:id', validateId, getUser);
 router.post('/', validateRegister, createUser);
 router.put('/:id', validateId, validateUserUpdate, updateUser);
 router.patch('/:id/status', validateId, validateStatusAction, toggleUserStatus);
-router.get('/:id/preferences', allowRoles('superadmin'), validateId, async (req, res, next) => {
-  try {
-    const user = await (await import('../models/User.js')).default.findById(req.params.id).select('preferences');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    res.json({ success: true, preferences: user.preferences });
-  } catch (error) { next(error); }
-});
-router.patch('/:id/preferences', allowRoles('superadmin'), validateId, updateUserPreferences);
+router.get('/:id/preferences', allowRoles('superadmin', 'admin'), validateId, getUserPreferences);
+router.patch('/:id/preferences', allowRoles('superadmin', 'admin'), validateId, updateUserPreferences);
+router.patch('/:id/password', validateId, passwordPolicy('newPassword'), validateBadRequest, updateUserPassword);
 router.post('/:id/suspend', validateId, suspendUser);
 router.post('/:id/ban', validateId, banUser);
 router.post('/:id/unsuspend', validateId, unsuspendUser);

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
@@ -10,6 +11,7 @@ import Skeleton from '../../components/common/Skeleton';
 import Pagination from '../../components/common/Pagination';
 import useDebounce from '../../hooks/useDebounce';
 import CountUp from '../../components/common/CountUp';
+import UserSettingsModal from '../../components/settings/UserSettingsModal';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -41,6 +43,7 @@ const SuperAdminUsers = () => {
   const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: PAGE_SIZE });
   const [stats, setStats] = useState({ total: 0, citizens: 0, barangay: 0, admins: 0 });
   const [selectedUser, setSelectedUser] = useState(null);
+  const [settingsUser, setSettingsUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -268,6 +271,7 @@ const SuperAdminUsers = () => {
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.barangay || '—'}</td>
                       <td className="px-4 py-4">
                         {canShowEdit(user) && <div className="flex gap-3">
+                          <button type="button" onClick={() => setSettingsUser(user)} title="User settings" aria-label={`Settings for ${user.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-500/10 hover:text-slate-400"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" /></button>
                           <button type="button" onClick={() => openEditor(user)} title="Edit user" aria-label="Edit user" className="rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                           </button>
@@ -290,6 +294,7 @@ const SuperAdminUsers = () => {
       </div>
 
       <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} targetUser={suspendingUser} currentUser={currentUser} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
+      {settingsUser && <UserSettingsModal user={settingsUser} onClose={() => setSettingsUser(null)} onSaved={() => { fetchUsers(); fetchStats(); }} />}
 
       {isEditing && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

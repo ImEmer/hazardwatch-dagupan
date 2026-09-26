@@ -160,7 +160,7 @@ function App() {
               <Route path="map" element={<AdminMapPage />} />
               <Route path="reports/resolved" element={<AdminResolvedReportsPage basePath="/superadmin" />} />
               <Route path="users" element={<SuperAdminUsers />} />
-              <Route path="settings" element={<SettingsDashboard superAdminOnly />} />
+              <Route path="settings" element={<SettingsDashboard />} />
               <Route path="activity" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminActivityPage /></ProtectedRoute>} />
               <Route path="notifications" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminNotificationsPage /></ProtectedRoute>} />
             </Route>

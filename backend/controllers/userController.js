@@ -7,7 +7,7 @@ const listFields = 'name email role barangay status isActive lastLogin createdAt
 const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
 const preferenceKeys = {
   notifications: ['newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'],
-  map: ['showResolved', 'showClusters', 'defaultView', 'defaultZoom', 'mapStyle', 'markerStyle'],
+  map: ['showResolved', 'defaultZoom', 'mapStyle', 'markerStyle'],
 };
 
 const mergePreferences = (current, updates) => {
@@ -30,12 +30,11 @@ const mergePreferences = (current, updates) => {
     if (unknownKey) return { error: `Unknown ${section} preference: ${unknownKey}.` };
     next[section] = { ...(next[section]?.toObject?.() || next[section] || {}) };
     for (const [key, value] of Object.entries(values)) {
-      if (['showResolved', 'showClusters', 'newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'].includes(key) && typeof value !== 'boolean') {
+      if (['showResolved', 'newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'].includes(key) && typeof value !== 'boolean') {
         return { error: `${key} must be a boolean.` };
       }
-      if (key === 'defaultView' && !['city', 'barangay', 'my-location'].includes(value)) return { error: 'Default map view is invalid.' };
       if (key === 'mapStyle' && !['streets', 'satellite', 'terrain'].includes(value)) return { error: 'Map style is invalid.' };
-      if (key === 'markerStyle' && !['pin', 'circle'].includes(value)) return { error: 'Marker style is invalid.' };
+      if (key === 'markerStyle' && !['pin', 'circle', 'danger'].includes(value)) return { error: 'Marker style is invalid.' };
       if (key === 'defaultZoom' && (!Number.isInteger(value) || value < 1 || value > 18)) return { error: 'Default zoom must be an integer from 1 to 18.' };
       next[section][key] = value;
     }
@@ -44,6 +43,18 @@ const mergePreferences = (current, updates) => {
 };
 
 export const getMyPreferences = (req, res) => res.json({ success: true, preferences: req.user.preferences });
+
+const canManageUserSettings = (actor, target) => actor.role === 'superadmin'
+  || (actor.role === 'admin' && ['user', 'barangay'].includes(target.role));
+
+export const getUserPreferences = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select('preferences role');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!canManageUserSettings(req.user, user)) return res.status(403).json({ success: false, message: 'You are not allowed to view this user’s settings.' });
+    res.json({ success: true, preferences: user.preferences });
+  } catch (error) { next(error); }
+};
 
 export const updateMyPreferences = async (req, res, next) => {
   try {
@@ -59,6 +70,7 @@ export const updateUserPreferences = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!canManageUserSettings(req.user, user)) return res.status(403).json({ success: false, message: 'You are not allowed to update this user’s settings.' });
     const result = mergePreferences(user.preferences, req.body);
     if (result.error) return res.status(400).json({ success: false, message: result.error });
     user.preferences = result.preferences;
@@ -67,8 +79,21 @@ export const updateUserPreferences = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const updateUserPassword = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select('+password');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!canManageUserSettings(req.user, user)) return res.status(403).json({ success: false, message: 'You are not allowed to update this user’s password.' });
+    user.password = req.body.newPassword;
+    await user.save();
+    await logActivity({ actor: req.user, action: 'user_password_reset', message: `${req.user.name} updated the password for ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {});
+    res.json({ success: true, message: 'User password updated.' });
+  } catch (error) { next(error); }
+};
+
 const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
-  if (actor.role !== 'admin' && actor.role !== 'superadmin') return false;
+  if (actor.role === 'superadmin') return String(actor._id) !== String(targetUser?._id);
+  if (actor.role !== 'admin') return false;
   if (targetUser?.role === 'superadmin' || nextRole === 'superadmin') return false;
   return (ROLE_LEVELS[actor.role] || 0) > (ROLE_LEVELS[targetUser?.role] || 0);
 };

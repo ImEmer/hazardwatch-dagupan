@@ -10,13 +10,10 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/
 
 const HazardMapPage = () => {
   const { token, user } = useAuth();
-  const mapPreferences = { showResolved: false, showClusters: true, defaultView: 'city', defaultZoom: 13, mapStyle: 'streets', markerStyle: 'circle', ...user?.preferences?.map };
+  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'circle', ...user?.preferences?.map };
   const { reports: mapReports, loading, error: fetchError, onBoundsChange, retry } = useViewportReports({ endpoint: '/reports/public', includeResolved: mapPreferences.showResolved });
   const visibleStatuses = mapPreferences.showResolved ? ['Pending', 'In Progress', 'Resolved'] : ['Pending', 'In Progress'];
   const visibleReports = mapReports.filter((report) => visibleStatuses.includes(report.status));
-  const defaultCenter = useMemo(() => mapPreferences.defaultView === 'barangay' && user?.barangay
-    ? (DAGUPAN_BARANGAY_COORDINATES[user.barangay] || [120.3333, 16.0433])
-    : [120.3333, 16.0433], [mapPreferences.defaultView, user?.barangay]);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
@@ -62,7 +59,7 @@ const HazardMapPage = () => {
             </select>
           </div>
           <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} defaultCenter={defaultCenter} />
+          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} />
           {loading && (
             <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">
               Loading reports...

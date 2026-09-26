@@ -61,7 +61,7 @@ Roles are `superadmin`, `admin`, `staff`, `barangay`, and `user`. Barangay users
 - `middleware/loginLockout.js` - In-memory lockout keyed by client IP and normalized email. Three failed attempts cause a five-minute lockout and `Retry-After` responses.
 - `middleware/errorHandler.js` - Converts unknown routes and common Mongo duplicate/validation/cast/JWT errors to JSON HTTP responses and logs unexpected errors.
 - `models/` - Mongoose schemas and persistence models.
-- `models/User.js` - User identity, role, barangay, account status, suspension/ban/deletion fields, login/reset fields, timestamps, bcrypt password hashing with cost 12, and password comparison.
+- `models/User.js` - User identity, role, barangay, account status, suspension/ban/deletion fields, login/reset fields, theme/notification/map preferences, timestamps, bcrypt password hashing with cost 12, and password comparison.
 - `models/Report.js` - Hazard report title/category/description/location, evidence URLs, status/priority, reporter snapshot, assignment, resolution/comments, views, archive and soft-delete fields. Includes geospatial, text, and status/category/priority indexes.
 - `models/Notification.js` - User-owned notifications for superadmin, admin, and barangay recipients, with event type, read state, reference, timestamps, and recipient/read indexes.
 - `models/ContactMessage.js` - Contact sender, email, subject, message, workflow status, and timestamps.
@@ -236,8 +236,9 @@ User-management routes require authentication and `admin` or `superadmin`; self-
 |---|---|---|---|
 | GET | `/users/me/preferences` | Any authenticated role | Returns the caller's theme, notification, and map preferences. |
 | PATCH | `/users/me/preferences` | Any authenticated role | Validates and updates the caller's partial preferences. |
-| GET | `/users/:id/preferences` | `superadmin` | Returns another user's preferences. |
-| PATCH | `/users/:id/preferences` | `superadmin` | Validates and updates another user's partial preferences. |
+| GET | `/users/:id/preferences` | `admin`, `superadmin` | Returns preferences for an authorized target; admins are limited to citizen/barangay users. |
+| PATCH | `/users/:id/preferences` | `admin`, `superadmin` | Updates preferences for an authorized target; admins are limited to citizen/barangay users. |
+| PATCH | `/users/:id/password` | `admin`, `superadmin` | Updates a managed account's password after role-scope and password-policy checks. |
 | GET | `/users` | Admin roles | Lists non-deleted users with selected public-management fields and normalizes expired suspensions. |
 | GET | `/users/:id` | Admin roles | Retrieves one user by Mongo ID and normalizes expired suspension. |
 | POST | `/users` | Admin roles | Reuses registration validation, applies role-creation restrictions, creates an active user, and logs creation. |

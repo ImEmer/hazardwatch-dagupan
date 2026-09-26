@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import useTheme from '../../hooks/useTheme';
 import useAuth from '../../hooks/useAuth';
 import api from '../../services/api';
@@ -11,6 +12,7 @@ import Pagination from '../../components/common/Pagination';
 import useDebounce from '../../hooks/useDebounce';
 import PasswordToggle from '../../components/PasswordToggle';
 import CountUp from '../../components/common/CountUp';
+import UserSettingsModal from '../../components/settings/UserSettingsModal';
 
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
@@ -49,6 +51,7 @@ const AdminUsersPage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [settingsUser, setSettingsUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -329,6 +332,7 @@ const AdminUsersPage = () => {
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
                   <td className="px-4 py-4">
                     {(canShowEdit(user) || canManageTarget(user)) && <div className="flex items-center gap-1">
+                      {canManageTarget(user) && <button type="button" onClick={() => setSettingsUser(user)} title="User settings" aria-label={`Settings for ${user.name}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-500/10 hover:text-slate-400"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" /></button>}
                       <button
                         type="button"
                         onClick={() => openEditor(user)}
@@ -363,6 +367,7 @@ const AdminUsersPage = () => {
       <Pagination currentPage={page} totalPages={pagination.pages} totalItems={pagination.total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} isDark={isDark} />
 
       <SuspendUserModal isOpen={Boolean(suspendingUser)} isDark={isDark} targetUser={suspendingUser} currentUser={currentUser} userName={suspendingUser?.name || ''} saving={suspensionSaving} onClose={() => setSuspendingUser(null)} onConfirm={confirmSuspension} />
+      {settingsUser && <UserSettingsModal user={settingsUser} onClose={() => setSettingsUser(null)} onSaved={() => { fetchUsers(); fetchStats(); }} />}
 
       {isEditing && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
