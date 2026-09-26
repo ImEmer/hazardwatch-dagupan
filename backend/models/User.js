@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
   profileImage: String,
   emailVerified: { type: Boolean, default: false },
   verificationRequired: { type: Boolean, default: true },
+  emailVerificationCode: { type: String, select: false },
   emailVerificationToken: { type: String, select: false },
   emailVerificationExpires: { type: Date, select: false },
   resetPasswordToken: { type: String, select: false },

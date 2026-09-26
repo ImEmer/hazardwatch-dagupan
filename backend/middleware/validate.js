@@ -45,6 +45,11 @@ export const validateRegister = [
   validateBadRequest,
 ];
 export const validateLogin = [body('email').trim().isEmail().normalizeEmail(), body('password').notEmpty(), validate];
+export const validateEmailVerification = [
+  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  body('code').isString().matches(/^\d{6}$/).withMessage('Enter the 6-digit verification code.'),
+  validateBadRequest,
+];
 export const validateReport = [
   body('category').isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
   body('customCategory').custom((value, { req }) => {

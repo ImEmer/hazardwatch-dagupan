@@ -57,34 +57,26 @@ export const sendPasswordResetCode = (email, code, name) => {
     return sendEmail({ to: email, subject, html, text });
 };
 
-export const sendVerificationEmail = ({ email, name, token }) => {
+export const sendVerificationEmail = ({ email, name, code }) => {
     const safeName = escapeHtml(name || 'there');
-    const safeToken = escapeHtml(token);
-    const apiUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:5000/api';
-    const verificationUrl = `${apiUrl.replace(/\/$/, '')}/auth/verify-email?token=${encodeURIComponent(token)}`;
+    const safeCode = escapeHtml(code);
     const subject = 'Verify your HazardWatch account';
-    const text = `Verify your HazardWatch account\n\nHi ${name || 'there'},\n\nThanks for signing up for HazardWatch. Please verify your account by visiting: ${verificationUrl}\n\nThis link expires in 15 minutes.\n\nIf you did not register for an account, you can ignore this email.`;
+    const text = `HazardWatch Dagupan\n\nHi ${name || 'there'},\n\nThanks for creating your HazardWatch account. Enter this code to verify your email: ${code}\n\nThis code expires in 15 minutes.\n\nIf you did not register, please ignore this email.`;
     const html = `
-        <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
-            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
-                <div style="background:#1261a0;padding:24px 28px;color:#ffffff;">
-                    <div style="font-size:22px;font-weight:700;">HazardWatch Dagupan</div>
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#172b4d;">
+            <div style="background-color:#1e40af;padding:20px;text-align:center;">
+                <h1 style="color:#ffffff;margin:0;">HazardWatch Dagupan</h1>
+            </div>
+            <div style="padding:30px;background-color:#f9fafb;">
+                <p>Hi ${safeName},</p>
+                <p>Thanks for creating your HazardWatch account. Enter this code to verify your email:</p>
+                <div style="text-align:center;margin:30px 0;">
+                    <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1e40af;padding:20px;background-color:#ffffff;border:2px dashed #1e40af;border-radius:8px;display:inline-block;">${safeCode}</div>
                 </div>
-                <div style="padding:32px 28px;">
-                    <p style="margin:0 0 16px;font-size:16px;">Hi ${safeName},</p>
-                    <p style="margin:0 0 16px;line-height:1.6;">Thanks for creating your HazardWatch account. Please verify your email address to activate your account and start reporting hazards.</p>
-                    <div style="margin:0 0 24px;text-align:center;">
-                        <a href="${verificationUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:700;">Verify Email</a>
-                    </div>
-                    <p style="margin:0 0 16px;color:#ef4444;font-size:14px;font-weight:700;line-height:1.6;">This link expires in 15 minutes.</p>
-                    <p style="margin:0;color:#52708f;font-size:14px;line-height:1.6;">If the button does not work, copy this link into your browser: ${safeToken ? verificationUrl : ''}</p>
-                </div>
+                <p style="color:#ef4444;font-weight:bold;">This code expires in 15 minutes.</p>
+                <p style="color:#6b7280;font-size:14px;">If you did not register, please ignore this email.</p>
             </div>
         </div>`;
 
-    if (process.env.NODE_ENV === 'development') {
-        console.log('[verification-email] Dev mode verification link:', verificationUrl);
-    }
-    console.log('[verification-email] Preparing email:', { to: email, name, token: safeToken, verificationUrl });
     return sendEmail({ to: email, subject, html, text });
 };

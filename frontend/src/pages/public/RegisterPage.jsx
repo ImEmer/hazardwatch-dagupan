@@ -53,8 +53,8 @@ const RegisterPage = () => {
       }
 
       await register({ name: form.name.trim(), email: trimmedEmail, password: form.password, role: 'user', agreedToTerms: true });
-      await showSuccess('Account created! Check your email to verify your account.');
-      navigate('/login');
+      await showSuccess('Account created. Check your email for the 6-digit code.');
+      navigate(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
     } catch (error) {
       const message = error.message && error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('exist')
         ? 'Email already registered. Please use a different email.'

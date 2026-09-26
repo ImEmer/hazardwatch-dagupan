@@ -31,13 +31,15 @@ export const register = async (req, res, next) => {
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const safeRole = ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
-    const verificationToken = crypto.randomBytes(32).toString('hex');
     const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      if (existingUser.status !== 'deleted') {
-        return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
-      }
+    if (existingUser && existingUser.status !== 'deleted') {
+      return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
+    }
 
+    const verificationCode = crypto.randomInt(100000, 1000000).toString();
+    const hashedVerificationCode = await bcrypt.hash(verificationCode, 12);
+    const verificationExpires = Date.now() + 15 * 60 * 1000;
+    if (existingUser) {
       existingUser.name = name;
       existingUser.email = normalizedEmail;
       existingUser.password = password;
@@ -49,15 +51,17 @@ export const register = async (req, res, next) => {
       existingUser.deletedAt = undefined;
       existingUser.emailVerified = false;
       existingUser.verificationRequired = true;
-      existingUser.emailVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-      existingUser.emailVerificationExpires = Date.now() + 15 * 60 * 1000;
+      existingUser.emailVerificationCode = hashedVerificationCode;
+      existingUser.emailVerificationToken = undefined;
+      existingUser.emailVerificationExpires = verificationExpires;
       await existingUser.save();
+      if (process.env.NODE_ENV === 'development') console.log(`🔐 Verification code for ${normalizedEmail}: ${verificationCode}`);
       try {
-        await sendVerificationEmail({ email: existingUser.email, name: existingUser.name, token: verificationToken });
+        await sendVerificationEmail({ email: existingUser.email, name: existingUser.name, code: verificationCode });
       } catch (emailError) {
         console.error('[register] Verification email failed:', emailError.message);
       }
-      return res.status(201).json({ success: true, message: 'Account re-created. Check your email to verify your account.', user: publicUser(existingUser) });
+      return res.status(201).json({ success: true, message: 'Account created. Check your email for the 6-digit code.', user: publicUser(existingUser) });
     }
 
     const user = await User.create({
@@ -71,17 +75,17 @@ export const register = async (req, res, next) => {
       isActive: false,
       emailVerified: false,
       verificationRequired: true,
-      emailVerificationToken: crypto.createHash('sha256').update(verificationToken).digest('hex'),
-      emailVerificationExpires: Date.now() + 15 * 60 * 1000,
+      emailVerificationCode: hashedVerificationCode,
+      emailVerificationExpires: verificationExpires,
     });
 
+    if (process.env.NODE_ENV === 'development') console.log(`🔐 Verification code for ${normalizedEmail}: ${verificationCode}`);
     try {
-      const verificationResult = await sendVerificationEmail({
+      await sendVerificationEmail({
         email: user.email,
         name: user.name,
-        token: verificationToken,
+        code: verificationCode,
       });
-      console.log('[register] Verification email sent:', { email: user.email, token: verificationToken, result: verificationResult });
     } catch (emailError) {
       console.error('[register] Verification email failed:', emailError.message);
     }
@@ -142,9 +146,9 @@ export const login = async (req, res, next) => {
       const reason = user.suspensionReason ? ` Reason: ${user.suspensionReason}` : '';
       return res.status(403).json({ success: false, status: 'banned', suspendedUntil: null, daysRemaining: null, reason: user.suspensionReason || '', message: `Your account is permanently banned.${reason}` });
     }
-    const requiresVerification = user.verificationRequired !== false
-      && (!user.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF);
-    if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first.' });
+    const requiresVerification = user.status === 'pending'
+      || (user.verificationRequired !== false && (!user.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF));
+    if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first. Check your inbox for the 6-digit code.', needsVerification: true, email: user.email });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     clearFailedLogins(req, normalizedEmail);
     user.lastLogin = new Date();
@@ -220,33 +224,33 @@ export const deleteAccount = async (req, res, next) => {
 
 export const checkEmail = async (req, res) => {
   const email = String(req.query.email || '').trim().toLowerCase();
-  const exists = Boolean(email) && Boolean(await User.findOne({ email }));
+  const exists = Boolean(email) && Boolean(await User.exists({ email, status: { $ne: 'deleted' } }));
   res.json({ success: true, exists });
 };
 
 export const verifyEmail = async (req, res, next) => {
   try {
-    const token = String(req.query.token || '').trim();
-    const clientUrl = (process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
-    if (!token) return res.redirect(`${clientUrl}/login?verified=false&error=missing_token`);
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const code = String(req.body.code || '').trim();
+    const user = await User.findOne({ email }).select('+emailVerificationCode +emailVerificationExpires');
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({ emailVerificationToken: hashedToken })
-      .select('+emailVerificationToken +emailVerificationExpires');
-
-    if (!user) return res.redirect(`${clientUrl}/login?verified=false&error=invalid_or_expired`);
-    if (!user.emailVerificationExpires || user.emailVerificationExpires <= new Date()) {
-      return res.redirect(`${clientUrl}/login?verified=false&error=expired`);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (user.emailVerified) return res.status(400).json({ success: false, message: 'Email already verified.' });
+    if (!user.emailVerificationCode || !user.emailVerificationExpires) {
+      return res.status(400).json({ success: false, message: 'No verification code found. Please register again.' });
     }
+    if (user.emailVerificationExpires <= new Date()) return res.status(400).json({ success: false, message: 'Code expired. Please register again.' });
+    if (!await bcrypt.compare(code, user.emailVerificationCode)) return res.status(400).json({ success: false, message: 'Invalid code.' });
 
     user.emailVerified = true;
     user.isActive = true;
     user.status = 'active';
+    user.emailVerificationCode = undefined;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    return res.redirect(`${clientUrl}/login?verified=true`);
+    return res.json({ success: true, message: 'Email verified. You can now log in.' });
   } catch (error) {
     return next(error);
   }

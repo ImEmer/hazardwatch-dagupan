@@ -49,7 +49,10 @@ const request = async (path, options = {}, token = null) => {
 
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'The request could not be completed.');
+    const requestError = new Error(error.response?.data?.message || 'The request could not be completed.');
+    requestError.status = error.response?.status;
+    requestError.data = error.response?.data;
+    throw requestError;
   }
 };
 
