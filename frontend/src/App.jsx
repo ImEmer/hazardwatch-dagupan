@@ -49,6 +49,9 @@ import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
 import SuperAdminActivityPage from './pages/superadmin/SuperAdminActivityPage';
 import SuperAdminReportsPage from './pages/superadmin/SuperAdminReportsPage';
 import SuperAdminReportDetailPage from './pages/superadmin/SuperAdminReportDetailPage';
+import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
+import BarangayNotificationsPage from './pages/barangay/BarangayNotificationsPage';
+import SuperAdminNotificationsPage from './pages/superadmin/SuperAdminNotificationsPage';
 import ScrollToTop from './components/common/ScrollToTop';
 import SessionExpiryModal from './components/SessionExpiryModal';
 const PublicPlaceholder = ({ title, description }) => (
@@ -85,11 +88,13 @@ const pageTitles = [
   { match: (pathname) => pathname === '/superadmin/users', title: 'Super Admin Users | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/settings', title: 'Super Admin Settings | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/activity', title: 'Super Admin Activity | HazardWatch' },
+  { match: (pathname) => pathname === '/superadmin/notifications', title: 'Notifications | HazardWatch' },
   { match: (pathname) => pathname === '/admin/dashboard', title: 'Admin Dashboard | HazardWatch' },
   { match: (pathname) => pathname === '/admin/reports', title: 'Reports Management | HazardWatch' },
   { match: (pathname) => pathname.startsWith('/admin/reports/'), title: 'Report Details | HazardWatch' },
   { match: (pathname) => pathname === '/admin/users', title: 'User Management | HazardWatch' },
   { match: (pathname) => pathname === '/admin/activity', title: 'Activity | HazardWatch' },
+  { match: (pathname) => pathname === '/admin/notifications', title: 'Notifications | HazardWatch' },
   { match: (pathname) => pathname === '/admin/map', title: 'Hazard Map View | HazardWatch' },
   { match: (pathname) => pathname === '/admin/settings', title: 'Admin Settings | HazardWatch' },
 ];
@@ -145,6 +150,7 @@ function App() {
               <Route path="reports/:id" element={<BarangayReportDetail />} />
               <Route path="map" element={<BarangayMapPage />} />
               <Route path="settings" element={<BarangaySettingsPage />} />
+              <Route path="notifications" element={<BarangayNotificationsPage />} />
             </Route>
 
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><AdminLayout /></ProtectedRoute>}>
@@ -158,6 +164,7 @@ function App() {
               <Route path="users" element={<SuperAdminUsers />} />
               <Route path="settings" element={<SuperAdminSettings />} />
               <Route path="activity" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminActivityPage /></ProtectedRoute>} />
+              <Route path="notifications" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminNotificationsPage /></ProtectedRoute>} />
             </Route>
 
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['superadmin', 'admin']}><AdminLayout /></ProtectedRoute>}> 
@@ -169,6 +176,7 @@ function App() {
               <Route path="reports/:id" element={<AdminReportDetailPage />} />
               <Route path="map" element={<AdminMapPage />} />
               <Route path="activity" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminActivityPage /></ProtectedRoute>} />
+              <Route path="notifications" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminNotificationsPage /></ProtectedRoute>} />
               <Route path="users" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminUsersPage /></ProtectedRoute>} />
               <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff']}><AdminSettingsPage /></ProtectedRoute>} />
             </Route>

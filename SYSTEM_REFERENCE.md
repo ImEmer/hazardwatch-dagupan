@@ -63,7 +63,7 @@ Roles are `superadmin`, `admin`, `staff`, `barangay`, and `user`. Barangay users
 - `models/` - Mongoose schemas and persistence models.
 - `models/User.js` - User identity, role, barangay, account status, suspension/ban/deletion fields, login/reset fields, timestamps, bcrypt password hashing with cost 12, and password comparison.
 - `models/Report.js` - Hazard report title/category/description/location, evidence URLs, status/priority, reporter snapshot, assignment, resolution/comments, views, archive and soft-delete fields. Includes geospatial, text, and status/category/priority indexes.
-- `models/Notification.js` - Role/scope or user-targeted notifications with type, message, read state, reference, and timestamps.
+- `models/Notification.js` - User-owned notifications for superadmin, admin, and barangay recipients, with event type, read state, reference, timestamps, and recipient/read indexes.
 - `models/ContactMessage.js` - Contact sender, email, subject, message, workflow status, and timestamps.
 - `models/ActivityLog.js` - Actor identity/role/barangay, scope, action/message/details, entity/target references, timestamps, and activity indexes.
 - `models/Category.js` - Optional category collection with unique name, icon, color, and active flag. No route currently exposes category CRUD.
@@ -269,8 +269,10 @@ All `/users` routes first require authentication and `admin` or `superadmin` rol
 | GET | `/activity/barangay/:barangay` | `barangay`, `admin`, `superadmin` | Barangay activity; a barangay caller may only request its own barangay. |
 | GET | `/activity/me` | Any authenticated role | Caller activity only. |
 | GET | `/activity` | Any authenticated role | Dispatches automatically to full admin, public admin, barangay, or own activity view based on role. |
-| GET | `/notifications` | Any authenticated role | Returns up to 20 newest notifications matching role/scope rules. |
-| PATCH | `/notifications/:id/read` | Any authenticated role | Marks a notification read; checks `userId` ownership when present. Role-level access is not rechecked for role-only notifications. |
+| GET | `/notifications` | `superadmin`, `admin`, `barangay` | Returns caller-owned notifications with `all`, `unread`, or `read` filtering and pagination, plus unread count. |
+| PATCH | `/notifications/read-all` | `superadmin`, `admin`, `barangay` | Marks all caller-owned unread notifications as read. |
+| PATCH | `/notifications/:id/read` | `superadmin`, `admin`, `barangay` | Marks an owned notification as read. |
+| PATCH | `/notifications/:id/unread` | `superadmin`, `admin`, `barangay` | Marks an owned notification as unread. |
 | POST | `/contact` | Public | Validates and stores a contact message. |
 | GET | `/contact` | `admin`, `superadmin` | Lists contact messages newest first. |
 | PATCH | `/contact/:id/status` | `admin`, `superadmin` | Validates and changes contact status to `new`, `read`, or `resolved`. |
@@ -354,7 +356,7 @@ These are findings from the inspected code, not claims that a control exists:
 10. **Upload validation trusts the multipart MIME type.** MIME values can be spoofed. Production hardening should inspect file signatures, constrain Cloudinary resource type, and consider malware/content scanning.
 11. **Some mutation payloads are insufficiently constrained.** Report update, status, priority, assignment, and comment routes rely partly on Mongoose validation or raw request bodies. Add explicit allowlists/field schemas and length checks at each route.
 12. **Bulk report deletion does not validate each ID or write audit records.** It accepts an arbitrary nonempty array and updates matching records. Add per-ID validation, maximum batch size, authorization/scoping checks, and activity logging.
-13. **Notification role filtering may expose broad role notifications.** `getNotifications` returns role/scope matches without always filtering by `userId`; review whether every role-wide notification is intended for every member of that role.
+13. **Notifications are polled rather than pushed.** Sidebar counts refresh every 60 seconds; add a push channel only if lower delivery latency becomes a requirement.
 14. **Public statistics include all non-deleted reports, including potentially sensitive operational data.** Confirm that totals, categories, and covered areas are intentionally public and do not need active/archived/privacy filtering.
 15. **Contact submission has no dedicated abuse/rate limit.** Add throttling, spam controls, and possibly CAPTCHA or moderation if exposed publicly.
 16. **The API does not visibly configure HTTPS itself.** TLS may be terminated by Render/Vercel/proxy infrastructure, but production deployment must enforce HTTPS and secure transport at the edge.

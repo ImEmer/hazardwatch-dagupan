@@ -1,10 +1,32 @@
 import Report from '../models/Report.js';
+import User from '../models/User.js';
 import { logActivity } from '../utils/logActivity.js';
+import { createNotification } from '../utils/createNotification.js';
 import { isDagupanBarangay } from '../utils/dagupanBarangays.js';
 import { calculatePriority } from '../utils/priorityCalculator.js';
 
 const barangayScope = (barangay) => ({ $or: [{ barangay }, { assignedBarangay: barangay }] });
 const scoped = (user) => user.role === 'barangay' ? barangayScope(user.barangay || '__unassigned_barangay__') : {};
+
+const notifyReportStaff = async (report, type, title, message) => {
+  try {
+    const [admins, barangayUsers] = await Promise.all([
+      User.find({ role: { $in: ['admin', 'superadmin'] } }).select('_id role'),
+      User.find({ role: 'barangay', barangay: report.barangay }).select('_id role'),
+    ]);
+    await Promise.all([...admins, ...barangayUsers].map((recipient) => createNotification({
+      recipientId: recipient._id,
+      recipientRole: recipient.role,
+      type,
+      title: recipient.role === 'barangay' && type === 'report_submitted' ? 'New Report in Your Barangay' : title,
+      message,
+      reference: report._id,
+      referenceModel: 'Report',
+    })));
+  } catch (error) {
+    console.error('[notification] Failed to notify report recipients:', error.message);
+  }
+};
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -181,6 +203,8 @@ export const createReport = async (req, res, next) => {
         phone: req.user.phone,
       },
     });
+    const reportMessage = `A new ${report.category} report was submitted in ${report.barangay || 'your area'}.`;
+    await notifyReportStaff(report, 'report_submitted', 'New Report Submitted', reportMessage);
     await logActivity({ actor: req.user, action: 'report_submitted', message: `${req.user.name} submitted a report`, scope: 'user', entityType: 'report', entityId: report._id }).catch(() => {});
     res.status(201).json({ success: true, report });
   } catch (error) { next(error); }
@@ -207,6 +231,7 @@ export const updateStatus = async (req, res, next) => {
     if (['Resolved', 'Closed'].includes(report.status) && req.user.role !== 'superadmin') {
       return res.status(400).json({ success: false, message: `This report is ${report.status} and can no longer be edited.` });
     }
+    const previousStatus = report.status;
     const nextStatus = req.body.status;
     const update = { status: nextStatus };
     if (nextStatus === 'Closed') {
@@ -217,6 +242,9 @@ export const updateStatus = async (req, res, next) => {
       update.archivedAt = null;
     }
     const updated = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, update, { new: true, runValidators: true });
+    if (previousStatus !== nextStatus) {
+      await notifyReportStaff(updated, 'status_changed', 'Report Status Updated', `Report "${updated.title}" is now ${nextStatus}.`);
+    }
     await logActivity({ actor: req.user, action: 'report_status_updated', message: `${req.user.name} updated status of report ${updated._id} to ${req.body.status}`, entityType: 'report', entityId: updated._id }).catch(() => {});
     res.json({ success: true, report: updated });
   } catch (error) { next(error); }
@@ -233,6 +261,22 @@ export const assignReport = async (req, res, next) => {
   try {
     const report = await Report.findByIdAndUpdate(req.params.id, { assignedTo: req.body.assignedTo, assignedBarangay: req.body.assignedBarangay }, { new: true });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    try {
+      const assignee = req.body.assignedTo ? await User.findById(req.body.assignedTo).select('_id role') : null;
+      if (assignee && ['superadmin', 'admin', 'barangay'].includes(assignee.role)) {
+        await createNotification({
+          recipientId: assignee._id,
+          recipientRole: assignee.role,
+          type: 'report_assigned',
+          title: 'Report Assigned to You',
+          message: `Report "${report.title}" was assigned to you.`,
+          reference: report._id,
+          referenceModel: 'Report',
+        });
+      }
+    } catch (error) {
+      console.error('[notification] Failed to notify report assignee:', error.message);
+    }
     await logActivity({ actor: req.user, action: 'report_assigned', message: `${req.user.name} assigned report ${report?._id} to ${req.body.assignedBarangay || 'a staff member'}`, entityType: 'report', entityId: report?._id }).catch(() => {});
     res.json({ success: true, report });
   } catch (error) { next(error); }

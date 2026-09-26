@@ -1,8 +1,24 @@
 import ContactMessage from '../models/ContactMessage.js';
+import User from '../models/User.js';
+import { createNotification } from '../utils/createNotification.js';
 
 export const submitMessage = async (req, res, next) => {
   try {
     const message = await ContactMessage.create(req.body);
+    try {
+      const admins = await User.find({ role: { $in: ['admin', 'superadmin'] } }).select('_id role');
+      await Promise.all(admins.map((admin) => createNotification({
+        recipientId: admin._id,
+        recipientRole: admin.role,
+        type: 'contact_received',
+        title: 'New Contact Message',
+        message: `A new message was received: ${message.subject}`,
+        reference: message._id,
+        referenceModel: 'ContactMessage',
+      })));
+    } catch (notificationError) {
+      console.error('[notification] Failed to notify contact recipients:', notificationError.message);
+    }
     res.status(201).json({ success: true, message });
   } catch (error) { next(error); }
 };

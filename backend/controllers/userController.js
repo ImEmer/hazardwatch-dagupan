@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import { logActivity } from '../utils/logActivity.js';
+import { createNotification } from '../utils/createNotification.js';
 
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
 const listFields = 'name email role barangay status isActive lastLogin createdAt';
@@ -182,6 +183,17 @@ export const suspendUser = async (req, res, next) => {
     if (!Number.isFinite(until.getTime()) || until <= new Date()) return res.status(400).json({ success: false, message: 'A valid suspension duration is required.' });
     target.status = 'suspended'; target.isActive = false; target.suspendedUntil = until; target.suspensionReason = String(req.body.reason || 'Temporarily suspended by administrator').trim(); target.suspendedBy = req.user._id;
     await target.save({ validateBeforeSave: false });
+    if (['superadmin', 'admin', 'barangay'].includes(target.role)) {
+      await createNotification({
+        recipientId: target._id,
+        recipientRole: target.role,
+        type: 'account_suspended',
+        title: 'Account Suspended',
+        message: `Your account has been suspended until ${until.toLocaleDateString()}.`,
+        reference: target._id,
+        referenceModel: 'User',
+      });
+    }
     res.json({ success: true, user: target.toJSON() });
   } catch (error) { next(error); }
 };
@@ -195,6 +207,17 @@ export const banUser = async (req, res, next) => {
     if (await isLastSuperadmin(target)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be banned.' });
     target.status = 'banned'; target.isActive = false; target.suspendedUntil = undefined; target.suspensionReason = String(req.body.reason || 'Account permanently banned.').trim(); target.suspendedBy = req.user._id;
     await target.save({ validateBeforeSave: false });
+    if (['superadmin', 'admin', 'barangay'].includes(target.role)) {
+      await createNotification({
+        recipientId: target._id,
+        recipientRole: target.role,
+        type: 'account_banned',
+        title: 'Account Banned',
+        message: 'Your account has been permanently banned.',
+        reference: target._id,
+        referenceModel: 'User',
+      });
+    }
     res.json({ success: true, user: target.toJSON() });
   } catch (error) { next(error); }
 };

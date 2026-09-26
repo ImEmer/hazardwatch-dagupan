@@ -20,8 +20,8 @@ The browser loads the React/Vite SPA from Vercel. Axios sends authenticated JSON
 flowchart LR
   Citizen[Citizen] -->|registration, login, report, contact| HW((HazardWatch))
   Staff[Admin / Staff / Barangay] -->|review, assign, update, statistics| HW
-  HW -->|status, notifications, activity| Citizen
-  HW -->|operational views| Staff
+  HW -->|status| Citizen
+  HW -->|notifications, activity, operational views| Staff
   HW <-->|data persistence| DB[(MongoDB Atlas)]
   HW -->|image storage| Media[Cloudinary]
   Citizen <-->|map tiles/geocoding| Maps[OpenStreetMap/Nominatim]

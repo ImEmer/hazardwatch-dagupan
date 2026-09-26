@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { confirmAction } from '../../services/alerts';
+import NotificationBell from '../common/NotificationBell';
 
 const items = [
   { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin', 'staff'] },
@@ -13,6 +14,7 @@ const items = [
   { to: '/admin/activity', label: 'Activity', roles: ['admin'] },
   { to: '/superadmin/activity', label: 'Activity', roles: ['superadmin'] },
   { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'] },
+  { to: '/admin/notifications', label: 'Notifications', roles: ['superadmin', 'admin'] },
   { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin', 'staff'] },
 ];
 
@@ -27,7 +29,7 @@ const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const isDark = theme === 'dark';
   const visibleItems = items.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
-    if (user?.role === 'superadmin' && ['/admin/reports', '/admin/map', '/admin/users', '/admin/settings'].includes(item.to)) return { ...item, to: item.to.replace('/admin', '/superadmin') };
+    if (user?.role === 'superadmin' && ['/admin/reports', '/admin/map', '/admin/users', '/admin/notifications', '/admin/settings'].includes(item.to)) return { ...item, to: item.to.replace('/admin', '/superadmin') };
     return item;
   });
 
@@ -62,10 +64,12 @@ const AdminSidebar = () => {
   const sidebar = <aside className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r transition-transform duration-300 lg:z-40 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-800'}`}>
     <div className={`flex items-center justify-between border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
       <p className="text-lg font-bold tracking-tight">HazardWatch</p>
+      <div className="flex items-center gap-1"><NotificationBell />
       <button type="button" onClick={() => setIsOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-white/10 lg:hidden" aria-label="Close menu"><MenuIcon close /></button>
       <button type="button" onClick={toggleTheme} className={`relative hidden h-8 w-14 items-center rounded-full border p-1 transition lg:flex ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-slate-100'}`} aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`} title={`Switch to ${isDark ? 'light' : 'dark'} theme`}>
         <span className={`flex h-6 w-6 items-center justify-center rounded-full transition-transform ${isDark ? 'translate-x-0 bg-slate-800 text-blue-200' : 'translate-x-6 bg-white text-amber-500 shadow-sm'}`}><span aria-hidden="true">{isDark ? '◐' : '☼'}</span></span>
       </button>
+      </div>
     </div>
     <div className={`border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><p className="text-xs uppercase tracking-[0.2em] text-gray-400">Signed in as</p><p className="mt-2 font-semibold">{user?.name || 'User'}</p><p className={`text-xs capitalize ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>{user?.role || 'staff'}</p></div>
     <nav className="flex-1 space-y-1 px-3 py-4">{visibleItems.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setIsOpen(false)} className={linkClass}>{item.label}</NavLink>)}</nav>

@@ -78,16 +78,18 @@ All user endpoints require admin or superadmin authorization.
 
 | # | Method | Endpoint | Access | Purpose |
 |---:|---|---|---|---|
-| 47 | GET | `/notifications` | Authenticated | List role/scope notifications. |
-| 48 | PATCH | `/notifications/:id/read` | Authenticated | Mark notification read with ownership check. |
-| 49 | GET | `/activity/all` | Superadmin | Full activity log. |
-| 50 | GET | `/activity/public` | Admin/superadmin | User/barangay activity. |
-| 51 | GET | `/activity/barangay/:barangay` | Staff | Barangay activity; barangay self-only. |
-| 52 | GET | `/activity/me` | Authenticated | Current-user activity. |
-| 53 | GET | `/activity` | Authenticated | Role-dispatched activity view. |
-| 54 | POST | `/contact` | Public | Submit validated contact message. |
-| 55 | GET | `/contact` | Admin/superadmin | List contact messages. |
-| 56 | PATCH | `/contact/:id/status` | Admin/superadmin | Change contact status. |
+| 47 | GET | `/notifications` | Admin/superadmin/barangay | List caller-owned notifications with filter and pagination. |
+| 48 | PATCH | `/notifications/read-all` | Admin/superadmin/barangay | Mark all caller-owned notifications as read. |
+| 49 | PATCH | `/notifications/:id/read` | Admin/superadmin/barangay | Mark an owned notification as read. |
+| 50 | PATCH | `/notifications/:id/unread` | Admin/superadmin/barangay | Mark an owned notification as unread. |
+| 51 | GET | `/activity/all` | Superadmin | Full activity log. |
+| 52 | GET | `/activity/public` | Admin/superadmin | User/barangay activity. |
+| 53 | GET | `/activity/barangay/:barangay` | Staff | Barangay activity; barangay self-only. |
+| 54 | GET | `/activity/me` | Authenticated | Current-user activity. |
+| 55 | GET | `/activity` | Authenticated | Role-dispatched activity view. |
+| 56 | POST | `/contact` | Public | Submit validated contact message. |
+| 57 | GET | `/contact` | Admin/superadmin | List contact messages. |
+| 58 | PATCH | `/contact/:id/status` | Admin/superadmin | Change contact status. |
 
 ## Common responses
 

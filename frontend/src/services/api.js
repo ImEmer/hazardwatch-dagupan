@@ -69,3 +69,10 @@ export const analyticsApi = {
   getSessions: () => api.get('/analytics/sessions'),
 };
 
+export const notificationApi = {
+  getNotifications: (params) => api.get('/notifications', { params }),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAsUnread: (id) => api.patch(`/notifications/${id}/unread`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+};
+
