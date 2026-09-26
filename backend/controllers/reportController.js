@@ -26,8 +26,11 @@ const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export const getPublicReports = async (req, res, next) => {
   try {
-    const { page = 1, limit = 5000, status, category, priority, barangay, includeResolved } = req.query;
-    const pageSize = Math.min(5000, Math.max(1, Number(limit) || 5000));
+    const { page = 1, limit = 500, status, category, priority, barangay, includeResolved, bounds } = req.query;
+    const requestedPage = Number(page);
+    const requestedLimit = Number(limit);
+    const pageNumber = Math.max(1, Number.isFinite(requestedPage) ? Math.floor(requestedPage) : 1);
+    const pageSize = Math.min(500, Math.max(1, Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 500));
     const statusFilter = includeResolved === 'true' ? { $nin: ['Closed'] } : { $nin: ['Resolved', 'Closed'] };
     const filter = { deletedAt: null, archived: { $ne: true }, isActive: { $ne: false }, status: statusFilter };
     if (status && status !== 'Closed' && (includeResolved === 'true' || status !== 'Resolved')) filter.status = status;
@@ -35,11 +38,42 @@ export const getPublicReports = async (req, res, next) => {
     if (priority) filter.priority = priority;
     if (barangay) filter.barangay = barangay;
 
-    const pageNumber = Math.max(1, Number(page) || 1);
+    if (bounds !== undefined) {
+      const values = typeof bounds === 'string' ? bounds.split(',').map(Number) : [];
+      if (
+        values.length !== 4
+        || !values.every(Number.isFinite)
+        || values[0] < -90 || values[0] > 90
+        || values[2] < -90 || values[2] > 90
+        || values[1] < -180 || values[1] > 180
+        || values[3] < -180 || values[3] > 180
+        || values[0] >= values[2]
+        || values[1] >= values[3]
+      ) {
+        return res.status(400).json({ success: false, message: 'Bounds must be valid swLat,swLng,neLat,neLng coordinates.' });
+      }
+
+      const [swLat, swLng, neLat, neLng] = values;
+      filter.location = {
+        $geoWithin: {
+          $geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [swLng, swLat],
+              [neLng, swLat],
+              [neLng, neLat],
+              [swLng, neLat],
+              [swLng, swLat],
+            ]],
+          },
+        },
+      };
+    }
+
     const skip = (pageNumber - 1) * pageSize;
     const [reports, total] = await Promise.all([
       Report.find(filter)
-        .select('_id category description status priority location address barangay createdAt')
+        .select('_id title category description status priority location address barangay createdAt')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(pageSize)

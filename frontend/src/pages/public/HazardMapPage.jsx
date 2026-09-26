@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import InteractiveMap from '../../components/InteractiveMap';
 import api from '../../services/api';
@@ -13,36 +13,60 @@ const HazardMapPage = () => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const { token } = useAuth();
-  useEffect(() => {
-    let cancelled = false;
-    const fetchReports = async () => {
-      try {
-        setLoading(true);
-        setFetchError('');
-        const allReports = [];
-        let page = 1;
-        let pages = 1;
-        while (page <= pages) {
-          const { data } = await api.get('/reports/public', { params: { page, limit: 5000, includeResolved: 'true' } });
-          allReports.push(...(data.reports || []));
-          pages = Number(data.pagination?.pages || page);
-          page += 1;
-        }
-        if (!cancelled) {
-          setMapReports(allReports);
-          console.log('[user map] Reports loaded:', allReports.length);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('[user map] Error:', error.response?.data || error.message);
-          setFetchError(error.response?.data?.message || error.message || 'Unable to load reports.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+  const latestBoundsRef = useRef(null);
+  const fetchTimerRef = useRef(null);
+  const requestControllerRef = useRef(null);
+
+  const fetchReportsByBounds = useCallback(async (bounds) => {
+    if (!bounds) return;
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
+    const boundsParam = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
+
+    setLoading(true);
+    setFetchError('');
+    try {
+      const { data } = await api.get('/reports/public', {
+        params: { bounds: boundsParam, limit: 500, includeResolved: 'true' },
+        timeout: 30000,
+        signal: controller.signal,
+      });
+      if (!controller.signal.aborted) {
+        const nextReports = data.reports || [];
+        setMapReports(nextReports);
+        console.log('[user map] Reports loaded for viewport:', nextReports.length);
       }
+    } catch (error) {
+      if (!controller.signal.aborted && error.code !== 'ERR_CANCELED') {
+        console.error('[user map] Error:', error.response?.data || error.message);
+        setFetchError('Unable to load reports. Please try again.');
+      }
+    } finally {
+      if (requestControllerRef.current === controller) {
+        requestControllerRef.current = null;
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  const handleBoundsChange = useCallback((bounds) => {
+    latestBoundsRef.current = bounds;
+    window.clearTimeout(fetchTimerRef.current);
+    requestControllerRef.current?.abort();
+    requestControllerRef.current = null;
+    setLoading(true);
+    setFetchError('');
+    fetchTimerRef.current = window.setTimeout(() => fetchReportsByBounds(bounds), 500);
+  }, [fetchReportsByBounds]);
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(fetchTimerRef.current);
+      const controller = requestControllerRef.current;
+      requestControllerRef.current = null;
+      controller?.abort();
     };
-    fetchReports();
-    return () => { cancelled = true; };
   }, []);
   const visibleReports = mapReports.filter((report) => ['Pending', 'In Progress', 'Resolved'].includes(report.status));
   const { theme } = useTheme();
@@ -90,17 +114,30 @@ const HazardMapPage = () => {
             </select>
           </div>
           <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} />
-          {(loading || fetchError || visibleReports.length === 0) && (
+          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} onBoundsChange={handleBoundsChange} />
+          {loading && (
+            <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">
+              Loading reports...
+            </div>
+          )}
+          {fetchError && (
+            <div role="alert" className="absolute right-5 top-16 z-20 max-w-sm rounded-lg bg-red-600 px-4 py-3 text-sm text-white shadow-lg">
+              <p>{fetchError}</p>
+              <button
+                type="button"
+                className="mt-2 rounded border border-white/70 px-3 py-1 font-semibold hover:bg-white/10"
+                onClick={() => latestBoundsRef.current && fetchReportsByBounds(latestBoundsRef.current)}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {!loading && !fetchError && visibleReports.length === 0 && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
               <div className="rounded-2xl border border-slate-700 bg-slate-900/80 px-6 py-5 text-center text-slate-200 shadow-xl">
-                {!loading && !fetchError && <div className="text-2xl" aria-hidden="true">⚠</div>}
-                <h2 className="mt-2 font-semibold">
-                  {loading ? 'Loading reports...' : fetchError ? 'Unable to load reports' : 'No reports to show'}
-                </h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {loading ? 'Fetching the latest community reports.' : fetchError || 'There are no hazard reports yet.'}
-                </p>
+                <div className="text-2xl" aria-hidden="true">⚠</div>
+                <h2 className="mt-2 font-semibold">No reports to show</h2>
+                <p className="mt-1 text-sm text-slate-400">There are no hazard reports in this map view.</p>
               </div>
             </div>
           )}

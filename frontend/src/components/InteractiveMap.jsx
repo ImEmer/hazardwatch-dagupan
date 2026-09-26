@@ -18,7 +18,8 @@ const InteractiveMap = ({
     showClickInstruction = false,
     showSelectedMarker = false,
     showHeatmap = false,
-    flyTo = null
+    flyTo = null,
+    onBoundsChange,
 }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
@@ -164,6 +165,14 @@ const InteractiveMap = ({
         });
     }, [flyTo, mapReady]);
 
+    useEffect(() => {
+        if (!map.current || !mapReady || !onBoundsChange) return;
+        const reportBounds = () => onBoundsChange(map.current.getBounds());
+        map.current.on('moveend', reportBounds);
+        reportBounds();
+        return () => map.current?.off('moveend', reportBounds);
+    }, [mapReady, onBoundsChange]);
+
     // Update report markers
     useEffect(() => {
         if (!map.current || !mapReady) return;
@@ -178,17 +187,28 @@ const InteractiveMap = ({
         clusteredRef.current = false;
         if (showHeatmap) return;
 
-        if (reports.length > 1000) {
+        if (reports.length > 100) {
             const features = reports.flatMap((report) => {
                 const coordinates = report.location?.coordinates;
                 if (!Array.isArray(coordinates) || coordinates.length !== 2) return [];
                 let [reportLng, reportLat] = coordinates.map(Number);
                 if (Math.abs(reportLng) <= 90 && Math.abs(reportLat) > 90) [reportLng, reportLat] = [reportLat, reportLng];
                 if (!Number.isFinite(reportLng) || !Number.isFinite(reportLat)) return [];
-                return [{ type: 'Feature', geometry: { type: 'Point', coordinates: [reportLng, reportLat] }, properties: { status: report.status || 'Pending' } }];
+                return [{
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [reportLng, reportLat] },
+                    properties: {
+                        id: String(report._id || report.id || ''),
+                        status: report.status || 'Pending',
+                        category: report.category || 'Hazard',
+                        description: report.description || report.title || 'Hazard report',
+                        address: report.address || '',
+                        createdAt: report.createdAt || '',
+                    },
+                }];
             });
             map.current.addSource('reports-clustered', { type: 'geojson', data: { type: 'FeatureCollection', features }, cluster: true, clusterMaxZoom: 14, clusterRadius: 45 });
-            map.current.addLayer({ id: 'reports-cluster-points', type: 'circle', source: 'reports-clustered', filter: ['has', 'point_count'], paint: { 'circle-color': '#3b82f6', 'circle-radius': ['step', ['get', 'point_count'], 18, 100, 24, 750, 32], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+            map.current.addLayer({ id: 'reports-cluster-points', type: 'circle', source: 'reports-clustered', filter: ['has', 'point_count'], paint: { 'circle-color': ['step', ['get', 'point_count'], '#3b82f6', 10, '#eab308', 50, '#ef4444'], 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 20, 50, 25], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
             map.current.addLayer({ id: 'reports-cluster-count', type: 'symbol', source: 'reports-clustered', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } });
             map.current.addLayer({ id: 'reports-unclustered-points', type: 'circle', source: 'reports-clustered', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['match', ['get', 'status'], 'Pending', '#eab308', 'In Progress', '#3b82f6', 'Resolved', '#10b981', '#6b7280'], 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
             const expandClusters = (event) => {
@@ -198,14 +218,72 @@ const InteractiveMap = ({
                     if (!error) map.current.easeTo({ center: features[0].geometry.coordinates, zoom });
                 });
             };
+            const showReportPopup = (event) => {
+                const features = map.current.queryRenderedFeatures(event.point, { layers: ['reports-unclustered-points'] });
+                if (!features.length) return;
+                const feature = features[0];
+                const properties = feature.properties;
+                const content = document.createElement('div');
+                content.className = 'p-2 max-w-xs';
+
+                const heading = document.createElement('h3');
+                heading.className = 'font-bold text-gray-800';
+                heading.textContent = properties.category || 'Hazard';
+                content.appendChild(heading);
+
+                const description = document.createElement('p');
+                description.className = 'text-sm text-gray-600 mt-1';
+                description.textContent = properties.description || 'Hazard report';
+                content.appendChild(description);
+
+                const status = document.createElement('p');
+                status.className = 'text-xs text-gray-500 mt-2';
+                status.textContent = `Status: ${properties.status || 'Pending'}`;
+                content.appendChild(status);
+
+                if (properties.createdAt) {
+                    const createdAt = document.createElement('p');
+                    createdAt.className = 'text-xs text-gray-400 mt-1';
+                    createdAt.textContent = new Date(properties.createdAt).toLocaleDateString();
+                    content.appendChild(createdAt);
+                }
+
+                if (properties.address) {
+                    const address = document.createElement('p');
+                    address.className = 'text-xs text-gray-500 mt-1 break-words';
+                    address.textContent = properties.address;
+                    content.appendChild(address);
+                }
+
+                if (properties.id) {
+                    const link = document.createElement('a');
+                    link.className = 'mt-2 inline-block text-sm font-medium text-blue-600';
+                    link.href = `/reports/${encodeURIComponent(properties.id)}`;
+                    link.textContent = 'View report';
+                    content.appendChild(link);
+                }
+
+                new maplibregl.Popup({ offset: 8, closeButton: true })
+                    .setLngLat(feature.geometry.coordinates.slice())
+                    .setDOMContent(content)
+                    .addTo(map.current);
+            };
+            const setClusterCursor = () => { map.current.getCanvas().style.cursor = 'pointer'; };
+            const clearClusterCursor = () => { map.current.getCanvas().style.cursor = ''; };
             map.current.on('click', 'reports-cluster-points', expandClusters);
-            map.current.on('mouseenter', 'reports-cluster-points', () => { map.current.getCanvas().style.cursor = 'pointer'; });
-            map.current.on('mouseleave', 'reports-cluster-points', () => { map.current.getCanvas().style.cursor = ''; });
+            map.current.on('click', 'reports-unclustered-points', showReportPopup);
+            map.current.on('mouseenter', 'reports-cluster-points', setClusterCursor);
+            map.current.on('mouseleave', 'reports-cluster-points', clearClusterCursor);
+            map.current.on('mouseenter', 'reports-unclustered-points', setClusterCursor);
+            map.current.on('mouseleave', 'reports-unclustered-points', clearClusterCursor);
             clusteredRef.current = true;
             return () => {
                 map.current?.off('click', 'reports-cluster-points', expandClusters);
-                map.current?.off('mouseenter', 'reports-cluster-points');
-                map.current?.off('mouseleave', 'reports-cluster-points');
+                map.current?.off('click', 'reports-unclustered-points', showReportPopup);
+                map.current?.off('mouseenter', 'reports-cluster-points', setClusterCursor);
+                map.current?.off('mouseleave', 'reports-cluster-points', clearClusterCursor);
+                map.current?.off('mouseenter', 'reports-unclustered-points', setClusterCursor);
+                map.current?.off('mouseleave', 'reports-unclustered-points', clearClusterCursor);
             };
         }
 

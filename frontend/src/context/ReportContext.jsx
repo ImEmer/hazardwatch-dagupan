@@ -5,30 +5,8 @@
         const ReportContext = createContext();
         const INITIAL_REPORTS = [];
 
-        const decodeJwtPayload = (jwt) => {
-            if (!jwt || typeof jwt !== 'string') return null;
-
-            try {
-                const payload = jwt.split('.')[1];
-                if (!payload) return null;
-                const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-                const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
-                return JSON.parse(atob(padded));
-            } catch (error) {
-                return null;
-            }
-        };
-
-        const hasValidToken = (jwt) => {
-            if (!jwt) return false;
-            const decoded = decodeJwtPayload(jwt);
-            if (!decoded || !decoded.exp) return true;
-            return Number(decoded.exp) * 1000 > Date.now();
-        };
-
         export const ReportProvider = ({ children }) => {
         const { token, user } = useAuth();
-        const isTokenValid = hasValidToken(token);
         const canAccessStaffReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
         const [reports, setReports] = useState(INITIAL_REPORTS);
         const [publicReports, setPublicReports] = useState(INITIAL_REPORTS);
@@ -40,19 +18,15 @@
             setReports([]);
         }, []);
 
-        const fetchPublicReports = useCallback(async () => {
+        const fetchPublicReports = useCallback(async (bounds) => {
+            if (typeof bounds !== 'string' || !bounds) return [];
+
             try {
-                const nextReports = [];
-                let page = 1;
-                let pages = 1;
-                do {
-                    const response = await api.get('/reports/public', {
-                        params: { page, limit: 5000, includeResolved: 'true' },
-                    });
-                    nextReports.push(...(response.data?.reports || []));
-                    pages = Number(response.data?.pagination?.pages || page);
-                    page += 1;
-                } while (page <= pages);
+                const response = await api.get('/reports/public', {
+                    params: { bounds, limit: 500, includeResolved: 'true' },
+                    timeout: 30000,
+                });
+                const nextReports = response.data?.reports || [];
                 setPublicReports(nextReports);
                 if (!canAccessStaffReports) {
                     setReports(nextReports);
@@ -73,6 +47,8 @@
         }, [canAccessStaffReports]);
 
         const fetchReports = useCallback(async () => {
+            if (!canAccessStaffReports) return [];
+
             setReportsLoading(true);
             setReportsError('');
             try {
@@ -86,17 +62,7 @@
                     return nextReports;
                 }
 
-                if (!token && !isTokenValid) {
-                    return fetchPublicReports();
-                }
-
-                if (token && !isTokenValid) {
-                    setReports([]);
-                    setPublicReports([]);
-                    return [];
-                }
-
-                return fetchPublicReports();
+                return [];
             } catch (error) {
                 const status = error.response?.status;
                 if (status === 401 || status === 403) {
@@ -109,7 +75,7 @@
             } finally {
                 setReportsLoading(false);
             }
-        }, [canAccessStaffReports, fetchPublicReports, isTokenValid, token]);
+        }, [canAccessStaffReports, token]);
 
         useEffect(() => {
             const handleReportsUpdated = () => {
@@ -128,22 +94,9 @@
                 return undefined;
             }
 
-            fetchPublicReports().catch(() => {});
-
-            if (!token || !user) {
-                return undefined;
-            }
-
-            const interval = window.setInterval(() => {
-                if (isTokenValid && token && user) fetchReports().catch(() => {});
-            }, 30000);
-            const handleFocus = () => fetchReports().catch(() => {});
-            window.addEventListener('focus', handleFocus);
-            return () => {
-            window.clearInterval(interval);
-            window.removeEventListener('focus', handleFocus);
-            };
-        }, [canAccessStaffReports, fetchPublicReports, fetchReports, isTokenValid, token, user?._id, user?.role]);
+            setReportsLoading(false);
+            return undefined;
+        }, [canAccessStaffReports, fetchReports]);
 
         const addReport = async (newReport, token) => {
             const selectedFiles = Array.from(newReport?.photos || (newReport?.photoFile ? [newReport.photoFile] : []));
@@ -190,7 +143,6 @@
             setReports(prev => [report, ...prev]);
             setPublicReports(prev => [report, ...prev]);
             window.dispatchEvent(new Event('hw:reports-updated'));
-            fetchPublicReports().catch(() => {});
             return report;
             } catch (error) {
             throw new Error(error.response?.data?.message || 'Unable to save the report.');
