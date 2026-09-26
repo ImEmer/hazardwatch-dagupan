@@ -8,31 +8,92 @@ const CATEGORY_COLORS = {
     ...HAZARD_CATEGORY_COLORS,
 };
 
-const PRIORITY_MARKER_COLORS = { Urgent: '#dc2626', High: '#f97316', Medium: '#eab308', Low: '#84cc16' };
+const STATUS_MARKER_COLORS = { Pending: '#eab308', 'In Progress': '#3b82f6', Resolved: '#10b981' };
 
-const addDangerMarkerImage = (mapInstance) => {
-    if (mapInstance.hasImage('hazard-danger')) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = 36;
-    canvas.height = 36;
-    const context = canvas.getContext('2d');
-    context.fillStyle = '#ffffff';
-    context.beginPath();
-    context.moveTo(18, 2);
-    context.lineTo(34, 32);
-    context.lineTo(2, 32);
-    context.closePath();
-    context.fill();
-    context.globalCompositeOperation = 'destination-out';
-    context.beginPath();
-    context.moveTo(18, 7);
-    context.lineTo(29, 28);
-    context.lineTo(7, 28);
-    context.closePath();
-    context.fill();
-    context.fillRect(16, 13, 4, 8);
-    context.fillRect(16, 23, 4, 3);
-    mapInstance.addImage('hazard-danger', context.getImageData(0, 0, 36, 36), { sdf: true });
+const clusterStatusColor = (properties) => {
+    const pending = Number(properties.pending_count || 0);
+    const inProgress = Number(properties.in_progress_count || 0);
+    const resolved = Number(properties.resolved_count || 0);
+    if (pending >= inProgress && pending >= resolved) return STATUS_MARKER_COLORS.Pending;
+    if (inProgress >= resolved) return STATUS_MARKER_COLORS['In Progress'];
+    return STATUS_MARKER_COLORS.Resolved;
+};
+
+const createDangerIcon = (color, count, size) => {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 48 48');
+    icon.setAttribute('width', String(size));
+    icon.setAttribute('height', String(size));
+    icon.setAttribute('aria-hidden', 'true');
+    const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    triangle.setAttribute('d', 'M24 3 46 44H2L24 3Z');
+    triangle.setAttribute('fill', color);
+    triangle.setAttribute('stroke', '#ffffff');
+    triangle.setAttribute('stroke-width', '2');
+    triangle.setAttribute('stroke-linejoin', 'round');
+    icon.appendChild(triangle);
+    if (count) {
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', '24');
+        label.setAttribute('y', '32');
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('font-family', 'Arial, sans-serif');
+        label.setAttribute('font-size', count.length > 3 ? '12' : '15');
+        label.setAttribute('font-weight', '700');
+        label.setAttribute('fill', '#ffffff');
+        label.textContent = count;
+        icon.appendChild(label);
+    } else {
+        const mark = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        mark.setAttribute('d', 'M24 15v10m0 5v.1');
+        mark.setAttribute('stroke', '#ffffff');
+        mark.setAttribute('stroke-width', '3');
+        mark.setAttribute('stroke-linecap', 'round');
+        icon.appendChild(mark);
+    }
+    return icon;
+};
+
+const createClusterMarkerElement = (markerStyle, color, count) => {
+    const size = Math.min(64, Math.max(42, 32 + String(count).length * 8));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', `${count} reports in cluster`);
+    button.title = `${count} reports`;
+    button.style.width = `${size}px`;
+    button.style.height = `${size}px`;
+    button.style.padding = '0';
+    button.style.border = '0';
+    button.style.background = 'transparent';
+    button.style.cursor = 'pointer';
+    button.style.display = 'grid';
+    button.style.placeItems = 'center';
+    button.style.filter = 'drop-shadow(0 2px 4px rgba(15,23,42,.45))';
+
+    if (markerStyle === 'danger') {
+        button.appendChild(createDangerIcon(color, String(count), size));
+        return button;
+    }
+
+    const shape = document.createElement('span');
+    shape.style.width = markerStyle === 'pin' ? `${Math.round(size * 0.76)}px` : `${size}px`;
+    shape.style.height = markerStyle === 'pin' ? `${Math.round(size * 0.76)}px` : `${size}px`;
+    shape.style.display = 'grid';
+    shape.style.placeItems = 'center';
+    shape.style.backgroundColor = color;
+    shape.style.border = '2px solid #ffffff';
+    shape.style.borderRadius = markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
+    shape.style.transform = markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
+    const label = document.createElement('span');
+    label.textContent = String(count);
+    label.style.color = '#ffffff';
+    label.style.font = `700 ${String(count).length > 3 ? 10 : 13}px Arial, sans-serif`;
+    label.style.lineHeight = '1';
+    label.style.textShadow = '0 1px 2px rgba(15,23,42,.8)';
+    label.style.transform = markerStyle === 'pin' ? 'rotate(45deg)' : '';
+    shape.appendChild(label);
+    button.appendChild(shape);
+    return button;
 };
 
 const createReportPopupContent = (report) => {
@@ -240,83 +301,126 @@ const InteractiveMap = ({
         return () => map.current?.off('moveend', reportBounds);
     }, [mapReady, onBoundsChange]);
 
-    // Update report markers
+    // Rebuild visible cluster/report markers after MapLibre finishes loading the current view.
     useEffect(() => {
-        if (!map.current || !mapReady) return;
+        if (!map.current || !mapReady) return undefined;
 
+        const sourceId = 'reports-clustered';
         markersRef.current.forEach((marker) => marker.remove());
         markersRef.current = [];
-        if (showHeatmap) return;
+        if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
+        if (showHeatmap) return undefined;
 
-        reports.forEach((report) => {
-            if (!report.location || !report.location.coordinates) return;
-
-            let [lng, lat] = report.location.coordinates.map(Number);
-            if (Math.abs(lng) <= 90 && Math.abs(lat) > 90) [lng, lat] = [lat, lng];
-            if (typeof lng !== 'number' || typeof lat !== 'number' || Number.isNaN(lng) || Number.isNaN(lat)) return;
-            if (import.meta.env.DEV) console.debug('Report coords:', report.location.coordinates, 'normalized:', [lng, lat]);
-
-                    const baseColor =
-                colorBy === 'status'
-                    ? (typeof STATUS_COLORS[report.status] === 'object' ? STATUS_COLORS[report.status].hex : STATUS_COLORS[report.status] || '#6B7280')
-                    : CATEGORY_COLORS[report.category] || '#6B7280';
-                    const color = mapPreferences.markerStyle === 'danger'
-                        ? PRIORITY_MARKER_COLORS[report.priority] || PRIORITY_MARKER_COLORS.Medium
-                        : baseColor;
-
-            const el = document.createElement('div');
-            el.style.width = '16px';
-            el.style.height = '16px';
-            el.style.display = 'grid';
-            el.style.placeItems = 'center';
-            el.style.cursor = 'pointer';
-            el.setAttribute('role', 'img');
-            el.setAttribute('aria-label', `${report.status || 'Pending'} hazard marker`);
-            el.style.boxShadow = '0 2px 5px rgba(15, 23, 42, 0.35)';
-            if (mapPreferences.markerStyle === 'danger') {
-                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                icon.setAttribute('viewBox', '0 0 24 24');
-                icon.setAttribute('width', '22');
-                icon.setAttribute('height', '22');
-                icon.setAttribute('aria-hidden', 'true');
-                const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                triangle.setAttribute('d', 'M12 3.5 21 20H3L12 3.5Z');
-                triangle.setAttribute('fill', color);
-                triangle.setAttribute('stroke', '#ffffff');
-                triangle.setAttribute('stroke-width', '1.5');
-                triangle.setAttribute('stroke-linejoin', 'round');
-                const exclamation = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                exclamation.setAttribute('d', 'M12 9v5m0 2.5v.1');
-                exclamation.setAttribute('stroke', '#ffffff');
-                exclamation.setAttribute('stroke-width', '2');
-                exclamation.setAttribute('stroke-linecap', 'round');
-                icon.append(triangle, exclamation);
-                el.appendChild(icon);
-            } else {
-                const visual = document.createElement('span');
-                visual.style.display = 'block';
-                visual.style.width = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
-                visual.style.height = mapPreferences.markerStyle === 'pin' ? '12px' : '16px';
-                visual.style.borderRadius = mapPreferences.markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
-                visual.style.transform = mapPreferences.markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
-                visual.style.backgroundColor = color;
-                visual.style.border = '2px solid #ffffff';
-                el.appendChild(visual);
-            }
-
-            const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
-                .setDOMContent(createReportPopupContent(report));
-
-            const marker = new maplibregl.Marker({
-                element: el,
-                anchor: 'center'
-            })
-                .setLngLat([lng, lat])
-                .setPopup(popup)
-                .addTo(map.current);
-
-            markersRef.current.push(marker);
+        const features = reports.flatMap((report) => {
+            const coordinates = report.location?.coordinates;
+            if (!Array.isArray(coordinates) || coordinates.length !== 2) return [];
+            let [longitude, latitude] = coordinates.map(Number);
+            if (Math.abs(longitude) <= 90 && Math.abs(latitude) > 90) [longitude, latitude] = [latitude, longitude];
+            if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return [];
+            return [{
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [longitude, latitude] },
+                properties: {
+                    id: String(report._id || report.id || ''),
+                    status: report.status || 'Pending',
+                    category: report.category || 'Hazard',
+                    title: report.title || 'Hazard report',
+                    address: report.address || '',
+                    barangay: report.barangay || '',
+                    createdAt: report.createdAt || '',
+                },
+            }];
         });
+
+        map.current.addSource(sourceId, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features },
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 48,
+            clusterProperties: {
+                pending_count: ['+', ['case', ['==', ['get', 'status'], 'Pending'], 1, 0]],
+                in_progress_count: ['+', ['case', ['==', ['get', 'status'], 'In Progress'], 1, 0]],
+                resolved_count: ['+', ['case', ['==', ['get', 'status'], 'Resolved'], 1, 0]],
+            },
+        });
+
+        const renderVisibleMarkers = () => {
+            if (!map.current?.getSource(sourceId) || !map.current.isSourceLoaded(sourceId)) return;
+            markersRef.current.forEach((marker) => marker.remove());
+            markersRef.current = [];
+            const source = map.current.getSource(sourceId);
+            const seen = new Set();
+            const sourceFeatures = map.current.querySourceFeatures(sourceId);
+
+            sourceFeatures.forEach((feature) => {
+                const properties = feature.properties || {};
+                const isCluster = Number(properties.point_count) > 0;
+                const key = isCluster ? `cluster:${properties.cluster_id}` : `report:${properties.id}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                const coordinates = feature.geometry?.coordinates;
+                if (!Array.isArray(coordinates) || coordinates.length < 2) return;
+                const [longitude, latitude] = coordinates;
+                const markerColor = isCluster
+                    ? clusterStatusColor(properties)
+                    : STATUS_MARKER_COLORS[properties.status] || '#6b7280';
+                const element = isCluster
+                    ? createClusterMarkerElement(mapPreferences.markerStyle || 'circle', markerColor, properties.point_count)
+                    : document.createElement('button');
+
+                if (!isCluster) {
+                    element.type = 'button';
+                    element.setAttribute('aria-label', `${properties.status || 'Pending'} hazard: ${properties.title || 'Report'}`);
+                    element.title = properties.title || 'Hazard report';
+                    element.style.width = '20px';
+                    element.style.height = '20px';
+                    element.style.padding = '0';
+                    element.style.border = '0';
+                    element.style.background = 'transparent';
+                    element.style.cursor = 'pointer';
+                    element.style.display = 'grid';
+                    element.style.placeItems = 'center';
+                    element.style.filter = 'drop-shadow(0 2px 3px rgba(15,23,42,.4))';
+
+                    if (mapPreferences.markerStyle === 'danger') {
+                        element.appendChild(createDangerIcon(markerColor, '', 26));
+                    } else {
+                        const visual = document.createElement('span');
+                        visual.style.width = mapPreferences.markerStyle === 'pin' ? '16px' : '20px';
+                        visual.style.height = mapPreferences.markerStyle === 'pin' ? '16px' : '20px';
+                        visual.style.borderRadius = mapPreferences.markerStyle === 'pin' ? '50% 50% 50% 0' : '50%';
+                        visual.style.transform = mapPreferences.markerStyle === 'pin' ? 'translateY(-2px) rotate(-45deg)' : '';
+                        visual.style.backgroundColor = markerColor;
+                        visual.style.border = '2px solid #ffffff';
+                        element.appendChild(visual);
+                    }
+                } else {
+                    element.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        source.getClusterExpansionZoom(properties.cluster_id, (error, expansionZoom) => {
+                            if (!error && map.current) map.current.easeTo({ center: [longitude, latitude], zoom: expansionZoom });
+                        });
+                    });
+                }
+
+                const marker = new maplibregl.Marker({ element, anchor: 'center' })
+                    .setLngLat([longitude, latitude]);
+                if (!isCluster) marker.setPopup(new maplibregl.Popup({ offset: 12, closeButton: true }).setDOMContent(createReportPopupContent(properties)));
+                marker.addTo(map.current);
+                markersRef.current.push(marker);
+            });
+        };
+
+        map.current.on('idle', renderVisibleMarkers);
+        renderVisibleMarkers();
+        return () => {
+            map.current?.off('idle', renderVisibleMarkers);
+            markersRef.current.forEach((marker) => marker.remove());
+            markersRef.current = [];
+            if (map.current?.getSource(sourceId)) map.current.removeSource(sourceId);
+        };
     }, [mapReady, mapPreferences.markerStyle, reports, showHeatmap]);
 
     useEffect(() => {
