@@ -68,8 +68,8 @@ const SuperAdminUsers = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/users', {
-        params: { page, limit: PAGE_SIZE, search: roleKeyword(debouncedSearch) || debouncedSearch.trim() },
+      const response = await api.get('/users/search', {
+        params: { page, limit: PAGE_SIZE, q: roleKeyword(debouncedSearch) || debouncedSearch.trim() },
         headers: { Authorization: `Bearer ${token}` },
       });
       const body = response.data || {};
@@ -250,14 +250,14 @@ const SuperAdminUsers = () => {
                         </span>
                       </td>
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.barangay || '—'}</td>
-                      <td className="px-4 py-4"><span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${user.statusLabel === 'Banned' ? 'border-red-500/30 bg-red-500/10 text-red-300' : user.statusLabel === 'Suspended' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : user.statusLabel === 'Active' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-500/30 bg-slate-500/10 text-slate-300'}`}>{user.statusLabel}</span></td>
+                      <td className="px-4 py-4"><span title={user.status === 'suspended' ? `Suspended until ${user.suspendedUntil ? new Date(user.suspendedUntil).toLocaleString() : 'further notice'}${user.suspensionReason ? `: ${user.suspensionReason}` : ''}` : undefined} className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${user.statusLabel === 'Banned' ? 'border-red-500/30 bg-red-500/10 text-red-300' : user.statusLabel === 'Suspended' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : user.statusLabel === 'Active' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-500/30 bg-slate-500/10 text-slate-300'}`}>{user.statusLabel}</span></td>
                       <td className="px-4 py-4">
                         {canManageTarget(user) ? <div className="flex gap-3">
                           <button type="button" onClick={() => openEditor(user)} title="Edit user" aria-label="Edit user" className="rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                           </button>
                           {canManageTarget(user) && user.status !== 'banned' && <button type="button" onClick={() => setBanningUser(user)} title="Ban Permanently" aria-label={`Ban ${user.email} permanently`} className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 hover:text-red-300"><UserX className="h-4 w-4" aria-hidden="true" /></button>}
-                          {canManageTarget(user) && user.role !== 'admin' && user.role !== 'superadmin' && (user.status === 'suspended' ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 9m0-5v5h-5M20 12a8 8 0 01-13.7 5.7L4 15m0 5v-5h5" /></svg></button> : user.status !== 'banned' && <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M9 9l6 6M15 9l-6 6" /></svg></button>)}
+                          {canManageTarget(user) && (user.status === 'suspended' ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 9m0-5v5h-5M20 12a8 8 0 01-13.7 5.7L4 15m0 5v-5h5" /></svg></button> : user.status !== 'banned' && <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M9 9l6 6M15 9l-6 6" /></svg></button>)}
                         </div> : '—'}
                       </td>
                     </UserRow>

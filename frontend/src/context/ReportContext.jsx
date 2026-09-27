@@ -131,6 +131,7 @@
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));
             payload.append('barangay', String(newReport.barangay || ''));
+            if (newReport.allowDuplicate) payload.append('allowDuplicate', 'true');
             selectedFiles.slice(0, 3).forEach((file, index) => {
             payload.append('images', file, file.name || `photo-${index + 1}.jpg`);
             });
@@ -145,7 +146,8 @@
             window.dispatchEvent(new Event('hw:reports-updated'));
             return report;
             } catch (error) {
-            throw new Error(error.response?.data?.message || 'Unable to save the report.');
+            if (error.response) throw error;
+            throw new Error(error.message || 'Unable to save the report.');
             }
         };
 

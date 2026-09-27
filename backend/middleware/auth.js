@@ -9,6 +9,7 @@ export const protect = async (req, res, next) => {
     if (!header?.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'Authentication required.' });
     const token = header.slice(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.purpose) return res.status(401).json({ success: false, message: 'A full access token is required.' });
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     if (await TokenBlacklist.exists({ token: tokenHash })) return res.status(401).json({ success: false, message: 'Token has been revoked.' });
     const user = await User.findById(decoded.id);

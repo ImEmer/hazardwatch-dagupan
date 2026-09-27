@@ -92,9 +92,10 @@ const parseBounds = (bounds) => {
 };
 
 const reportFilter = (req) => {
-  const { search, status, category, priority, barangay, startDate, endDate, includeResolved, bounds } = req.query;
+  const { status, category, priority, barangay, startDate, endDate, includeResolved, bounds } = req.query;
   const filter = { deletedAt: null, isActive: true, archived: { $ne: true } };
-  if (status) filter.status = status;
+  const normalizedStatus = ['Pending', 'In Progress', 'Resolved', 'Closed'].find((value) => value.toLowerCase() === String(status || '').toLowerCase());
+  if (status) filter.status = normalizedStatus || status;
   else if (includeResolved !== 'true') filter.status = { $nin: ['Resolved', 'Closed'] };
   if (category) filter.category = category;
   if (priority) filter.priority = priority;
@@ -102,12 +103,43 @@ const reportFilter = (req) => {
   else if (barangay) filter.$and = [barangayScope(barangay)];
   const locationFilter = parseBounds(bounds);
   if (locationFilter) filter.location = locationFilter;
-  if (search) { const pattern = new RegExp(escapeRegex(search), 'i'); filter.$and = [...(filter.$and || []), { $or: [{ title: pattern }, { description: pattern }, { address: pattern }] }]; }
   if (startDate || endDate) filter.createdAt = { ...(startDate ? { $gte: new Date(startDate) } : {}), ...(endDate ? { $lte: new Date(`${endDate}T23:59:59.999Z`) } : {}) };
   return filter;
 };
 
+const applyReportSearch = async (filter, value) => {
+  const query = String(value || '').trim();
+  if (!query) return filter;
+  const pattern = new RegExp(escapeRegex(query), 'i');
+  const regexFilter = { $or: [
+    { title: pattern },
+    { description: pattern },
+    { category: pattern },
+    { address: pattern },
+    { barangay: pattern },
+    { assignedBarangay: pattern },
+  ] };
+  const [textMatches, regexMatches] = await Promise.all([
+    Report.find({ $and: [filter, { $text: { $search: query } }] }).select('_id').lean().catch(() => []),
+    Report.find({ $and: [filter, regexFilter] }).select('_id').lean(),
+  ]);
+  const ids = [...new Set([...textMatches, ...regexMatches].map((report) => String(report._id)))];
+  return { $and: [filter, { _id: { $in: ids } }] };
+};
+
 const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+const DUPLICATE_DISTANCE_METERS = 100;
+const DUPLICATE_WINDOW_HOURS = 24;
+
+const cleanupUploadedFiles = async (files = []) => {
+  await Promise.all(files.map(async (file) => {
+    const publicId = file.filename || file.public_id;
+    if (!publicId) return;
+    try { await cloudinary.uploader.destroy(publicId); } catch (error) {
+      console.error('[reports] Failed to clean up rejected upload:', error.message);
+    }
+  }));
+};
 
 export const getPublicReports = async (req, res, next) => {
   try {
@@ -155,7 +187,7 @@ export const getReports = async (req, res, next) => {
     const { page = 1, limit = 10, assignedTo, sortBy = 'createdAt', sortOrder = 'desc', bounds } = req.query;
     const locationFilter = parseBounds(bounds);
     if (bounds !== undefined && !locationFilter) return res.status(400).json({ success: false, message: 'Bounds must be valid swLat,swLng,neLat,neLng coordinates.' });
-    const filter = reportFilter(req);
+    const filter = await applyReportSearch(reportFilter(req), req.query.q ?? req.query.search);
     if (assignedTo) filter.assignedTo = assignedTo;
     const pageNumber = Math.max(1, Number(page) || 1);
     const pageSize = Math.min(500, Math.max(1, Number(limit) || 10));
@@ -171,8 +203,9 @@ export const getArchivedReports = async (req, res, next) => {
     const { page = 1, limit = 10 } = req.query;
     const pageNumber = Math.max(1, Number(page));
     const limitNumber = Math.min(100, Math.max(1, Number(limit)));
-    const filter = { archived: true, deletedAt: null, isActive: true };
+    let filter = { archived: true, deletedAt: null, isActive: true };
     if (req.user.role === 'barangay') Object.assign(filter, barangayScope(req.user.barangay || '__unassigned_barangay__'));
+    filter = await applyReportSearch(filter, req.query.q ?? req.query.search);
     const [reports, total] = await Promise.all([
       Report.find(filter).populate('assignedTo', 'name email').sort({ archivedAt: -1, createdAt: -1 }).skip((pageNumber - 1) * limitNumber).limit(limitNumber),
       Report.countDocuments(filter),
@@ -183,7 +216,8 @@ export const getArchivedReports = async (req, res, next) => {
 
 export const exportReportsCsv = async (req, res, next) => {
   try {
-    const reports = await Report.find(reportFilter(req)).sort({ createdAt: -1 }).lean();
+    const filter = await applyReportSearch(reportFilter(req), req.query.q ?? req.query.search);
+    const reports = await Report.find(filter).sort({ createdAt: -1 }).lean();
     const rows = [
       ['ID', 'Title', 'Category', 'Status', 'Priority', 'Barangay', 'Address', 'Latitude', 'Longitude', 'Reported By', 'Date Submitted'],
       ...reports.map((report) => [report._id, report.title, report.category, report.status, report.priority, report.assignedBarangay || report.barangay, report.address, report.location?.coordinates?.[1], report.location?.coordinates?.[0], report.reportedBy?.name, report.createdAt?.toISOString()]),
@@ -220,6 +254,26 @@ export const createReport = async (req, res, next) => {
     const photoValue = uploadedFiles[0] ? (uploadedFiles[0].path || uploadedFiles[0].secure_url) : (typeof req.body.photo === 'string' ? req.body.photo : '');
     const imageUrls = uploadedFiles.map((file) => file.path || file.secure_url).filter(Boolean);
     const location = typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location;
+    const coordinates = location?.coordinates;
+    const allowDuplicate = req.body.allowDuplicate === true || req.body.allowDuplicate === 'true';
+    const duplicateReport = Array.isArray(coordinates) && coordinates.length === 2
+      ? await Report.findOne({
+        category: req.body.category,
+        'reportedBy.userId': req.user._id,
+        createdAt: { $gte: new Date(Date.now() - DUPLICATE_WINDOW_HOURS * 60 * 60 * 1000) },
+        location: { $near: { $geometry: { type: 'Point', coordinates }, $maxDistance: DUPLICATE_DISTANCE_METERS } },
+      }).select('_id category address barangay location createdAt status').lean()
+      : null;
+    if (duplicateReport && !allowDuplicate) {
+      await cleanupUploadedFiles(uploadedFiles);
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_DETECTED',
+        message: 'You already submitted a similar report within the last 24 hours.',
+        duplicateId: duplicateReport._id,
+        duplicate: duplicateReport,
+      });
+    }
     const report = await Report.create({
       ...req.body,
       title: `${req.body.category} report - ${new Date().toLocaleDateString('en-PH')}`,
@@ -227,6 +281,8 @@ export const createReport = async (req, res, next) => {
       customCategory: req.body.category === 'Other' ? String(req.body.customCategory || '').trim() : '',
       location,
       barangay: req.body.barangay || '',
+      isDuplicate: Boolean(duplicateReport && allowDuplicate),
+      duplicateOf: duplicateReport?._id || null,
       photo: photoValue,
       images: imageUrls.length ? imageUrls : (req.body.images ? (Array.isArray(req.body.images) ? req.body.images : [req.body.images]) : (photoValue ? [photoValue] : [])),
       reportedBy: {

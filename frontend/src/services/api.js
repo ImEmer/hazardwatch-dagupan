@@ -9,7 +9,7 @@ const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
 
 const isAuthRoute = (url = '') => {
-  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
+  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/2fa/') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
 };
 
 const clearStoredSession = () => {
@@ -79,6 +79,15 @@ export const notificationApi = {
 export const preferencesApi = {
   getMine: () => api.get('/users/me/preferences'),
   updateMine: (preferences) => api.patch('/users/me/preferences', preferences),
+};
+
+export const authApi = {
+  enableTwoFactor: () => api.post('/auth/2fa/enable'),
+  verifyTwoFactorSetup: (code) => api.post('/auth/2fa/enable/verify', { code }),
+  disableTwoFactor: (currentPassword) => api.post('/auth/2fa/disable', { currentPassword }),
+  verifyTwoFactorLogin: (tempToken, code) => api.post('/auth/2fa/verify', { tempToken, code }),
+  verifyTwoFactorBackupCode: (tempToken, backupCode) => api.post('/auth/2fa/verify', { tempToken, backupCode }),
+  resendTwoFactorLoginCode: (tempToken) => api.post('/auth/2fa/resend', { tempToken }),
 };
 
 export const systemSettingsApi = {

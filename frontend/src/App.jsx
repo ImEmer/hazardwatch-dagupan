@@ -12,6 +12,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
 import SubmitReport from './pages/public/SubmitReport';
 import LoginPage from './pages/public/LoginPage';
+import TwoFactorPage from './pages/public/TwoFactorPage';
 import RegisterPage from './pages/public/RegisterPage';
 import ForgotPasswordPage from './pages/public/ForgotPasswordPage';
 import EnterResetCodePage from './pages/public/EnterResetCodePage';
@@ -132,6 +133,7 @@ function App() {
             <Route path="/my-reports" element={<PublicPage><MyReportsPage /></PublicPage>} />
             <Route path="/reports/:id" element={<PublicPage><ReportDetailPage /></PublicPage>} />
             <Route path="/profile" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff', 'barangay', 'user']}><PublicPage><ProfilePage /></PublicPage></ProtectedRoute>} />
+            <Route path="/verify-2fa" element={<PublicPage><TwoFactorPage /></PublicPage>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />

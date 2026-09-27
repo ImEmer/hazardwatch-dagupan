@@ -8,6 +8,7 @@ import { reportSubmitLimiter } from '../middleware/rateLimit.js';
 const router = Router();
 router.get('/public', getPublicReports);
 router.get('/export', protect, allowRoles('admin', 'superadmin'), exportReportsCsv);
+router.get('/search', protect, isStaff, validatePagination, getReports);
 router.get('/', protect, isStaff, validatePagination, getReports);
 router.get('/mine', protect, getMyReports);
 router.get('/archived', protect, isStaff, validatePagination, getArchivedReports);

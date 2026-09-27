@@ -6,6 +6,7 @@ import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, PRIORITY_COLORS, REPORT_STAT
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
+import useDebounce from '../../hooks/useDebounce';
 import Skeleton from '../../components/common/Skeleton';
 import Pagination from '../../components/common/Pagination';
 
@@ -19,6 +20,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState(searchParams.get('search') || '');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : 'all');
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
@@ -35,7 +37,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
     let cancelled = false;
     setReportsLoading(true);
     setReportsError('');
-    api.get('/reports', {
+    api.get('/reports/search', {
       params: {
         page,
         limit: PAGE_SIZE,
@@ -44,7 +46,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
         category: categoryFilter === 'all' ? undefined : categoryFilter,
         priority: priorityFilter === 'all' ? undefined : priorityFilter,
         barangay: barangayFilter === 'all' ? undefined : barangayFilter,
-        search: search || undefined,
+        q: debouncedSearch || undefined,
       },
       headers: { Authorization: `Bearer ${token}` },
     }).then((response) => {
@@ -57,22 +59,17 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
       if (!cancelled) setReportsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [barangayFilter, categoryFilter, page, priorityFilter, resolvedOnly, search, statusFilter, token]);
+  }, [barangayFilter, categoryFilter, debouncedSearch, page, priorityFilter, resolvedOnly, statusFilter, token]);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
-      const matchesSearch = [report.title, report.category, report.address || '', report.description]
-        .join(' ')
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
       const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || report.priority === priorityFilter;
       const matchesCategory = categoryFilter === 'all' || report.category === categoryFilter;
       const matchesBarangay = barangayFilter === 'all' || (report.assignedBarangay || report.barangay) === barangayFilter;
       const isArchived = report.archived === true || report.status === 'Closed';
       const isActive = !isArchived && !['Resolved', 'Closed'].includes(report.status);
-      return (resolvedOnly ? report.status === 'Resolved' && !isArchived : isActive) && matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesBarangay;
+      return (resolvedOnly ? report.status === 'Resolved' && !isArchived : isActive) && matchesStatus && matchesPriority && matchesCategory && matchesBarangay;
     });
   }, [reports, resolvedOnly, search, statusFilter, priorityFilter, categoryFilter, barangayFilter]);
 
@@ -260,6 +257,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                     <td className="px-4 py-4">
                       <div>
                         <p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</p>
+                        {report.isDuplicate && <span className="mt-1 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">Duplicate</span>}
                         <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.reportedBy?.name || 'Citizen report'}</p>
                       </div>
                     </td>

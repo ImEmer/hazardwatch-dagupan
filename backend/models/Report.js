@@ -23,13 +23,15 @@ const reportSchema = new mongoose.Schema({
   views: { type: Number, default: 0 },
   archived: { type: Boolean, default: false },
   archivedAt: { type: Date },
+  isDuplicate: { type: Boolean, default: false },
+  duplicateOf: { type: mongoose.Schema.Types.ObjectId, ref: 'Report', default: null },
   isActive: { type: Boolean, default: true },
   seeded: { type: Boolean, default: false, index: true },
   deletedAt: Date,
-}, { timestamps: true });
+}, { timestamps: true, autoIndex: false });
 
 reportSchema.index({ location: '2dsphere' });
-reportSchema.index({ title: 'text', description: 'text', address: 'text' });
+reportSchema.index({ title: 'text', description: 'text', category: 'text', address: 'text', barangay: 'text', assignedBarangay: 'text' });
 reportSchema.index({ status: 1, category: 1, priority: 1 });
 
 export default mongoose.model('Report', reportSchema);

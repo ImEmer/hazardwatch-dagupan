@@ -3,7 +3,7 @@ import { logActivity } from '../utils/logActivity.js';
 import { createNotification } from '../utils/createNotification.js';
 
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
-const listFields = 'name email role barangay status isActive lastLogin createdAt';
+const listFields = 'name email role barangay status isActive suspendedUntil suspensionReason lastLogin createdAt';
 const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
 const manageableRoles = ['admin', 'barangay', 'user'];
 const preferenceKeys = {
@@ -68,7 +68,8 @@ export const updateUserPassword = async (req, res, next) => {
 
 const managedTargetError = (actor, targetUser, action) => {
   if (String(actor._id) === String(targetUser?._id)) return `You cannot ${action} your own account.`;
-  if (!['admin', 'superadmin'].includes(actor.role) || !manageableRoles.includes(targetUser?.role)) {
+  const allowedTargets = actor.role === 'superadmin' ? manageableRoles : actor.role === 'admin' ? ['barangay', 'user'] : [];
+  if (!allowedTargets.includes(targetUser?.role)) {
     return `You do not have permission to ${action} a user with role ${targetUser?.role}.`;
   }
   return null;
@@ -118,16 +119,23 @@ export const getUsers = async (req, res, next) => {
     const requestedPage = Number.parseInt(req.query.page, 10) || 1;
     const requestedLimit = Number.parseInt(req.query.limit, 10) || 10;
     const limit = Math.min(100, Math.max(1, requestedLimit));
-    const search = String(req.query.search || '').trim();
+    const search = String(req.query.q ?? req.query.search ?? '').trim();
     const filter = { status: { $ne: 'deleted' } };
+    const requestedRole = String(req.query.role || '').trim();
+    if (['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(requestedRole)) filter.role = requestedRole;
     if (search) {
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.$or = [
-        { name: { $regex: escapedSearch, $options: 'i' } },
-        { email: { $regex: escapedSearch, $options: 'i' } },
-        { role: { $regex: escapedSearch, $options: 'i' } },
-        { barangay: { $regex: escapedSearch, $options: 'i' } },
-      ];
+      const [textMatches, regexMatches] = await Promise.all([
+        User.find({ $and: [filter, { $text: { $search: search } }] }).select('_id').lean().catch(() => []),
+        User.find({ $and: [filter, { $or: [
+          { name: { $regex: escapedSearch, $options: 'i' } },
+          { email: { $regex: escapedSearch, $options: 'i' } },
+          { role: { $regex: escapedSearch, $options: 'i' } },
+          { barangay: { $regex: escapedSearch, $options: 'i' } },
+        ] }] }).select('_id').lean(),
+      ]);
+      const ids = [...new Set([...textMatches, ...regexMatches].map((user) => String(user._id)))];
+      filter._id = { $in: ids };
     }
     const safeRequestedPage = Math.max(1, requestedPage);
     const startedAt = performance.now();

@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import Pagination from './Pagination';
 import Skeleton from './Skeleton';
+import useDebounce from '../../hooks/useDebounce';
 
 const PAGE_SIZE = 10;
 
@@ -16,11 +17,13 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
   const [reports, setReports] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, total: 0, pages: 1 });
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const debouncedSearch = useDebounce(search, 300);
   const isDark = theme === 'dark';
   const isBarangay = user?.role === 'barangay';
   const panel = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';
@@ -33,7 +36,7 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    api.get('/reports/archived', { params: { page, limit: PAGE_SIZE }, headers: { Authorization: `Bearer ${token}` } })
+    api.get('/reports/archived', { params: { page, limit: PAGE_SIZE, q: debouncedSearch || undefined }, headers: { Authorization: `Bearer ${token}` } })
       .then((response) => {
         if (cancelled) return;
         const nextPagination = response.data?.pagination || { page, limit: PAGE_SIZE, total: 0, pages: 1 };
@@ -52,7 +55,7 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, reloadKey, token]);
+  }, [debouncedSearch, page, reloadKey, token]);
 
   const togglePageSelection = (checked) => {
     setSelectedIds((current) => checked
@@ -96,6 +99,10 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
       </section>
 
       <section className={`overflow-hidden rounded-2xl border shadow-xl ${panel}`}>
+        <div className={`border-b p-4 ${rowBorder}`}>
+          <label htmlFor="archived-report-search" className="sr-only">Search archived reports</label>
+          <input id="archived-report-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); setSelectedIds([]); }} placeholder="Search archived reports" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-blue-500 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+        </div>
         <div className={`flex items-center justify-between gap-3 border-b p-4 ${rowBorder}`}>
           <label className={`inline-flex items-center gap-2 text-sm ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
             <input type="checkbox" aria-label="Select all reports on this page" checked={allSelected} disabled={loading || !reports.length || deleting} onChange={(event) => togglePageSelection(event.target.checked)} />

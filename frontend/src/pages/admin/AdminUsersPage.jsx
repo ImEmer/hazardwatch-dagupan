@@ -76,8 +76,8 @@ const AdminUsersPage = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/users', {
-        params: { page, limit: PAGE_SIZE, search: roleKeyword(debouncedSearch) || debouncedSearch.trim() },
+      const response = await api.get('/users/search', {
+        params: { page, limit: PAGE_SIZE, q: roleKeyword(debouncedSearch) || debouncedSearch.trim() },
         headers: { Authorization: `Bearer ${token}` },
       });
       const body = response.data || {};
@@ -245,10 +245,11 @@ const AdminUsersPage = () => {
   const canManageTarget = (targetUser) => {
     const currentId = currentUser?._id || currentUser?.id;
     const targetId = targetUser?._id || targetUser?.id;
+    const allowedTargets = currentUser?.role === 'superadmin' ? ['admin', 'barangay', 'user'] : ['barangay', 'user'];
     return Boolean(currentUser)
       && String(targetId) !== String(currentId)
       && ['admin', 'superadmin'].includes(currentUser.role)
-      && ['admin', 'barangay', 'user'].includes(targetUser?.role);
+      && allowedTargets.includes(targetUser?.role);
   };
 
   return (
@@ -306,7 +307,7 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.barangay || '—'}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusBadge[user.statusLabel] || statusBadge.Inactive}`}>
+                    <span title={user.status === 'suspended' ? `Suspended until ${user.suspendedUntil ? new Date(user.suspendedUntil).toLocaleString() : 'further notice'}${user.suspensionReason ? `: ${user.suspensionReason}` : ''}` : undefined} className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${user.statusLabel === 'Suspended' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : statusBadge[user.statusLabel] || statusBadge.Inactive}`}>
                       {user.statusLabel}
                     </span>
                   </td>

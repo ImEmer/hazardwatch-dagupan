@@ -17,6 +17,8 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
 import { globalLimiter } from './middleware/rateLimit.js';
+import cron from 'node-cron';
+import { runBackup } from './scripts/backup.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -80,6 +82,16 @@ app.use(errorHandler);
 connectDB().then(async () => {
   if (!await User.exists({ role: 'superadmin', status: { $ne: 'deleted' } })) {
     console.warn('WARNING: No active superadmin account exists in the database.');
+  }
+  if (process.env.BACKUP_CRON_ENABLED === 'true') {
+    const backupConfigPresent = ['B2_KEY_ID', 'B2_APP_KEY', 'B2_BUCKET_ID'].every((key) => process.env[key]);
+    if (!backupConfigPresent) {
+      console.warn('[backup] Cron is enabled but Backblaze credentials are incomplete.');
+    } else {
+      const schedule = process.env.BACKUP_CRON_SCHEDULE || '0 2 * * *';
+      cron.schedule(schedule, () => runBackup().catch(() => {}), { timezone: process.env.BACKUP_TIMEZONE || 'UTC' });
+      console.log(`[backup] Daily backup scheduled: ${schedule} (${process.env.BACKUP_TIMEZONE || 'UTC'}).`);
+    }
   }
   app.listen(port, () => console.log(`HazardWatch API listening on port ${port}`));
 }).catch((error) => {

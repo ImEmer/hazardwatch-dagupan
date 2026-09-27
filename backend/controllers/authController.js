@@ -5,13 +5,17 @@ import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
-import { sendPasswordResetCode, sendVerificationEmail } from '../utils/sendEmail.js';
+import { sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
-export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, preferences: user.preferences });
+export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled, preferences: user.preferences });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
+const privilegedRoles = ['superadmin', 'admin', 'barangay'];
+const createOtp = () => crypto.randomInt(100000, 1000000).toString();
+const createBackupCodes = () => Array.from({ length: 10 }, () => crypto.randomBytes(5).toString('hex').toUpperCase());
+const createLoginChallenge = (user) => jwt.sign({ id: user._id, purpose: 'login-2fa' }, process.env.JWT_SECRET, { expiresIn: '10m' });
 const revokeToken = async (req, decodedToken = jwt.decode(req.headers.authorization.slice(7))) => {
   const token = req.headers.authorization.slice(7);
   if (!decodedToken?.exp) return;
@@ -105,7 +109,7 @@ export const login = async (req, res, next) => {
       return res.status(429).json({ success: false, message: `Too many failed login attempts. Please try again in ${Math.ceil(lockout.retryAfter / 60)} minutes.` });
     }
 
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password +otpCode +otpExpires +otpAttempts +otpBlockedUntil');
     if (!user || !(await user.comparePassword(password))) {
       const failedLogin = recordFailedLogin(req, normalizedEmail);
       if (failedLogin) {
@@ -150,11 +154,182 @@ export const login = async (req, res, next) => {
       || (user.verificationRequired !== false && (!user.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF));
     if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first. Check your inbox for the 6-digit code.', needsVerification: true, email: user.email });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
+    if (privilegedRoles.includes(user.role) && user.twoFactorEnabled) {
+      const now = new Date();
+      if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
+        const retryAfter = Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000);
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({ success: false, message: 'Two-factor verification is temporarily locked. Try again in 15 minutes.' });
+      }
+      if (user.otpBlockedUntil && user.otpBlockedUntil <= now) {
+        user.otpBlockedUntil = undefined;
+        user.otpAttempts = 0;
+      }
+      const code = createOtp();
+      await sendTwoFactorCode({ email: user.email, name: user.name, code });
+      user.otpCode = await bcrypt.hash(code, 12);
+      user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      await user.save({ validateBeforeSave: false });
+      clearFailedLogins(req, normalizedEmail);
+      return res.json({ success: true, requiresOTP: true, tempToken: createLoginChallenge(user), message: 'A security code was sent to your email.' });
+    }
     clearFailedLogins(req, normalizedEmail);
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
     await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     res.json({ success: true, token: issueToken(user), user: publicUser(user) });
+  } catch (error) { next(error); }
+};
+
+export const verifyTwoFactorLogin = async (req, res, next) => {
+  try {
+    const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
+    if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
+    const user = await User.findById(decoded.id).select('+otpCode +otpExpires +otpAttempts +otpBlockedUntil +backupCodes');
+    if (!user || !user.isActive || !privilegedRoles.includes(user.role) || !user.twoFactorEnabled) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
+    const now = new Date();
+    if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
+      res.set('Retry-After', String(Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000)));
+      return res.status(429).json({ success: false, message: 'Too many incorrect security codes. Try again in 15 minutes.' });
+    }
+    if (user.status === 'suspended' && user.suspendedUntil && user.suspendedUntil <= now) {
+      user.status = 'active';
+      user.isActive = true;
+      user.suspendedUntil = undefined;
+      user.suspensionReason = undefined;
+      user.suspendedBy = undefined;
+    }
+    if (user.status !== 'active') return res.status(403).json({ success: false, message: 'This account is not active.' });
+
+    const code = String(req.body.code || '').trim();
+    const backupCode = String(req.body.backupCode || '').trim().toUpperCase();
+    let valid = Boolean(code && user.otpCode && user.otpExpires && user.otpExpires > now && await bcrypt.compare(code, user.otpCode));
+    let consumedBackupHash = null;
+    if (!valid && backupCode) {
+      for (const hash of user.backupCodes || []) {
+        if (await bcrypt.compare(backupCode, hash)) {
+          consumedBackupHash = hash;
+          valid = true;
+          break;
+        }
+      }
+    }
+    if (!valid) {
+      user.otpAttempts = (user.otpAttempts || 0) + 1;
+      if (user.otpAttempts >= 5) {
+        user.otpBlockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        user.otpCode = undefined;
+        user.otpExpires = undefined;
+      }
+      await user.save({ validateBeforeSave: false });
+      const locked = user.otpAttempts >= 5;
+      if (locked) res.set('Retry-After', '900');
+      return res.status(locked ? 429 : 401).json({ success: false, message: locked ? 'Too many incorrect security codes. Try again in 15 minutes.' : 'Invalid or expired security code.' });
+    }
+
+    const loginTime = new Date();
+    if (consumedBackupHash) {
+      const result = await User.updateOne({ _id: user._id, backupCodes: consumedBackupHash }, {
+        $pull: { backupCodes: consumedBackupHash },
+        $set: { lastLogin: loginTime, otpAttempts: 0 },
+        $unset: { otpCode: 1, otpExpires: 1, otpBlockedUntil: 1 },
+      });
+      if (!result.modifiedCount) return res.status(401).json({ success: false, message: 'This backup code has already been used.' });
+    } else {
+      user.otpCode = undefined;
+      user.otpExpires = undefined;
+      user.otpAttempts = 0;
+      user.otpBlockedUntil = undefined;
+      user.lastLogin = loginTime;
+      await user.save({ validateBeforeSave: false });
+    }
+    await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
+    return res.json({ success: true, token: issueToken(user), user: publicUser(user) });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') return res.status(401).json({ success: false, message: 'Verification session expired. Log in again.' });
+    next(error);
+  }
+};
+
+export const resendTwoFactorLoginCode = async (req, res, next) => {
+  try {
+    const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
+    if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
+    const user = await User.findById(decoded.id).select('+otpAttempts +otpBlockedUntil');
+    if (!user || !user.isActive || !user.twoFactorEnabled || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
+    if (user.otpBlockedUntil && user.otpBlockedUntil > new Date()) return res.status(429).json({ success: false, message: 'Two-factor verification is temporarily locked.' });
+    const code = createOtp();
+    await sendTwoFactorCode({ email: user.email, name: user.name, code });
+    user.otpCode = await bcrypt.hash(code, 12);
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, message: 'A new security code was sent to your email.' });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') return res.status(401).json({ success: false, message: 'Verification session expired. Log in again.' });
+    next(error);
+  }
+};
+
+export const enableTwoFactor = async (req, res, next) => {
+  try {
+    if (!privilegedRoles.includes(req.user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
+    if (req.user.twoFactorEnabled) return res.status(409).json({ success: false, message: 'Two-factor authentication is already enabled.' });
+    const code = createOtp();
+    const backupCodes = createBackupCodes();
+    const [setupHash, backupHashes] = await Promise.all([
+      bcrypt.hash(code, 12),
+      Promise.all(backupCodes.map((backupCode) => bcrypt.hash(backupCode, 12))),
+    ]);
+    await sendTwoFactorCode({ email: req.user.email, name: req.user.name, code });
+    req.user.twoFactorSetupCode = setupHash;
+    req.user.twoFactorSetupExpires = new Date(Date.now() + 10 * 60 * 1000);
+    req.user.twoFactorSetupAttempts = 0;
+    req.user.twoFactorSetupBackupCodes = backupHashes;
+    await req.user.save({ validateBeforeSave: false });
+    res.json({ success: true, requiresOTP: true, backupCodes, message: 'Enter the emailed code to finish enabling 2FA. Save these backup codes now.' });
+  } catch (error) { next(error); }
+};
+
+export const verifyTwoFactorSetup = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('+twoFactorSetupCode +twoFactorSetupExpires +twoFactorSetupAttempts +twoFactorSetupBackupCodes');
+    if (!user || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
+    if (!user.twoFactorSetupCode || !user.twoFactorSetupExpires || user.twoFactorSetupExpires <= new Date()) return res.status(400).json({ success: false, message: 'The setup code expired. Start 2FA setup again.' });
+    const valid = await bcrypt.compare(String(req.body.code || ''), user.twoFactorSetupCode);
+    if (!valid) {
+      user.twoFactorSetupAttempts = (user.twoFactorSetupAttempts || 0) + 1;
+      if (user.twoFactorSetupAttempts >= 5) {
+        user.twoFactorSetupCode = undefined;
+        user.twoFactorSetupExpires = undefined;
+        user.twoFactorSetupBackupCodes = [];
+      }
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ success: false, message: user.twoFactorSetupAttempts >= 5 ? 'Setup locked. Start 2FA setup again.' : 'Invalid setup code.' });
+    }
+    user.twoFactorEnabled = true;
+    user.backupCodes = user.twoFactorSetupBackupCodes;
+    user.twoFactorSetupCode = undefined;
+    user.twoFactorSetupExpires = undefined;
+    user.twoFactorSetupAttempts = 0;
+    user.twoFactorSetupBackupCodes = [];
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, user: publicUser(user) });
+  } catch (error) { next(error); }
+};
+
+export const disableTwoFactor = async (req, res, next) => {
+  try {
+    if (!privilegedRoles.includes(req.user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
+    const user = await User.findById(req.user._id).select('+password +otpCode +otpExpires +backupCodes');
+    if (!user || !(await user.comparePassword(String(req.body.currentPassword || '')))) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    user.twoFactorEnabled = false;
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    user.otpAttempts = 0;
+    user.otpBlockedUntil = undefined;
+    user.backupCodes = [];
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, user: publicUser(user) });
   } catch (error) { next(error); }
 };
 

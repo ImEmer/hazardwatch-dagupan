@@ -46,6 +46,16 @@ const userSchema = new mongoose.Schema({
   preferences: { type: preferencesSchema, default: () => ({}) },
   emailVerified: { type: Boolean, default: false },
   verificationRequired: { type: Boolean, default: true },
+  twoFactorEnabled: { type: Boolean, default: false },
+  otpCode: { type: String, select: false },
+  otpExpires: { type: Date, select: false },
+  otpAttempts: { type: Number, default: 0, select: false },
+  otpBlockedUntil: { type: Date, select: false },
+  backupCodes: { type: [String], default: [], select: false },
+  twoFactorSetupCode: { type: String, select: false },
+  twoFactorSetupExpires: { type: Date, select: false },
+  twoFactorSetupAttempts: { type: Number, default: 0, select: false },
+  twoFactorSetupBackupCodes: { type: [String], default: [], select: false },
   emailVerificationCode: { type: String, select: false },
   emailVerificationToken: { type: String, select: false },
   emailVerificationExpires: { type: Date, select: false },
@@ -57,13 +67,13 @@ const userSchema = new mongoose.Schema({
   passwordResetCodeToken: { type: String, select: false },
   passwordResetCodeTokenExpires: { type: Date, select: false },
   passwordResetLastSentAt: { type: Date, select: false },
-}, { timestamps: true });
+}, { timestamps: true, autoIndex: false });
 
 userSchema.index({ status: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ status: 1, role: 1 });
-userSchema.index({ name: 'text', email: 'text' });
+userSchema.index({ name: 'text', email: 'text', role: 'text', barangay: 'text' });
 
 userSchema.pre('save', async function hashPassword(next) {
   if (!this.isModified('password') || !this.password) return next();

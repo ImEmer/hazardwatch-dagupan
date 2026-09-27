@@ -180,7 +180,13 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    if (response.requiresOTP) return response;
     const session = response.token ? response : response.data;
+    persistSession(session);
+    return session.user;
+  }, [persistSession]);
+
+  const completeLogin = useCallback((session) => {
     persistSession(session);
     return session.user;
   }, [persistSession]);
@@ -275,6 +281,7 @@ export const AuthProvider = ({ children }) => {
     showExpiryWarning,
     isAuthenticated: Boolean(user && token),
     login,
+    completeLogin,
     refreshSession,
     logout,
     register,
@@ -287,7 +294,7 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     verifyResetCode,
     resetPassword,
-  }), [changePassword, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyResetCode]);
+  }), [changePassword, completeLogin, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyResetCode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

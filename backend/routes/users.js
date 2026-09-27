@@ -8,6 +8,7 @@ router.get('/me/preferences', protect, getMyPreferences);
 router.patch('/me/preferences', protect, updateMyPreferences);
 router.use(protect, isAdmin);
 router.get('/stats', getUserStats);
+router.get('/search', getUsers);
 router.get('/', getUsers);
 router.get('/:id', validateId, getUser);
 router.post('/', validateRegister, createUser);

@@ -12,6 +12,7 @@ import {
 import { showError, showSuccess } from "../../services/alerts";
 import Skeleton from "../../components/common/Skeleton";
 import Pagination from "../../components/common/Pagination";
+import useDebounce from "../../hooks/useDebounce";
 
 const PAGE_SIZE = 10;
 const STATUSES = ["Pending", "In Progress", "Closed"];
@@ -30,6 +31,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
   });
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState(resolvedOnly ? "Resolved" : "all");
   const [priority, setPriority] = useState("all");
   const [category, setCategory] = useState("all");
@@ -50,12 +52,12 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       status: resolvedOnly ? "Resolved" : status === "all" ? undefined : status,
       priority: priority === "all" ? undefined : priority,
       category: category === "all" ? undefined : category,
-      search: search || undefined,
+      q: debouncedSearch || undefined,
     };
     setLoading(true);
     setError("");
     api
-      .get("/reports", {
+      .get("/reports/search", {
         params,
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -88,7 +90,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     page,
     priority,
     resolvedOnly,
-    search,
+    debouncedSearch,
     status,
     token,
     user?.barangay,

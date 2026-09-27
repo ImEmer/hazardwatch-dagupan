@@ -32,6 +32,7 @@ const SubmitReport = () => {
     });
     const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [duplicateReport, setDuplicateReport] = useState(null);
     const [errors, setErrors] = useState({});
     const photoInputRef = useRef(null);
 
@@ -111,8 +112,8 @@ const SubmitReport = () => {
         return newErrors;
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e, allowDuplicate = false) => {
+        e?.preventDefault();
 
         if (!isAuthenticated) {
             const result = await confirmAction('You need to log in before submitting a report.', 'Login');
@@ -144,12 +145,18 @@ const SubmitReport = () => {
             photoFile: images[0],
             photos: images,
             barangay: selectedBarangay,
+            allowDuplicate,
         };
         try {
             await addReport(newReport, token);
             await showSuccess('Your hazard report was submitted successfully.');
+            setDuplicateReport(null);
             resetFormState();
         } catch (error) {
+            if (error.response?.status === 409 && error.response?.data?.code === 'DUPLICATE_DETECTED') {
+                setDuplicateReport(error.response.data.duplicate || null);
+                return;
+            }
             await showError(error.message || 'Unable to save the report. Please try again.');
         } finally {
             setIsSubmitting(false);
@@ -157,6 +164,7 @@ const SubmitReport = () => {
     };
 
     return (
+        <>
         <div className={`min-h-screen px-4 py-8 ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-50'}`}>
         <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-12">
@@ -398,6 +406,24 @@ const SubmitReport = () => {
             </div>
         </div>
         </div>
+        {duplicateReport && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="presentation">
+                <section className={`w-full max-w-md rounded-xl border p-5 shadow-2xl ${isDark ? 'border-[#343640] bg-[#14151d] text-white' : 'border-slate-200 bg-white text-slate-900'}`} role="dialog" aria-modal="true" aria-labelledby="duplicate-report-title">
+                    <h2 id="duplicate-report-title" className="text-lg font-semibold">You already submitted a similar report.</h2>
+                    <div className={`mt-4 space-y-2 rounded-lg border p-3 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-slate-50'}`}>
+                        <p><span className="font-medium">Category:</span> {duplicateReport.category}</p>
+                        <p><span className="font-medium">Location:</span> {duplicateReport.address || duplicateReport.barangay || duplicateReport.location?.coordinates?.map((value) => Number(value).toFixed(5)).join(', ') || 'Unavailable'}</p>
+                        <p><span className="font-medium">Submitted:</span> {new Date(duplicateReport.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="mt-5 flex flex-wrap justify-end gap-2">
+                        <button type="button" onClick={() => setDuplicateReport(null)} disabled={isSubmitting} className={`rounded-md border px-3 py-2 text-sm ${isDark ? 'border-[#343640] text-gray-300' : 'border-slate-300 text-slate-700'}`}>Cancel</button>
+                        <button type="button" onClick={() => navigate(`/reports/${duplicateReport._id}`)} className="rounded-md border border-blue-500 px-3 py-2 text-sm font-medium text-blue-500">View Existing</button>
+                        <button type="button" onClick={() => { setDuplicateReport(null); handleSubmit(null, true); }} disabled={isSubmitting} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{isSubmitting ? 'Submitting...' : 'Submit Anyway'}</button>
+                    </div>
+                </section>
+            </div>
+        )}
+        </>
     );
 };
 

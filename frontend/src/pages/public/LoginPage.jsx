@@ -69,6 +69,10 @@ const LoginPage = () => {
     setSubmitting(true);
     try {
       const loggedInUser = await login(form.email, form.password);
+      if (loggedInUser?.requiresOTP) {
+        navigate('/verify-2fa', { replace: true, state: { tempToken: loggedInUser.tempToken, email: form.email.trim().toLowerCase() } });
+        return;
+      }
       const role = loggedInUser?.role?.toLowerCase();
       const name = form.email.split('@')[0];
       await showSuccess(`Welcome back, ${name}!`);

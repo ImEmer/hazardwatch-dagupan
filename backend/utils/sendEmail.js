@@ -80,3 +80,12 @@ export const sendVerificationEmail = ({ email, name, code }) => {
 
     return sendEmail({ to: email, subject, html, text });
 };
+
+export const sendTwoFactorCode = ({ email, name, code }) => {
+    const safeName = escapeHtml(name || 'there');
+    const safeCode = escapeHtml(code);
+    const subject = 'Your HazardWatch security code';
+    const text = `Hi ${name || 'there'},\n\nYour HazardWatch security code is ${code}. It expires in 10 minutes. If you did not request this code, secure your account immediately.`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#172b4d"><h1>HazardWatch Dagupan</h1><p>Hi ${safeName},</p><p>Use this one-time security code to continue:</p><p style="font-size:32px;font-weight:700;letter-spacing:6px">${safeCode}</p><p>This code expires in 10 minutes.</p><p>If you did not request this code, secure your account immediately.</p></div>`;
+    return sendEmail({ to: email, subject, html, text });
+};
