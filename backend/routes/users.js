@@ -12,9 +12,11 @@ router.get('/', getUsers);
 router.get('/:id', validateId, getUser);
 router.post('/', validateRegister, createUser);
 router.put('/:id', validateId, validateUserUpdate, updateUser);
+router.patch('/:id', validateId, validateUserUpdate, updateUser);
 router.patch('/:id/status', validateId, validateStatusAction, toggleUserStatus);
 router.patch('/:id/password', validateId, passwordPolicy('newPassword'), validateBadRequest, updateUserPassword);
 router.post('/:id/suspend', validateId, suspendUser);
+router.patch('/:id/suspend', validateId, suspendUser);
 router.patch('/:id/ban', validateId, validateBanReason, banUser);
 router.post('/:id/unsuspend', validateId, unsuspendUser);
 router.delete('/bulk', validateBulkIds, async (req, res) => {

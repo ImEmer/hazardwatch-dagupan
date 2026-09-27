@@ -150,14 +150,10 @@ const AdminUsersPage = () => {
 
   const handleSave = async () => {
     if (!selectedUser) return;
-
-    if (currentUser?.role === 'admin' && (form.role === 'superadmin' || selectedUser.role === 'superadmin')) {
-      await showError('Admins cannot edit or promote a superadmin account.');
-      return;
-    }
+    if (!canManageTarget(selectedUser)) return;
 
     try {
-      const response = await api.put(`/users/${selectedUser._id || selectedUser.id}`, {
+      const response = await api.patch(`/users/${selectedUser._id || selectedUser.id}`, {
         name: form.name,
         email: form.email,
         role: form.role,
@@ -225,9 +221,9 @@ const AdminUsersPage = () => {
   };
 
   const confirmSuspension = async (details) => {
-    if (!suspendingUser) return;
+    if (!suspendingUser || !canManageTarget(suspendingUser)) return;
     setSuspensionSaving(true);
-    try { await api.post(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await fetchStats(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
+    try { await api.patch(`/users/${suspendingUser.id}/suspend`, details, { headers: { Authorization: `Bearer ${token}` } }); setSuspendingUser(null); await fetchUsers(); await fetchStats(); await showSuccess('User suspended successfully.'); } catch (error) { await showError(error.response?.data?.message || 'Unable to suspend user.'); } finally { setSuspensionSaving(false); }
   };
 
   const changeRestriction = async (targetUser, action) => {
@@ -247,15 +243,12 @@ const AdminUsersPage = () => {
     ['Admins', stats.admins, 'border-red-500'],
   ];
   const canManageTarget = (targetUser) => {
-    const levels = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
     const currentId = currentUser?._id || currentUser?.id;
-    return String(targetUser.id) !== String(currentId)
-      && targetUser.role !== 'superadmin'
-      && (levels[currentUser?.role] || 0) > (levels[targetUser.role] || 0);
-  };
-  const canShowEdit = (targetUser) => {
-    const currentId = currentUser?._id || currentUser?.id;
-    return String(targetUser.id) !== String(currentId) && (canManageTarget(targetUser) || ['admin', 'superadmin'].includes(targetUser.role));
+    const targetId = targetUser?._id || targetUser?.id;
+    return Boolean(currentUser)
+      && String(targetId) !== String(currentId)
+      && ['admin', 'superadmin'].includes(currentUser.role)
+      && ['admin', 'barangay', 'user'].includes(targetUser?.role);
   };
 
   return (
@@ -319,12 +312,11 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
                   <td className="px-4 py-4">
-                    {(canShowEdit(user) || canManageTarget(user)) && <div className="flex items-center gap-1">
+                    {canManageTarget(user) ? <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => openEditor(user)}
-                        disabled={currentUser?.role === 'admin' && user.role === 'superadmin'}
-                        title={currentUser?.role === 'admin' && user.role === 'superadmin' ? 'Only a SuperAdmin can modify another SuperAdmin.' : 'Edit user'}
+                        title="Edit user"
                         aria-label="Edit user"
                         className="rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -332,7 +324,7 @@ const AdminUsersPage = () => {
                       </button>
                       {user.status === 'suspended' ? <button type="button" onClick={() => changeRestriction(user, 'unsuspend')} className="rounded-lg p-2 text-emerald-400 hover:bg-emerald-500/10" title="Unsuspend user" aria-label="Unsuspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0113.7-5.7L20 9m0-5v5h-5M20 12a8 8 0 01-13.7 5.7L4 15m0 5v-5h5" /></svg></button> : user.status !== 'banned' && <button type="button" onClick={() => changeRestriction(user, 'suspend')} className="rounded-lg p-2 text-amber-400 hover:bg-amber-500/10" title="Suspend user" aria-label="Suspend user"><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M9 9l6 6M15 9l-6 6" /></svg></button>}
                       {canManageTarget(user) && user.status !== 'banned' && <button type="button" onClick={() => setBanningUser(user)} className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 hover:text-red-300" title="Ban Permanently" aria-label={`Ban ${user.email} permanently`}><UserX className="h-4 w-4" aria-hidden="true" /></button>}
-                    </div>}
+                    </div> : '—'}
                   </td>
                 </UserRow>
                 ))

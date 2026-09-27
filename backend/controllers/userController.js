@@ -5,6 +5,7 @@ import { createNotification } from '../utils/createNotification.js';
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
 const listFields = 'name email role barangay status isActive lastLogin createdAt';
 const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
+const manageableRoles = ['admin', 'barangay', 'user'];
 const preferenceKeys = {
   notifications: ['newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'],
   map: ['showResolved', 'defaultZoom', 'mapStyle', 'markerStyle'],
@@ -65,11 +66,12 @@ export const updateUserPassword = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-const enforceUserManagementRules = (actor, targetUser, nextRole = null) => {
-  if (actor.role === 'superadmin') return String(actor._id) !== String(targetUser?._id);
-  if (actor.role !== 'admin') return false;
-  if (targetUser?.role === 'superadmin' || nextRole === 'superadmin') return false;
-  return (ROLE_LEVELS[actor.role] || 0) > (ROLE_LEVELS[targetUser?.role] || 0);
+const managedTargetError = (actor, targetUser, action) => {
+  if (String(actor._id) === String(targetUser?._id)) return `You cannot ${action} your own account.`;
+  if (!['admin', 'superadmin'].includes(actor.role) || !manageableRoles.includes(targetUser?.role)) {
+    return `You do not have permission to ${action} a user with role ${targetUser?.role}.`;
+  }
+  return null;
 };
 
 const managementError = (actor, targetUser, action) => {
@@ -165,9 +167,8 @@ export const updateUser = async (req, res, next) => {
     if (nextRole !== undefined && nextRole !== targetUser.role) {
       return res.status(403).json({ success: false, message: 'User roles cannot be changed through this update flow.' });
     }
-    if (!enforceUserManagementRules(req.user, targetUser, nextRole)) {
-      return res.status(403).json({ success: false, message: 'You are not allowed to modify this user.' });
-    }
+    const permissionError = managedTargetError(req.user, targetUser, 'edit');
+    if (permissionError) return res.status(403).json({ success: false, message: permissionError });
 
     const payload = { ...req.body };
     delete payload.role;
@@ -234,9 +235,8 @@ export const suspendUser = async (req, res, next) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
-    const permissionError = managementError(req.user, target, 'suspend');
+    const permissionError = managedTargetError(req.user, target, 'suspend');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
-    if (await isLastSuperadmin(target)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be suspended.' });
     const requestedDuration = req.body.durationInDays ?? req.body.duration;
     const durationMs = getDurationMs(requestedDuration);
     const until = requestedDuration === 'custom' ? new Date(req.body.suspendedUntil) : new Date(Date.now() + durationMs);
@@ -262,11 +262,8 @@ export const banUser = async (req, res, next) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
-    if (String(target._id) === String(req.user._id)) return res.status(403).json({ success: false, message: 'You cannot ban your own account.' });
-    const canBan = req.user.role === 'superadmin'
-      ? target.role !== 'superadmin'
-      : req.user.role === 'admin' && ['user', 'barangay', 'staff'].includes(target.role);
-    if (!canBan) return res.status(403).json({ success: false, message: `You do not have permission to ban a user with role ${target.role}.` });
+    const permissionError = managedTargetError(req.user, target, 'ban');
+    if (permissionError) return res.status(403).json({ success: false, message: permissionError });
     if (target.status === 'banned') return res.status(409).json({ success: false, message: 'This user is already permanently banned.' });
     target.status = 'banned';
     target.isActive = false;
@@ -296,7 +293,7 @@ export const unsuspendUser = async (req, res, next) => {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     if (target.status === 'banned') return res.status(403).json({ success: false, message: 'Permanently banned users cannot be unsuspended.' });
-    const permissionError = managementError(req.user, target, 'modify');
+    const permissionError = managedTargetError(req.user, target, 'modify');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
     target.status = 'active'; target.isActive = true; target.suspendedUntil = undefined; target.suspensionReason = undefined; target.suspendedBy = undefined;
     await target.save({ validateBeforeSave: false });
