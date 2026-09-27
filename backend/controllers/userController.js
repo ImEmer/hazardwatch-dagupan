@@ -167,6 +167,7 @@ export const createUser = async (req, res, next) => {
       ...req.body,
       email: String(req.body.email || '').trim().toLowerCase(),
       role,
+      twoFactorEnabled: privilegedRoles.includes(role),
       notificationEmail: privilegedRoles.includes(role) ? PRIVILEGED_NOTIFICATION_EMAIL : null,
       status: 'active',
       isActive: true,

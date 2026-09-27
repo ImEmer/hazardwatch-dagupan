@@ -60,6 +60,7 @@ export const register = async (req, res, next) => {
       existingUser.email = normalizedEmail;
       existingUser.password = password;
       existingUser.role = safeRole;
+      existingUser.twoFactorEnabled = privilegedRoles.includes(safeRole);
       existingUser.notificationEmail = privilegedRoles.includes(safeRole) ? PRIVILEGED_NOTIFICATION_EMAIL : null;
       existingUser.barangay = barangay;
       existingUser.phone = phone;
@@ -86,6 +87,7 @@ export const register = async (req, res, next) => {
       email: normalizedEmail,
       password,
       role: safeRole,
+      twoFactorEnabled: privilegedRoles.includes(safeRole),
       notificationEmail: privilegedRoles.includes(safeRole) ? PRIVILEGED_NOTIFICATION_EMAIL : null,
       barangay,
       phone,
