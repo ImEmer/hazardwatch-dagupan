@@ -147,6 +147,21 @@ export const validateBulkIds = [
   body('ids.*').isMongoId().withMessage('Invalid id.'),
   validateBadRequest,
 ];
+export const validateBulkReportIds = (req, res, next) => {
+  const reportIds = req.body?.reportIds ?? req.body?.ids;
+  if (!Array.isArray(reportIds) || reportIds.length === 0 || reportIds.length > 50) {
+    return res.status(400).json({ success: false, message: 'Report IDs must contain between 1 and 50 items.' });
+  }
+  if (reportIds.some((id) => typeof id !== 'string' || !/^[a-f\d]{24}$/i.test(id))) {
+    return res.status(400).json({ success: false, message: 'Every report ID must be a valid MongoDB ID.' });
+  }
+  req.reportIds = [...new Set(reportIds)];
+  next();
+};
+export const validateBanReason = [
+  body('reason').optional({ nullable: true }).trim().isLength({ max: 500 }).withMessage('Ban reason cannot exceed 500 characters.'),
+  validateBadRequest,
+];
 export const validateUserUpdate = [
   mutationFieldAllowlist(['name', 'email', 'role', 'barangay', 'phone']),
   body('name').optional().trim().isLength({ min: 2, max: 50 }).escape(),

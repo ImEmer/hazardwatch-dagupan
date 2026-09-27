@@ -22,3 +22,5 @@ export const uploadPhoto = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, callback) => callback(null, /^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)),
 });
+
+export { cloudinary };

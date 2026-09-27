@@ -1,12 +1,41 @@
 import Report from '../models/Report.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { logActivity } from '../utils/logActivity.js';
 import { createNotification } from '../utils/createNotification.js';
 import { isDagupanBarangay } from '../utils/dagupanBarangays.js';
 import { calculatePriority } from '../utils/priorityCalculator.js';
+import { cloudinary } from '../middleware/upload.js';
 
 const barangayScope = (barangay) => ({ $or: [{ barangay }, { assignedBarangay: barangay }] });
 const scoped = (user) => user.role === 'barangay' ? barangayScope(user.barangay || '__unassigned_barangay__') : {};
+
+const reportAssetPublicId = (url) => {
+  if (typeof url !== 'string') return null;
+  const marker = '/image/upload/';
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex < 0) return null;
+  const uploadedPath = url.slice(markerIndex + marker.length);
+  const versionedPath = uploadedPath.match(/(?:^|\/)v\d+\/(.+)$/);
+  const publicPath = (versionedPath?.[1] || uploadedPath).replace(/\.[^/.]+$/, '');
+  try { return decodeURIComponent(publicPath); } catch { return publicPath; }
+};
+
+const deleteReportAssets = async (reports) => {
+  const publicIds = new Set(reports.flatMap((report) => [report.photo, ...(report.images || [])]).map(reportAssetPublicId).filter(Boolean));
+  await Promise.all([...publicIds].map(async (publicId) => {
+    try {
+      await cloudinary.uploader.destroy(publicId);
+    } catch (error) {
+      console.error('[reports] Failed to delete report image:', error.message);
+    }
+  }));
+};
+
+const deleteReportNotifications = async (reports) => {
+  const reportIds = reports.map((report) => report._id);
+  if (reportIds.length) await Notification.deleteMany({ referenceModel: 'Report', reference: { $in: reportIds } });
+};
 
 const notifyReportStaff = async (report, type, title, message) => {
   try {
@@ -295,9 +324,38 @@ export const addComment = async (req, res, next) => {
 };
 export const deleteReport = async (req, res, next) => {
   try {
-    const report = await Report.findByIdAndUpdate(req.params.id, { isActive: false, deletedAt: new Date() }, { new: true });
+    const report = await Report.findOne({ _id: req.params.id, ...scoped(req.user) });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found.' });
+    await report.deleteOne();
+    await deleteReportNotifications([report]);
+    await deleteReportAssets([report]);
     await logActivity({ actor: req.user, action: 'report_deleted', message: `${req.user.name} deleted report ${report._id}`, entityType: 'report', entityId: report._id }).catch(() => {});
-    res.json({ success: true, message: 'Report deleted.', report });
+    res.json({ success: true, deletedCount: 1 });
+  } catch (error) { next(error); }
+};
+
+export const deleteReportsBulk = async (req, res, next) => {
+  try {
+    const reports = await Report.find({ _id: { $in: req.reportIds } });
+    if (req.user.role === 'barangay') {
+      const barangay = req.user.barangay || '__unassigned_barangay__';
+      const outOfScope = reports.some((report) => report.barangay !== barangay && report.assignedBarangay !== barangay);
+      if (outOfScope) return res.status(403).json({ success: false, message: 'You can only delete reports from your barangay.' });
+    }
+    if (!reports.length) return res.json({ success: true, deletedCount: 0 });
+
+    const ids = reports.map((report) => report._id);
+    const result = await Report.deleteMany({ _id: { $in: ids }, ...scoped(req.user) });
+    const deletedReports = reports;
+    await deleteReportNotifications(deletedReports);
+    await deleteReportAssets(deletedReports);
+    await Promise.all(deletedReports.map((report) => logActivity({
+      actor: req.user,
+      action: 'report_deleted',
+      message: `${req.user.name} deleted report ${report._id}`,
+      entityType: 'report',
+      entityId: report._id,
+    }).catch(() => {})));
+    res.json({ success: true, deletedCount: result.deletedCount });
   } catch (error) { next(error); }
 };

@@ -38,6 +38,8 @@ const userSchema = new mongoose.Schema({
   suspendedUntil: { type: Date },
   suspensionReason: { type: String },
   suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  bannedAt: { type: Date },
+  banReason: { type: String, maxlength: 500 },
   deletedAt: { type: Date },
   lastLogin: Date,
   profileImage: String,

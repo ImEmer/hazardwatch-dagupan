@@ -43,15 +43,6 @@ export const getMyPreferences = (req, res) => res.json({ success: true, preferen
 const canManageUserSettings = (actor, target) => actor.role === 'superadmin'
   || (actor.role === 'admin' && ['user', 'barangay'].includes(target.role));
 
-export const getUserPreferences = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id).select('preferences role');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    if (!canManageUserSettings(req.user, user)) return res.status(403).json({ success: false, message: 'You are not allowed to view this user’s settings.' });
-    res.json({ success: true, preferences: user.preferences });
-  } catch (error) { next(error); }
-};
-
 export const updateMyPreferences = async (req, res, next) => {
   try {
     const result = mergePreferences(req.user.preferences, req.body);
@@ -59,19 +50,6 @@ export const updateMyPreferences = async (req, res, next) => {
     req.user.preferences = result.preferences;
     await req.user.save({ validateBeforeSave: false });
     res.json({ success: true, preferences: req.user.preferences });
-  } catch (error) { next(error); }
-};
-
-export const updateUserPreferences = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    if (!canManageUserSettings(req.user, user)) return res.status(403).json({ success: false, message: 'You are not allowed to update this user’s settings.' });
-    const result = mergePreferences(user.preferences, req.body);
-    if (result.error) return res.status(400).json({ success: false, message: result.error });
-    user.preferences = result.preferences;
-    await user.save({ validateBeforeSave: false });
-    res.json({ success: true, preferences: user.preferences });
   } catch (error) { next(error); }
 };
 
@@ -284,10 +262,19 @@ export const banUser = async (req, res, next) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
-    const permissionError = managementError(req.user, target, 'ban');
-    if (permissionError) return res.status(403).json({ success: false, message: permissionError });
-    if (await isLastSuperadmin(target)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be banned.' });
-    target.status = 'banned'; target.isActive = false; target.suspendedUntil = undefined; target.suspensionReason = String(req.body.reason || 'Account permanently banned.').trim(); target.suspendedBy = req.user._id;
+    if (String(target._id) === String(req.user._id)) return res.status(403).json({ success: false, message: 'You cannot ban your own account.' });
+    const canBan = req.user.role === 'superadmin'
+      ? target.role !== 'superadmin'
+      : req.user.role === 'admin' && ['user', 'barangay', 'staff'].includes(target.role);
+    if (!canBan) return res.status(403).json({ success: false, message: `You do not have permission to ban a user with role ${target.role}.` });
+    if (target.status === 'banned') return res.status(409).json({ success: false, message: 'This user is already permanently banned.' });
+    target.status = 'banned';
+    target.isActive = false;
+    target.bannedAt = new Date();
+    target.banReason = String(req.body.reason || '').trim() || undefined;
+    target.suspendedUntil = undefined;
+    target.suspensionReason = undefined;
+    target.suspendedBy = undefined;
     await target.save({ validateBeforeSave: false });
     if (['superadmin', 'admin', 'barangay'].includes(target.role)) {
       await createNotification({
@@ -300,7 +287,7 @@ export const banUser = async (req, res, next) => {
         referenceModel: 'User',
       });
     }
-    res.json({ success: true, user: target.toJSON() });
+    res.json({ success: true, message: 'User banned permanently', user: target.toJSON() });
   } catch (error) { next(error); }
 };
 
@@ -308,6 +295,7 @@ export const unsuspendUser = async (req, res, next) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (target.status === 'banned') return res.status(403).json({ success: false, message: 'Permanently banned users cannot be unsuspended.' });
     const permissionError = managementError(req.user, target, 'modify');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
     target.status = 'active'; target.isActive = true; target.suspendedUntil = undefined; target.suspensionReason = undefined; target.suspendedBy = undefined;

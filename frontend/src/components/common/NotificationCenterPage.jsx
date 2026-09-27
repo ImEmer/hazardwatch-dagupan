@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCheck, ChevronLeft, ChevronRight, Mail, MailOpen } from 'lucide-react';
+import { CheckCheck, Mail, MailOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import useTheme from '../../hooks/useTheme';
 import { notificationApi } from '../../services/api';
+import Pagination from './Pagination';
 
 const filters = [
   { value: 'all', label: 'All' },
@@ -116,14 +117,7 @@ const NotificationCenterPage = () => {
         ))}
       </section>
 
-      <footer className={`flex flex-wrap items-center justify-between gap-3 text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
-        <span>{pagination.total || 0} notifications</span>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading} className={`rounded-md border p-2 disabled:opacity-40 ${isDark ? 'border-[#2e303a] hover:bg-white/5' : 'border-slate-200 hover:bg-slate-100'}`} aria-label="Previous page"><ChevronLeft size={16} /></button>
-          <span>Page {pagination.page || page} of {Math.max(1, pagination.pages || 1)}</span>
-          <button type="button" onClick={() => setPage((current) => Math.min(pagination.pages || 1, current + 1))} disabled={page >= (pagination.pages || 1) || loading} className={`rounded-md border p-2 disabled:opacity-40 ${isDark ? 'border-[#2e303a] hover:bg-white/5' : 'border-slate-200 hover:bg-slate-100'}`} aria-label="Next page"><ChevronRight size={16} /></button>
-        </div>
-      </footer>
+      <Pagination currentPage={page} totalPages={pagination.pages || 1} totalItems={pagination.total} itemsPerPage={10} onPageChange={setPage} isDark={isDark} />
     </div>
   );
 };

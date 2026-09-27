@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 import useTheme from '../../hooks/useTheme';
+import Pagination from './Pagination';
 
 const PAGE_SIZE = 20;
 const reportId = (report) => String(report?._id || report?.id || '');
@@ -57,7 +57,7 @@ const MapReportList = ({ endpoint, token, includeResolved = false, status, selec
   return (
     <section className={`flex min-h-0 flex-col overflow-hidden rounded-lg border ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`} aria-label="Reports">
       <header className={`flex items-center justify-between border-b px-4 py-3 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
-        <div><h2 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports</h2><p className={`mt-0.5 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{pagination.total || 0} reports · newest first</p></div>
+        <div><h2 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports</h2><p className={`mt-0.5 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{pagination.total || 0} reports</p></div>
         <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>{page} / {Math.max(1, pagination.pages || 1)}</span>
       </header>
       <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3" aria-live="polite">
@@ -74,11 +74,7 @@ const MapReportList = ({ endpoint, token, includeResolved = false, status, selec
           </button>;
         })}
       </div>
-      <footer className={`flex items-center justify-between border-t px-3 py-2 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
-        <button type="button" aria-label="Previous reports page" disabled={page <= 1 || loading} onClick={() => setPage((current) => Math.max(1, current - 1))} className={`rounded p-1.5 disabled:opacity-40 ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}><ChevronLeft size={16} /></button>
-        <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Page {page}</span>
-        <button type="button" aria-label="Next reports page" disabled={page >= (pagination.pages || 1) || loading} onClick={() => setPage((current) => current + 1)} className={`rounded p-1.5 disabled:opacity-40 ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}><ChevronRight size={16} /></button>
-      </footer>
+      <Pagination currentPage={page} totalPages={pagination.pages || 1} totalItems={pagination.total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} isDark={isDark} />
     </section>
   );
 };

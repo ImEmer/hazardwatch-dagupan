@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { banUser, createUser, deleteUser, getMyPreferences, getUser, getUserPreferences, getUsers, getUserStats, suspendUser, toggleUserStatus, unsuspendUser, updateMyPreferences, updateUser, updateUserPassword, updateUserPreferences } from '../controllers/userController.js';
-import { allowRoles, isAdmin, protect } from '../middleware/auth.js';
-import { passwordPolicy, validateBadRequest, validateBulkIds, validateId, validateRegister, validateStatusAction, validateUserUpdate } from '../middleware/validate.js';
+import { banUser, createUser, deleteUser, getMyPreferences, getUser, getUsers, getUserStats, suspendUser, toggleUserStatus, unsuspendUser, updateMyPreferences, updateUser, updateUserPassword } from '../controllers/userController.js';
+import { isAdmin, protect } from '../middleware/auth.js';
+import { passwordPolicy, validateBadRequest, validateBanReason, validateBulkIds, validateId, validateRegister, validateStatusAction, validateUserUpdate } from '../middleware/validate.js';
 
 const router = Router();
 router.get('/me/preferences', protect, getMyPreferences);
@@ -13,11 +13,9 @@ router.get('/:id', validateId, getUser);
 router.post('/', validateRegister, createUser);
 router.put('/:id', validateId, validateUserUpdate, updateUser);
 router.patch('/:id/status', validateId, validateStatusAction, toggleUserStatus);
-router.get('/:id/preferences', allowRoles('superadmin', 'admin'), validateId, getUserPreferences);
-router.patch('/:id/preferences', allowRoles('superadmin', 'admin'), validateId, updateUserPreferences);
 router.patch('/:id/password', validateId, passwordPolicy('newPassword'), validateBadRequest, updateUserPassword);
 router.post('/:id/suspend', validateId, suspendUser);
-router.post('/:id/ban', validateId, banUser);
+router.patch('/:id/ban', validateId, validateBanReason, banUser);
 router.post('/:id/unsuspend', validateId, unsuspendUser);
 router.delete('/bulk', validateBulkIds, async (req, res) => {
   const { ids = [] } = req.body || {};

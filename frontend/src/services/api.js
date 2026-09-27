@@ -79,9 +79,6 @@ export const notificationApi = {
 export const preferencesApi = {
   getMine: () => api.get('/users/me/preferences'),
   updateMine: (preferences) => api.patch('/users/me/preferences', preferences),
-  getForUser: (id) => api.get(`/users/${id}/preferences`),
-  updateForUser: (id, preferences) => api.patch(`/users/${id}/preferences`, preferences),
-  updatePassword: (id, newPassword) => api.patch(`/users/${id}/password`, { newPassword }),
 };
 
 export const systemSettingsApi = {
