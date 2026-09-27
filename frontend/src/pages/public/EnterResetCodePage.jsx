@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import CodeInput from '../../components/common/CodeInput';
 import useAuth from '../../hooks/useAuth';
 import { AuthCard } from './RegisterPage';
 import { showError, showSuccess, showWarning } from '../../services/alerts';
@@ -15,6 +16,7 @@ const EnterResetCodePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(0);
+  const verificationInFlightRef = useRef(false);
 
   React.useEffect(() => {
     if (!resendSeconds) return undefined;
@@ -43,26 +45,29 @@ const EnterResetCodePage = () => {
     }
   };
 
-  const submit = async (event) => {
-    event.preventDefault();
+  const submit = async (event, codeToVerify = code) => {
+    event?.preventDefault();
+    if (verificationInFlightRef.current || submitting) return;
     const emailError = validateEmail(email);
-    if (emailError || !/^\d{6}$/.test(code)) {
+    if (emailError || !/^\d{6}$/.test(codeToVerify)) {
       const message = emailError || 'Enter the 6-digit reset code.';
       setError(message);
       await showWarning(message);
       return;
     }
 
+    verificationInFlightRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      const response = await verifyResetCode(email.trim(), code);
+      const response = await verifyResetCode(email.trim(), codeToVerify);
       navigate(`/reset-password/${encodeURIComponent(response.token)}`, { replace: true });
     } catch (requestError) {
       const message = requestError.message || 'Invalid or expired reset code.';
       setError(message);
       await showError(message);
     } finally {
+      verificationInFlightRef.current = false;
       setSubmitting(false);
     }
   };
@@ -75,7 +80,7 @@ const EnterResetCodePage = () => {
           <input type="email" id="email" name="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="auth-input mt-2" />
         </label>
         <label className="block text-sm text-gray-300">6-digit code
-          <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength="6" id="code" name="code" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="auth-input mt-2 text-center tracking-[0.35em]" />
+          <CodeInput value={code} onChange={setCode} onComplete={(fullCode) => submit(null, fullCode)} disabled={submitting} className="auth-input mt-2 text-center tracking-[0.35em]" inputProps={{ id: 'code', name: 'code', required: true }} />
         </label>
         <button type="button" disabled={resending || resendSeconds > 0} onClick={resendCode} className="w-full rounded-lg border border-gray-600 px-4 py-3 text-sm text-gray-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50">
           {resendSeconds > 0 ? `Resend in ${resendSeconds}s...` : resending ? 'Sending...' : 'Resend Code'}

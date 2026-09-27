@@ -161,6 +161,9 @@ const InteractiveMap = ({
     const mapContainer = useRef(null);
     const map = useRef(null);
     const markersRef = useRef([]);
+    const activePopupRef = useRef(null);
+    const selectedReportIdRef = useRef(null);
+    const popupInteractionRef = useRef(0);
     const selectedMarkerRef = useRef(null);
     const selectedLabelRef = useRef(null);
     const markerElementRef = useRef(null);
@@ -168,10 +171,44 @@ const InteractiveMap = ({
     const appliedMapStyleRef = useRef(mapPreferences.mapStyle || 'streets');
     const reportSelectCallbackRef = useRef(onReportSelect);
     const [mapReady, setMapReady] = useState(false);
+    const [selectedReportId, setSelectedReportId] = useState(null);
+
+    const activatePopup = (popup, reportId = null) => {
+        const previousPopup = activePopupRef.current;
+        activePopupRef.current = popup;
+        selectedReportIdRef.current = reportId;
+        setSelectedReportId(reportId);
+        popup.on('close', () => {
+            if (activePopupRef.current !== popup) return;
+            activePopupRef.current = null;
+            selectedReportIdRef.current = null;
+            setSelectedReportId(null);
+        });
+        previousPopup?.remove();
+        popup.addTo(map.current);
+    };
+
+    const openReportPopup = (reportId, report, coordinates) => {
+        if (!map.current) return;
+        popupInteractionRef.current += 1;
+        if (selectedReportIdRef.current === reportId && activePopupRef.current?.isOpen()) {
+            reportSelectCallbackRef.current?.(report);
+            return;
+        }
+        const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
+            .setLngLat(coordinates)
+            .setDOMContent(createReportPopupContent(report));
+        activatePopup(popup, reportId);
+        reportSelectCallbackRef.current?.(report);
+    };
 
     useEffect(() => {
         reportSelectCallbackRef.current = onReportSelect;
     }, [onReportSelect]);
+
+    useEffect(() => {
+        selectedReportIdRef.current = selectedReportId;
+    }, [selectedReportId]);
 
     const [lng] = useState(defaultCenter[0]);
     const [lat] = useState(defaultCenter[1]);
@@ -223,6 +260,7 @@ const InteractiveMap = ({
                 [120.42, 16.10]
             ]
         });
+        map.current.doubleClickZoom.disable();
 
         map.current.addControl(
             new maplibregl.NavigationControl(),
@@ -247,22 +285,21 @@ const InteractiveMap = ({
             setMapReady(true);
         });
 
+        map.current.on('click', async (e) => {
+            if (e.originalEvent?.target?.closest?.('.maplibregl-marker')) return;
+            popupInteractionRef.current += 1;
+            activePopupRef.current?.remove();
+            activePopupRef.current = null;
+            selectedReportIdRef.current = null;
+            setSelectedReportId(null);
+            if (!onMapClick) return;
+
+            const { lng, lat } = e.lngLat;
+            const geocodedLocation = await reverseGeocode(lng, lat);
+            onMapClick({ lng, lat }, geocodedLocation.address, geocodedLocation.barangay);
+        });
+
         if (onMapClick) {
-            map.current.on('click', async (e) => {
-                const { lng, lat } = e.lngLat;
-
-                const geocodedLocation = await reverseGeocode(lng, lat);
-
-                onMapClick(
-                    {
-                        lng,
-                        lat
-                    },
-                    geocodedLocation.address,
-                    geocodedLocation.barangay
-                );
-            });
-
             map.current.on('mouseenter', () => {
                 map.current.getCanvas().style.cursor = 'crosshair';
             });
@@ -423,7 +460,10 @@ const InteractiveMap = ({
                         visual.style.border = '2px solid #ffffff';
                         element.appendChild(visual);
                     }
-                    element.addEventListener('click', () => reportSelectCallbackRef.current?.({
+                    element.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const report = {
                         _id: properties.id,
                         title: properties.title,
                         category: properties.category,
@@ -435,20 +475,81 @@ const InteractiveMap = ({
                         locationText: properties.locationText,
                         createdAt: properties.createdAt,
                         coordinates: [longitude, latitude],
-                    }));
+                        };
+                        openReportPopup(properties.id, report, [longitude, latitude]);
+                    });
                 } else {
                     element.addEventListener('click', (event) => {
                         event.preventDefault();
                         event.stopPropagation();
-                        source.getClusterExpansionZoom(properties.cluster_id, (error, expansionZoom) => {
-                            if (!error && map.current) map.current.easeTo({ center: [longitude, latitude], zoom: expansionZoom });
-                        });
+                        const clusterId = properties.cluster_id;
+                        const clusterCount = Number(properties.point_count) || 1;
+                        const interactionId = ++popupInteractionRef.current;
+                        activePopupRef.current?.remove();
+                        activePopupRef.current = null;
+                        selectedReportIdRef.current = null;
+                        setSelectedReportId(null);
+                        source.getClusterExpansionZoom(clusterId).then(async (expansionZoom) => {
+                            if (interactionId !== popupInteractionRef.current || !map.current?.getSource(sourceId)) return;
+                            const leaves = await source.getClusterLeaves(clusterId, clusterCount, 0);
+                            if (interactionId !== popupInteractionRef.current) return;
+                            const firstCoordinates = leaves[0]?.geometry?.coordinates;
+                            const sameCoordinates = firstCoordinates && leaves.every((leaf) =>
+                                leaf.geometry?.coordinates?.[0] === firstCoordinates[0]
+                                && leaf.geometry?.coordinates?.[1] === firstCoordinates[1]
+                            );
+                            if (!sameCoordinates && expansionZoom > map.current.getZoom()) {
+                                activePopupRef.current?.remove();
+                                activePopupRef.current = null;
+                                selectedReportIdRef.current = null;
+                                setSelectedReportId(null);
+                                map.current.easeTo({ center: [longitude, latitude], zoom: expansionZoom });
+                                return;
+                            }
+
+                            const content = document.createElement('div');
+                            content.className = 'max-h-80 max-w-xs overflow-y-auto p-2';
+                            const heading = document.createElement('p');
+                            heading.className = 'mb-2 text-sm font-bold text-gray-800';
+                            heading.textContent = `${clusterCount} reports in this area`;
+                            content.appendChild(heading);
+                            leaves.forEach((leaf) => {
+                                const report = leaf.properties || {};
+                                const item = document.createElement('button');
+                                item.type = 'button';
+                                item.className = 'mb-2 block w-full rounded border border-gray-200 p-2 text-left hover:bg-gray-50';
+                                const title = document.createElement('span');
+                                title.className = 'block text-xs font-semibold text-gray-800';
+                                title.textContent = report.title || 'Hazard report';
+                                const summary = document.createElement('span');
+                                summary.className = 'mt-1 block text-[11px] text-gray-500';
+                                summary.textContent = `${report.category || 'Uncategorized'} · ${report.status || 'Pending'} · ${report.priority || 'Medium'} priority · ${report.locationText || report.address || report.barangay || 'Location unavailable'}`;
+                                item.append(title, summary);
+                                if (report.description) {
+                                    const description = document.createElement('span');
+                                    description.className = 'mt-1 block text-[11px] text-gray-600';
+                                    description.textContent = report.description;
+                                    item.appendChild(description);
+                                }
+                                item.addEventListener('click', (itemEvent) => {
+                                    itemEvent.preventDefault();
+                                    itemEvent.stopPropagation();
+                                    const coordinates = leaf.geometry?.coordinates || [longitude, latitude];
+                                    const selectedReport = { ...report, _id: report.id, coordinates };
+                                    openReportPopup(report.id, selectedReport, coordinates);
+                                });
+                                content.appendChild(item);
+                            });
+                            const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
+                                .setLngLat([longitude, latitude])
+                                .setDOMContent(content);
+                            activatePopup(popup);
+                        }).catch(() => {});
                     });
                 }
 
                 const marker = new maplibregl.Marker({ element, anchor: 'center' })
                     .setLngLat([longitude, latitude]);
-                if (!isCluster) marker.setPopup(new maplibregl.Popup({ offset: 12, closeButton: true }).setDOMContent(createReportPopupContent(properties)));
                 marker.addTo(map.current);
                 markersRef.current.push(marker);
             });

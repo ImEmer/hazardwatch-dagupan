@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuth from '../../hooks/useAuth';
@@ -7,6 +7,7 @@ import PasswordToggle from '../PasswordToggle';
 import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
 import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
+import CodeInput from '../common/CodeInput';
 
 const DEFAULT_PREFERENCES = {
   theme: 'dark',
@@ -31,6 +32,7 @@ const SettingsDashboard = () => {
   const isDark = theme === 'dark';
   const [profile, setProfile] = useState({ name: '', email: '' });
   const [verificationCode, setVerificationCode] = useState('');
+  const verificationInFlightRef = useRef(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [passwordVisibility, setPasswordVisibility] = useState({ current: false, next: false, confirm: false });
@@ -71,13 +73,20 @@ const SettingsDashboard = () => {
     if (saved && emailChanged) setVerificationPending(true);
   };
 
-  const submitVerification = async (event) => {
-    event.preventDefault();
-    await runSave('verify-email', async () => {
-      await verifyEmail(profile.email, verificationCode);
-      setVerificationPending(false);
-      setVerificationCode('');
-    }, 'Email verified.');
+  const submitVerification = async (event, codeToVerify = verificationCode) => {
+    event?.preventDefault();
+    if (verificationInFlightRef.current || saving === 'verify-email') return;
+    if (!/^\d{6}$/.test(codeToVerify)) return toast.error('Enter the 6-digit verification code.');
+    verificationInFlightRef.current = true;
+    try {
+      await runSave('verify-email', async () => {
+        await verifyEmail(profile.email, codeToVerify);
+        setVerificationPending(false);
+        setVerificationCode('');
+      }, 'Email verified.');
+    } finally {
+      verificationInFlightRef.current = false;
+    }
   };
 
   const savePassword = async (event) => {
@@ -114,7 +123,7 @@ const SettingsDashboard = () => {
           <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Role<span className={`mt-1.5 block rounded-md border px-3 py-2 capitalize ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-gray-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{user?.role || 'user'}</span></div>
           {user?.barangay && <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Barangay<span className={`mt-1.5 block rounded-md border px-3 py-2 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-gray-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{user.barangay}</span></div>}
         </form>
-        {verificationPending && <form onSubmit={submitVerification} className={`mt-4 flex flex-wrap items-end gap-3 border-t pt-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Verification code<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={`${inputClass} mt-1.5`} /></label><button type="submit" disabled={saving === 'verify-email'} className={saveButton}>{saving === 'verify-email' ? 'Verifying...' : 'Verify email'}</button></form>}
+        {verificationPending && <form onSubmit={submitVerification} className={`mt-4 flex flex-wrap items-end gap-3 border-t pt-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Verification code<CodeInput value={verificationCode} onChange={setVerificationCode} onComplete={(fullCode) => submitVerification(null, fullCode)} disabled={saving === 'verify-email'} className={`${inputClass} mt-1.5`} inputProps={{ required: true }} /></label><button type="submit" disabled={saving === 'verify-email'} className={saveButton}>{saving === 'verify-email' ? 'Verifying...' : 'Verify email'}</button></form>}
       </SettingsSection>
 
       <SettingsSection title="Security" description="Change your password. Use at least 8 characters with uppercase, lowercase, a number, and a symbol." actions={<><button type="button" onClick={() => setPasswords({ current: '', next: '', confirm: '' })} className={secondaryButton}>Cancel</button><button form="password-settings-form" type="submit" disabled={saving === 'password'} className={saveButton}>{saving === 'password' ? 'Saving...' : 'Update password'}</button></>}>
