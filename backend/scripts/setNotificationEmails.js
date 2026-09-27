@@ -1,7 +1,11 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { connectDB } from '../config/db.js';
 import User from '../models/User.js';
+
+dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.env') });
 
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const notificationEmail = 'emersonisla06@gmail.com';
