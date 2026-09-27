@@ -26,6 +26,7 @@ const preferencesSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  notificationEmail: { type: String, default: null, lowercase: true, trim: true, select: false },
   // Kept for existing Google users. Google Sign-In is deprecated.
   googleId: { type: String, unique: true, sparse: true },
   authProvider: { type: String, enum: ['local', 'google'], default: 'local' },

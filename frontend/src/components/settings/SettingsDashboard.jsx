@@ -219,7 +219,7 @@ const SettingsDashboard = () => {
             ['criticalReports', 'Critical/high-priority reports', 'Receive alerts for urgent and high-priority reports.'],
             ['statusUpdates', 'Report status updates', 'Receive updates when report status changes.'],
             ['systemNotifications', 'System notifications', 'Receive account and operational notices.'],
-            ['emailNotifications', 'Email notifications', 'Save your email preference. Email delivery is not connected yet.'],
+            ['emailNotifications', 'Email notifications', ['superadmin', 'admin', 'barangay'].includes(user?.role) ? 'Send system notifications to your configured notification email.' : 'Email notification delivery is not enabled for citizen accounts.'],
             ['inAppNotifications', 'In-app notifications', 'Show notifications in the sidebar and notification center.'],
           ].map(([key, label, description]) => <div key={key} className="py-3 first:pt-0 last:pb-0"><SettingsToggle label={label} description={description} checked={notifications[key]} onChange={(checked) => setNotifications((current) => ({ ...current, [key]: checked }))} /></div>)}
         </div>

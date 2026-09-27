@@ -13,9 +13,21 @@ export const publicUser = (user) => ({ id: user._id, name: user.name, email: use
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
+const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
 const createBackupCodes = () => Array.from({ length: 10 }, () => crypto.randomBytes(5).toString('hex').toUpperCase());
 const createLoginChallenge = (user) => jwt.sign({ id: user._id, purpose: 'login-2fa' }, process.env.JWT_SECRET, { expiresIn: '10m' });
+const deliverTwoFactorCode = async (user, code) => {
+  const target = user.notificationEmail || user.email;
+  if (process.env.NODE_ENV === 'production') {
+    await sendTwoFactorCode({ email: target, name: user.name, code });
+    return;
+  }
+  console.log(`[auth] 2FA OTP for ${user.email} sent to ${target}: ${code}`);
+  await sendTwoFactorCode({ email: target, name: user.name, code }).catch((error) => {
+    console.error('[auth] Two-factor email delivery failed in development:', error.message);
+  });
+};
 const revokeToken = async (req, decodedToken = jwt.decode(req.headers.authorization.slice(7))) => {
   const token = req.headers.authorization.slice(7);
   if (!decodedToken?.exp) return;
@@ -48,6 +60,7 @@ export const register = async (req, res, next) => {
       existingUser.email = normalizedEmail;
       existingUser.password = password;
       existingUser.role = safeRole;
+      existingUser.notificationEmail = privilegedRoles.includes(safeRole) ? PRIVILEGED_NOTIFICATION_EMAIL : null;
       existingUser.barangay = barangay;
       existingUser.phone = phone;
       existingUser.status = 'pending';
@@ -73,6 +86,7 @@ export const register = async (req, res, next) => {
       email: normalizedEmail,
       password,
       role: safeRole,
+      notificationEmail: privilegedRoles.includes(safeRole) ? PRIVILEGED_NOTIFICATION_EMAIL : null,
       barangay,
       phone,
       status: 'pending',
@@ -109,7 +123,7 @@ export const login = async (req, res, next) => {
       return res.status(429).json({ success: false, message: `Too many failed login attempts. Please try again in ${Math.ceil(lockout.retryAfter / 60)} minutes.` });
     }
 
-    const user = await User.findOne({ email: normalizedEmail }).select('+password +otpCode +otpExpires +otpAttempts +otpBlockedUntil');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password +notificationEmail +otpCode +otpExpires +otpAttempts +otpBlockedUntil');
     if (!user || !(await user.comparePassword(password))) {
       const failedLogin = recordFailedLogin(req, normalizedEmail);
       if (failedLogin) {
@@ -166,7 +180,7 @@ export const login = async (req, res, next) => {
         user.otpAttempts = 0;
       }
       const code = createOtp();
-      await sendTwoFactorCode({ email: user.email, name: user.name, code });
+      await deliverTwoFactorCode(user, code);
       user.otpCode = await bcrypt.hash(code, 12);
       user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save({ validateBeforeSave: false });
@@ -255,11 +269,11 @@ export const resendTwoFactorLoginCode = async (req, res, next) => {
   try {
     const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
     if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
-    const user = await User.findById(decoded.id).select('+otpAttempts +otpBlockedUntil');
+    const user = await User.findById(decoded.id).select('+notificationEmail +otpAttempts +otpBlockedUntil');
     if (!user || !user.isActive || !user.twoFactorEnabled || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
     if (user.otpBlockedUntil && user.otpBlockedUntil > new Date()) return res.status(429).json({ success: false, message: 'Two-factor verification is temporarily locked.' });
     const code = createOtp();
-    await sendTwoFactorCode({ email: user.email, name: user.name, code });
+    await deliverTwoFactorCode(user, code);
     user.otpCode = await bcrypt.hash(code, 12);
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
@@ -272,20 +286,21 @@ export const resendTwoFactorLoginCode = async (req, res, next) => {
 
 export const enableTwoFactor = async (req, res, next) => {
   try {
-    if (!privilegedRoles.includes(req.user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
-    if (req.user.twoFactorEnabled) return res.status(409).json({ success: false, message: 'Two-factor authentication is already enabled.' });
+    const user = await User.findById(req.user._id).select('+notificationEmail');
+    if (!user || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
+    if (user.twoFactorEnabled) return res.status(409).json({ success: false, message: 'Two-factor authentication is already enabled.' });
     const code = createOtp();
     const backupCodes = createBackupCodes();
     const [setupHash, backupHashes] = await Promise.all([
       bcrypt.hash(code, 12),
       Promise.all(backupCodes.map((backupCode) => bcrypt.hash(backupCode, 12))),
     ]);
-    await sendTwoFactorCode({ email: req.user.email, name: req.user.name, code });
-    req.user.twoFactorSetupCode = setupHash;
-    req.user.twoFactorSetupExpires = new Date(Date.now() + 10 * 60 * 1000);
-    req.user.twoFactorSetupAttempts = 0;
-    req.user.twoFactorSetupBackupCodes = backupHashes;
-    await req.user.save({ validateBeforeSave: false });
+    await deliverTwoFactorCode(user, code);
+    user.twoFactorSetupCode = setupHash;
+    user.twoFactorSetupExpires = new Date(Date.now() + 10 * 60 * 1000);
+    user.twoFactorSetupAttempts = 0;
+    user.twoFactorSetupBackupCodes = backupHashes;
+    await user.save({ validateBeforeSave: false });
     res.json({ success: true, requiresOTP: true, backupCodes, message: 'Enter the emailed code to finish enabling 2FA. Save these backup codes now.' });
   } catch (error) { next(error); }
 };

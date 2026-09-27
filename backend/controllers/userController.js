@@ -6,6 +6,8 @@ const fields = 'name email role barangay phone status isActive suspendedUntil su
 const listFields = 'name email role barangay status isActive suspendedUntil suspensionReason lastLogin createdAt';
 const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
 const manageableRoles = ['admin', 'barangay', 'user'];
+const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
+const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const preferenceKeys = {
   notifications: ['newHazardReports', 'criticalReports', 'statusUpdates', 'systemNotifications', 'emailNotifications', 'inAppNotifications'],
   map: ['showResolved', 'defaultZoom', 'mapStyle', 'markerStyle'],
@@ -161,9 +163,19 @@ export const createUser = async (req, res, next) => {
     }
     if (typeof req.body.email === 'string' && /\s/.test(req.body.email)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
     if (typeof req.body.password === 'string' && /\s/.test(req.body.password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
-    const user = await User.create({ ...req.body, email: String(req.body.email || '').trim().toLowerCase(), role, status: 'active', isActive: true, deletedAt: undefined });
+    const user = await User.create({
+      ...req.body,
+      email: String(req.body.email || '').trim().toLowerCase(),
+      role,
+      notificationEmail: privilegedRoles.includes(role) ? PRIVILEGED_NOTIFICATION_EMAIL : null,
+      status: 'active',
+      isActive: true,
+      deletedAt: undefined,
+    });
     await logActivity({ actor: req.user, action: 'user_created', message: `${req.user.name} created user ${user.name}`, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {});
-    res.status(201).json({ success: true, user: user.toJSON() });
+    const safeUser = user.toJSON();
+    delete safeUser.notificationEmail;
+    res.status(201).json({ success: true, user: safeUser });
   } catch (e) { next(e); }
 };
 export const updateUser = async (req, res, next) => {
