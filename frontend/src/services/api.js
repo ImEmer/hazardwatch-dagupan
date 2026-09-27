@@ -86,7 +86,6 @@ export const authApi = {
   verifyTwoFactorSetup: (code) => api.post('/auth/2fa/enable/verify', { code }),
   disableTwoFactor: (currentPassword) => api.post('/auth/2fa/disable', { currentPassword }),
   verifyTwoFactorLogin: (tempToken, code) => api.post('/auth/2fa/verify', { tempToken, code }),
-  verifyTwoFactorBackupCode: (tempToken, backupCode) => api.post('/auth/2fa/verify', { tempToken, backupCode }),
   resendTwoFactorLoginCode: (tempToken) => api.post('/auth/2fa/resend', { tempToken }),
 };
 

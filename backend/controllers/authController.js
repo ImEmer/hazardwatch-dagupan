@@ -15,7 +15,6 @@ export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, 
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
-const createBackupCodes = () => Array.from({ length: 10 }, () => crypto.randomBytes(5).toString('hex').toUpperCase());
 const createLoginChallenge = (user) => jwt.sign({ id: user._id, purpose: 'login-2fa' }, process.env.JWT_SECRET, { expiresIn: '10m' });
 const deliverTwoFactorCode = async (user, code) => {
   const target = user.notificationEmail || user.email;
@@ -201,7 +200,7 @@ export const verifyTwoFactorLogin = async (req, res, next) => {
   try {
     const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
     if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
-    const user = await User.findById(decoded.id).select('+otpCode +otpExpires +otpAttempts +otpBlockedUntil +backupCodes');
+    const user = await User.findById(decoded.id).select('+otpCode +otpExpires +otpAttempts +otpBlockedUntil');
     if (!user || !user.isActive || !privilegedRoles.includes(user.role) || !user.twoFactorEnabled) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
     const now = new Date();
     if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
@@ -218,18 +217,7 @@ export const verifyTwoFactorLogin = async (req, res, next) => {
     if (user.status !== 'active') return res.status(403).json({ success: false, message: 'This account is not active.' });
 
     const code = String(req.body.code || '').trim();
-    const backupCode = String(req.body.backupCode || '').trim().toUpperCase();
-    let valid = Boolean(code && user.otpCode && user.otpExpires && user.otpExpires > now && await bcrypt.compare(code, user.otpCode));
-    let consumedBackupHash = null;
-    if (!valid && backupCode) {
-      for (const hash of user.backupCodes || []) {
-        if (await bcrypt.compare(backupCode, hash)) {
-          consumedBackupHash = hash;
-          valid = true;
-          break;
-        }
-      }
-    }
+    const valid = Boolean(code && user.otpCode && user.otpExpires && user.otpExpires > now && await bcrypt.compare(code, user.otpCode));
     if (!valid) {
       user.otpAttempts = (user.otpAttempts || 0) + 1;
       if (user.otpAttempts >= 5) {
@@ -244,21 +232,12 @@ export const verifyTwoFactorLogin = async (req, res, next) => {
     }
 
     const loginTime = new Date();
-    if (consumedBackupHash) {
-      const result = await User.updateOne({ _id: user._id, backupCodes: consumedBackupHash }, {
-        $pull: { backupCodes: consumedBackupHash },
-        $set: { lastLogin: loginTime, otpAttempts: 0 },
-        $unset: { otpCode: 1, otpExpires: 1, otpBlockedUntil: 1 },
-      });
-      if (!result.modifiedCount) return res.status(401).json({ success: false, message: 'This backup code has already been used.' });
-    } else {
-      user.otpCode = undefined;
-      user.otpExpires = undefined;
-      user.otpAttempts = 0;
-      user.otpBlockedUntil = undefined;
-      user.lastLogin = loginTime;
-      await user.save({ validateBeforeSave: false });
-    }
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    user.otpAttempts = 0;
+    user.otpBlockedUntil = undefined;
+    user.lastLogin = loginTime;
+    await user.save({ validateBeforeSave: false });
     await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     return res.json({ success: true, token: issueToken(user), user: publicUser(user) });
   } catch (error) {
@@ -292,24 +271,19 @@ export const enableTwoFactor = async (req, res, next) => {
     if (!user || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
     if (user.twoFactorEnabled) return res.status(409).json({ success: false, message: 'Two-factor authentication is already enabled.' });
     const code = createOtp();
-    const backupCodes = createBackupCodes();
-    const [setupHash, backupHashes] = await Promise.all([
-      bcrypt.hash(code, 12),
-      Promise.all(backupCodes.map((backupCode) => bcrypt.hash(backupCode, 12))),
-    ]);
+    const setupHash = await bcrypt.hash(code, 12);
     await deliverTwoFactorCode(user, code);
     user.twoFactorSetupCode = setupHash;
     user.twoFactorSetupExpires = new Date(Date.now() + 10 * 60 * 1000);
     user.twoFactorSetupAttempts = 0;
-    user.twoFactorSetupBackupCodes = backupHashes;
     await user.save({ validateBeforeSave: false });
-    res.json({ success: true, requiresOTP: true, backupCodes, message: 'Enter the emailed code to finish enabling 2FA. Save these backup codes now.' });
+    res.json({ success: true, requiresOTP: true, message: 'Enter the emailed code to finish enabling 2FA.' });
   } catch (error) { next(error); }
 };
 
 export const verifyTwoFactorSetup = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('+twoFactorSetupCode +twoFactorSetupExpires +twoFactorSetupAttempts +twoFactorSetupBackupCodes');
+    const user = await User.findById(req.user._id).select('+twoFactorSetupCode +twoFactorSetupExpires +twoFactorSetupAttempts');
     if (!user || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
     if (!user.twoFactorSetupCode || !user.twoFactorSetupExpires || user.twoFactorSetupExpires <= new Date()) return res.status(400).json({ success: false, message: 'The setup code expired. Start 2FA setup again.' });
     const valid = await bcrypt.compare(String(req.body.code || ''), user.twoFactorSetupCode);
@@ -318,17 +292,14 @@ export const verifyTwoFactorSetup = async (req, res, next) => {
       if (user.twoFactorSetupAttempts >= 5) {
         user.twoFactorSetupCode = undefined;
         user.twoFactorSetupExpires = undefined;
-        user.twoFactorSetupBackupCodes = [];
       }
       await user.save({ validateBeforeSave: false });
       return res.status(400).json({ success: false, message: user.twoFactorSetupAttempts >= 5 ? 'Setup locked. Start 2FA setup again.' : 'Invalid setup code.' });
     }
     user.twoFactorEnabled = true;
-    user.backupCodes = user.twoFactorSetupBackupCodes;
     user.twoFactorSetupCode = undefined;
     user.twoFactorSetupExpires = undefined;
     user.twoFactorSetupAttempts = 0;
-    user.twoFactorSetupBackupCodes = [];
     await user.save({ validateBeforeSave: false });
     res.json({ success: true, user: publicUser(user) });
   } catch (error) { next(error); }
@@ -337,14 +308,13 @@ export const verifyTwoFactorSetup = async (req, res, next) => {
 export const disableTwoFactor = async (req, res, next) => {
   try {
     if (!privilegedRoles.includes(req.user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
-    const user = await User.findById(req.user._id).select('+password +otpCode +otpExpires +backupCodes');
+    const user = await User.findById(req.user._id).select('+password +otpCode +otpExpires');
     if (!user || !(await user.comparePassword(String(req.body.currentPassword || '')))) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
     user.twoFactorEnabled = false;
     user.otpCode = undefined;
     user.otpExpires = undefined;
     user.otpAttempts = 0;
     user.otpBlockedUntil = undefined;
-    user.backupCodes = [];
     await user.save({ validateBeforeSave: false });
     res.json({ success: true, user: publicUser(user) });
   } catch (error) { next(error); }

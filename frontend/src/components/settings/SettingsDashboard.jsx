@@ -36,7 +36,7 @@ const SettingsDashboard = () => {
   const verificationInFlightRef = useRef(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled));
-  const [twoFactorSetupCodes, setTwoFactorSetupCodes] = useState(null);
+  const [twoFactorSetupPending, setTwoFactorSetupPending] = useState(false);
   const [twoFactorSetupCode, setTwoFactorSetupCode] = useState('');
   const [twoFactorPassword, setTwoFactorPassword] = useState('');
   const twoFactorInFlightRef = useRef(false);
@@ -118,7 +118,7 @@ const SettingsDashboard = () => {
     setSaving('two-factor-setup');
     try {
       const { data } = await authApi.enableTwoFactor();
-      setTwoFactorSetupCodes(data.backupCodes || []);
+      setTwoFactorSetupPending(true);
       setTwoFactorSetupCode('');
       toast.success(data.message || 'Security code sent to your email.');
     } catch (error) {
@@ -134,7 +134,7 @@ const SettingsDashboard = () => {
       await authApi.verifyTwoFactorSetup(codeToVerify);
       const updatedUser = await getCurrentUser();
       setTwoFactorEnabled(Boolean(updatedUser?.twoFactorEnabled));
-      setTwoFactorSetupCodes(null);
+      setTwoFactorSetupPending(false);
       setTwoFactorSetupCode('');
       toast.success('Two-factor authentication enabled.');
     } catch (error) {
@@ -190,17 +190,16 @@ const SettingsDashboard = () => {
         </form>
       </SettingsSection>
 
-      {['superadmin', 'admin', 'barangay'].includes(user?.role) && <SettingsSection title="Two-factor authentication" description="Protect your privileged account with an emailed sign-in code." actions={!twoFactorEnabled && !twoFactorSetupCodes ? <button type="button" onClick={startTwoFactorSetup} disabled={Boolean(saving)} className={saveButton}>{saving === 'two-factor-setup' ? 'Sending code...' : 'Enable 2FA'}</button> : undefined}>
+      {['superadmin', 'admin', 'barangay'].includes(user?.role) && <SettingsSection title="Two-factor authentication" description="Protect your privileged account with an emailed sign-in code." actions={!twoFactorEnabled && !twoFactorSetupPending ? <button type="button" onClick={startTwoFactorSetup} disabled={Boolean(saving)} className={saveButton}>{saving === 'two-factor-setup' ? 'Sending code...' : 'Enable 2FA'}</button> : undefined}>
         {twoFactorEnabled ? <form onSubmit={disableTwoFactor} className="flex flex-wrap items-end gap-3">
           <label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Current password<input type="password" autoComplete="current-password" required value={twoFactorPassword} onChange={(event) => setTwoFactorPassword(event.target.value)} className={`${inputClass} mt-1.5`} /></label>
           <button type="submit" disabled={Boolean(saving)} className={`${secondaryButton} disabled:opacity-50`}>{saving === 'two-factor-disable' ? 'Disabling...' : 'Disable 2FA'}</button>
-        </form> : twoFactorSetupCodes ? <div className="space-y-4">
-          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Save these one-time backup codes now. They will not be shown again.</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{twoFactorSetupCodes.map((backupCode) => <code key={backupCode} className={`rounded border p-2 text-center text-xs ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-gray-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{backupCode}</code>)}</div>
+        </form> : twoFactorSetupPending ? <div className="space-y-4">
+          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Enter the six-digit code sent to your notification email to finish enabling 2FA.</p>
           <form onSubmit={(event) => { event.preventDefault(); verifyTwoFactorSetup(); }} className="flex flex-wrap items-end gap-3">
             <label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Email verification code<CodeInput value={twoFactorSetupCode} onChange={setTwoFactorSetupCode} onComplete={verifyTwoFactorSetup} disabled={saving === 'two-factor-verify'} className={`${inputClass} mt-1.5 text-center font-mono tracking-widest`} inputProps={{ required: true, 'aria-label': '6-digit 2FA setup code' }} /></label>
             <button type="submit" disabled={Boolean(saving) || twoFactorSetupCode.length !== 6} className={`${saveButton} disabled:opacity-50`}>{saving === 'two-factor-verify' ? 'Verifying...' : 'Verify and enable'}</button>
-            <button type="button" onClick={() => { setTwoFactorSetupCodes(null); setTwoFactorSetupCode(''); }} disabled={Boolean(saving)} className={secondaryButton}>Cancel setup</button>
+            <button type="button" onClick={() => { setTwoFactorSetupPending(false); setTwoFactorSetupCode(''); }} disabled={Boolean(saving)} className={secondaryButton}>Cancel setup</button>
           </form>
         </div> : <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Two-factor authentication is disabled.</p>}
       </SettingsSection>}
