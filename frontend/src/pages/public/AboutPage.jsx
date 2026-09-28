@@ -1,39 +1,153 @@
-import React, { useEffect } from 'react';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
-import { CommunityParticipationSection, SaferCommunitiesSection } from '../../components/CommunitySections';
+import React from 'react';
+import { AlertTriangle, ArrowRight, CircleCheck, LayoutDashboard, MapPin, Users, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const AboutPage = () => {
-  useEffect(() => {
-    AOS.init({ duration: 800, easing: 'ease-in-out', once: true });
-    AOS.refresh();
-  }, []);
+  const steps = [
+    {
+      number: '01',
+      title: 'Report hazards',
+      description: 'Submit a detailed report with photos and the location of the hazard.',
+      Icon: AlertTriangle,
+    },
+    {
+      number: '02',
+      title: 'Pinpoint locations',
+      description: 'Mark the exact spot so neighbors and responders can find it quickly.',
+      Icon: MapPin,
+    },
+    {
+      number: '03',
+      title: 'Track resolution',
+      description: 'Follow each report from submission through review and resolution.',
+      Icon: CircleCheck,
+    },
+  ];
+
+  const pillars = [
+    {
+      title: 'Location-based',
+      description: 'Reports tied to Dagupan City and its barangays.',
+      Icon: MapPin,
+    },
+    {
+      title: 'Centralized monitoring',
+      description: 'Hazard reports brought together in one dashboard.',
+      Icon: LayoutDashboard,
+    },
+    {
+      title: 'Community-driven',
+      description: 'Citizens and local officials working from shared information.',
+      Icon: Users,
+    },
+    {
+      title: 'Real-time reporting',
+      description: 'Updates as hazards are reported, reviewed, and resolved.',
+      Icon: Zap,
+    },
+  ];
 
   return (
-    <main className="min-h-screen bg-[#0a0b0f] px-4 pb-16 pt-28 text-white">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <section className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-8 text-center md:p-12" data-aos="fade-up">
-          <p className="text-sm uppercase tracking-[0.3em] text-[#3b82f6]">HazardWatch</p>
-          <h1 className="mt-4 text-4xl font-bold md:text-5xl">About HazardWatch</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-400">Building safer communities through real-time hazard reporting.</p>
-        </section>
-        <section className="grid gap-6 md:grid-cols-2" data-aos="fade-up" data-aos-delay="100">
-          <article className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6">
-            <h2 className="text-2xl font-bold">What is HazardWatch?</h2>
-            <p className="mt-3 leading-7 text-gray-400">HazardWatch is a community-based real-time hazard reporting and monitoring platform designed for Dagupan City. It connects citizens with local authorities to ensure faster response times and better awareness of community safety issues.</p>
-          </article>
-          <article className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6">
-            <h2 className="text-2xl font-bold">Our Mission</h2>
-            <p className="mt-3 leading-7 text-gray-400">HazardWatch is dedicated to empowering communities by providing a simple, accessible platform for reporting and monitoring hazards. We believe that informed communities are safer communities.</p>
-          </article>
-        </section>
-        <CommunityParticipationSection />
-        <SaferCommunitiesSection />
-        <section className="rounded-2xl border border-[#2e303a] bg-[#14151d] p-6 text-center md:p-8" data-aos="fade-up">
-          <h2 className="text-2xl font-bold">Our Commitment</h2>
-          <p className="mx-auto mt-3 max-w-3xl leading-7 text-gray-400">We are committed to transparency, accountability, and community safety. Every report is treated with importance and handled with care.</p>
-        </section>
-      </div>
+    <main className="overflow-hidden bg-white text-slate-900 dark:bg-[#0a0b0f] dark:text-white">
+      <section className="relative isolate flex min-h-[70vh] items-center justify-center px-4 py-20 text-center sm:px-6 lg:px-8">
+        <img
+          src="/dagupan-map-dark.png"
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          fetchPriority="high"
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-30 dark:opacity-100"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/90 via-white/75 to-white/90 dark:from-black/80 dark:via-black/60 dark:to-black/80" />
+        <div className="mx-auto max-w-4xl pt-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-[#60a5fa] md:text-sm">About HazardWatch</p>
+          <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">About HazardWatch</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-700 dark:text-gray-200 md:text-lg">
+            Building safer communities through real-time hazard reporting.
+          </p>
+          <Link
+            to="/map"
+            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0a0b0f]"
+          >
+            Explore Live Map <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-20 sm:px-6 md:py-24 lg:grid-cols-2 lg:gap-16 lg:px-8">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-[#60a5fa] md:text-sm">Our mission</p>
+          <h2 className="mt-4 max-w-2xl text-2xl font-semibold tracking-tight md:text-4xl">
+            Empowering communities through accessible hazard reporting.
+          </h2>
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-600 dark:text-gray-400 md:text-lg">
+            HazardWatch gives Dagupan residents a simple way to share local hazards and see what is happening around them. By connecting community reports with real-time awareness, we help citizens and local officials work toward safer neighborhoods.
+          </p>
+        </div>
+        <div className="mx-auto w-full max-w-md">
+          <img
+            src="/mission-illustration.png"
+            alt="Community safety illustration"
+            loading="lazy"
+            className="h-auto w-full object-contain"
+          />
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-slate-50 dark:border-[#2e303a] dark:bg-[#14151d]/50">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-24 lg:px-8">
+          <header className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-[#60a5fa] md:text-sm">How it works</p>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-4xl">From a local report to a safer response.</h2>
+          </header>
+          <ol className="relative mt-12 grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
+            <div aria-hidden="true" className="absolute left-[16%] right-[16%] top-4 hidden h-px bg-[#3b82f6]/25 md:block" />
+            {steps.map(({ number, title, description, Icon }) => (
+              <li key={number} className="relative min-w-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#3b82f6]/40 bg-white text-[#3b82f6] dark:bg-[#0a0b0f]">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <p className="mt-5 text-xs font-semibold tracking-[0.16em] text-blue-700 dark:text-[#60a5fa]">{number}</p>
+                <h3 className="mt-2 text-lg font-semibold md:text-xl">{title}</h3>
+                <p className="mt-3 max-w-sm text-base leading-relaxed text-slate-600 dark:text-gray-400">{description}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-24 lg:px-8">
+        <header className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-[#60a5fa] md:text-sm">Core pillars</p>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-4xl">Built for safer communities.</h2>
+        </header>
+        <ul className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {pillars.map(({ title, description, Icon }) => (
+            <li key={title} className="min-w-0 border-t border-slate-200 pt-6 transition-colors hover:border-[#3b82f6] dark:border-[#2e303a] dark:hover:border-[#3b82f6]">
+              <Icon className="h-6 w-6 text-[#3b82f6]" aria-hidden="true" />
+              <h3 className="mt-5 text-lg font-semibold md:text-xl">{title}</h3>
+              <p className="mt-3 text-base leading-relaxed text-slate-600 dark:text-gray-400">{description}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 md:pb-24 lg:px-8">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100 px-6 py-16 text-center dark:from-[#14151d] dark:via-[#14151d] dark:to-[#0a0b0f] sm:px-10 md:py-20">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-2xl font-semibold tracking-tight md:text-4xl">Be part of the solution.</h2>
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 dark:text-gray-400 md:text-lg">
+              Report hazards and help keep your community safe.
+            </p>
+            <Link
+              to="/submit"
+              className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 font-semibold text-white shadow-lg shadow-[#3b82f6]/20 transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 dark:shadow-[0_0_40px_rgba(59,130,246,0.5)] dark:focus-visible:ring-offset-[#14151d]"
+            >
+              Report a Hazard <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 };
