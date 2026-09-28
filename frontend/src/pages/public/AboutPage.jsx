@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { AlertTriangle, ArrowRight, Clock3, LayoutGrid, MapPin, Users, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Code2, LayoutGrid, Lightbulb, MapPin, Target, Users, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const TAGLINES = [
@@ -110,11 +110,31 @@ const AboutPage = () => {
     },
   ];
 
-  const impactStats = [
-    { number: '25,000+', label: 'Hazards Reported', Icon: AlertTriangle },
-    { number: '31', label: 'Barangays Covered', Icon: MapPin },
-    { number: '< 24 hrs', label: 'Avg. Response Time', Icon: Clock3 },
-    { number: '24,970+', label: 'Active Citizens', Icon: Users },
+  const storyMilestones = [
+    {
+      number: '01',
+      title: 'The Problem',
+      description: 'Dagupan City had no unified, real-time way to report hazards. Reports were scattered, slow, and often missed.',
+      Icon: AlertTriangle,
+    },
+    {
+      number: '02',
+      title: 'The Idea',
+      description: 'A vision for a simple, accessible platform where citizens, barangays, and city officials collaborate in real time.',
+      Icon: Lightbulb,
+    },
+    {
+      number: '03',
+      title: 'The Build',
+      description: 'Built with modern web technologies, designed for scalability, security, and real-world deployment.',
+      Icon: Code2,
+    },
+    {
+      number: '04',
+      title: 'The Vision',
+      description: 'A future where every hazard is reported, tracked, and resolved, powered by community and technology.',
+      Icon: Target,
+    },
   ];
 
   return (
@@ -167,20 +187,36 @@ const AboutPage = () => {
       <section className="bg-slate-50 dark:bg-[#0f1729]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-24 lg:px-8">
           <header className="max-w-2xl" data-aos="fade-up">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-[#60a5fa] md:text-sm">Our impact</p>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-4xl">Making a difference in Dagupan City.</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-[#60a5fa] md:text-sm">Our story</p>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-4xl">The Story Behind HazardWatch</h2>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-600 dark:text-gray-400 md:text-lg">
+              From a simple idea to a community-powered platform — here's how HazardWatch came to life.
+            </p>
           </header>
-          <ul className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {impactStats.map(({ number, label, Icon }, index) => (
-              <li key={label} className="min-w-0 py-2" data-aos="fade-up" data-aos-delay={index * 100}>
-                <div className="flex h-10 w-10 items-center justify-center text-[#3b82f6]">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <p className="mt-4 text-4xl font-bold tracking-tight text-blue-700 dark:text-[#60a5fa] md:text-5xl">{number}</p>
-                <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">{label}</p>
-              </li>
-            ))}
-          </ul>
+          <ol className="relative mt-14 space-y-10 before:absolute before:inset-y-0 before:left-5 before:w-px before:bg-slate-300 dark:before:bg-slate-700 md:space-y-0 md:before:left-1/2">
+            {storyMilestones.map(({ number, title, description, Icon }, index) => {
+              const isLeft = index % 2 === 0;
+              return (
+                <li
+                  key={number}
+                  className="relative grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-5 md:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] md:pb-14 md:last:pb-0"
+                  data-aos="fade-up"
+                  data-aos-delay={index * 100}
+                >
+                  <div className="relative z-10 col-start-1 row-start-1 flex h-10 w-10 items-center justify-center rounded-full border border-[#3b82f6]/50 bg-slate-50 text-xs font-semibold text-blue-700 dark:bg-[#0f1729] dark:text-[#60a5fa] md:col-start-2 md:mx-auto">
+                    {number}
+                  </div>
+                  <div className={`col-start-2 row-start-1 min-w-0 ${isLeft ? 'md:col-start-1 md:pr-8 md:text-right' : 'md:col-start-3 md:pl-8'}`}>
+                    <div className={`mb-3 flex items-center gap-3 text-blue-700 dark:text-[#60a5fa] ${isLeft ? 'md:flex-row-reverse' : ''}`}>
+                      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white md:text-xl">{title}</h3>
+                    </div>
+                    <p className="text-base leading-relaxed text-slate-600 dark:text-gray-400">{description}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       </section>
 
