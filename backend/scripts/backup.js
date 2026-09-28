@@ -10,6 +10,9 @@ import { sendEmail } from '../utils/sendEmail.js';
 
 const B2_API_VERSION = 'v3';
 const RETENTION_DAYS = 30;
+const MONGODUMP = process.env.MONGODUMP_PATH || (process.platform === 'win32'
+  ? 'C:\\Program Files\\MongoDB\\Tools\\100\\bin\\mongodump.exe'
+  : 'mongodump');
 
 const requireBackupConfig = () => {
   const required = ['MONGO_URI', 'B2_KEY_ID', 'B2_APP_KEY', 'B2_BUCKET_ID'];
@@ -35,7 +38,7 @@ const b2Post = (auth, action, body) => requestJson(`${auth.apiUrl}/b2api/${B2_AP
 });
 
 const createArchive = async (filePath) => new Promise((resolve, reject) => {
-  const child = spawn('mongodump', ['--uri', process.env.MONGO_URI, '--archive', filePath, '--gzip'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const child = spawn(MONGODUMP, ['--uri', process.env.MONGO_URI, '--archive', filePath, '--gzip'], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
   let stderr = '';
   child.stderr.on('data', (chunk) => { stderr = `${stderr}${chunk}`.slice(-4096); });
   child.once('error', reject);
