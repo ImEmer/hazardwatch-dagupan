@@ -55,6 +55,13 @@ const userSchema = new mongoose.Schema({
   twoFactorSetupCode: { type: String, select: false },
   twoFactorSetupExpires: { type: Date, select: false },
   twoFactorSetupAttempts: { type: Number, default: 0, select: false },
+  knownDevices: [{
+    deviceId: { type: String, required: true },
+    firstSeenAt: { type: Date, default: Date.now },
+    lastSeenAt: { type: Date, default: Date.now },
+    userAgent: { type: String, default: '' },
+    ip: { type: String, default: '' },
+  }],
   emailVerificationCode: { type: String, select: false },
   emailVerificationToken: { type: String, select: false },
   emailVerificationExpires: { type: Date, select: false },

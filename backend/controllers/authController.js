@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
-import { sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
+import { sendAccountVerifiedEmail, sendNewDeviceAlertEmail, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
@@ -16,6 +16,38 @@ const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
 const createLoginChallenge = (user) => jwt.sign({ id: user._id, purpose: 'login-2fa' }, process.env.JWT_SECRET, { expiresIn: '10m' });
+export const createDeviceFingerprint = ({ userAgent = '', acceptLanguage = '', deviceId = '' }) => {
+  const fingerprintSource = deviceId || `${userAgent || 'unknown'}|${acceptLanguage || 'unknown'}`;
+  return crypto.createHash('sha256').update(fingerprintSource).digest('hex');
+};
+
+export const syncKnownDevice = (knownDevices = [], { deviceId, userAgent = '', ip = '', now = new Date() } = {}) => {
+  const trimmed = Array.isArray(knownDevices) ? knownDevices : [];
+  const index = trimmed.findIndex((entry) => entry?.deviceId === deviceId);
+  const baseEntry = {
+    deviceId,
+    firstSeenAt: now,
+    lastSeenAt: now,
+    userAgent: userAgent || '',
+    ip: ip || '',
+  };
+
+  if (index === -1) {
+    const next = [...trimmed, baseEntry];
+    if (next.length > 20) next.shift();
+    return next;
+  }
+
+  const updated = [...trimmed];
+  updated[index] = {
+    ...updated[index],
+    lastSeenAt: now,
+    userAgent: userAgent || updated[index].userAgent || '',
+    ip: ip || updated[index].ip || '',
+  };
+  return updated;
+};
+
 const deliverTwoFactorCode = async (user, code) => {
   const target = user.notificationEmail || user.email;
   if (process.env.NODE_ENV === 'production') {
@@ -189,8 +221,37 @@ export const login = async (req, res, next) => {
       return res.json({ success: true, requiresOTP: true, tempToken: createLoginChallenge(user), message: 'A security code was sent to your email.' });
     }
     clearFailedLogins(req, normalizedEmail);
-    user.lastLogin = new Date();
+    const userAgent = String(req.headers['user-agent'] || '');
+    const acceptLanguage = String(req.headers['accept-language'] || '');
+    const deviceIdHeader = String(req.headers['x-device-id'] || '');
+    const deviceId = createDeviceFingerprint({ userAgent, acceptLanguage, deviceId: deviceIdHeader });
+    const existingDevice = user.knownDevices?.find((entry) => entry?.deviceId === deviceId);
+    const deviceName = (() => {
+      const match = /([A-Za-z0-9._-]+)\s*\(([^)]+)\)/.exec(userAgent) || /([A-Za-z0-9._-]+)\//.exec(userAgent);
+      if (!userAgent) return 'New device';
+      if (match) return `${match[1] || 'Browser'} on ${match[2] || 'device'}`;
+      return userAgent.split(' ').slice(0, 5).join(' ') || 'New device';
+    })();
+    const loginTimestamp = new Date();
+    const nextKnownDevices = syncKnownDevice(user.knownDevices, { deviceId, userAgent, ip: req.ip || req.socket?.remoteAddress || 'unknown-ip', now: loginTimestamp });
+    user.knownDevices = nextKnownDevices;
+    user.lastLogin = loginTimestamp;
     await user.save({ validateBeforeSave: false });
+
+    if (!existingDevice) {
+      try {
+        await sendNewDeviceAlertEmail({
+          email: user.notificationEmail || user.email,
+          name: user.name,
+          deviceName,
+          ipAddress: req.ip || req.socket?.remoteAddress || 'unknown IP',
+          sentAt: loginTimestamp,
+        });
+      } catch (error) {
+        console.error('[auth] New device alert email failed:', error.message);
+      }
+    }
+
     await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     res.json({ success: true, token: issueToken(user), user: publicUser(user) });
   } catch (error) { next(error); }
@@ -236,8 +297,36 @@ export const verifyTwoFactorLogin = async (req, res, next) => {
     user.otpExpires = undefined;
     user.otpAttempts = 0;
     user.otpBlockedUntil = undefined;
+    const userAgent = String(req.headers['user-agent'] || '');
+    const acceptLanguage = String(req.headers['accept-language'] || '');
+    const deviceIdHeader = String(req.headers['x-device-id'] || '');
+    const deviceId = createDeviceFingerprint({ userAgent, acceptLanguage, deviceId: deviceIdHeader });
+    const existingDevice = user.knownDevices?.find((entry) => entry?.deviceId === deviceId);
+    const deviceName = (() => {
+      const match = /([A-Za-z0-9._-]+)\s*\(([^)]+)\)/.exec(userAgent) || /([A-Za-z0-9._-]+)\//.exec(userAgent);
+      if (!userAgent) return 'New device';
+      if (match) return `${match[1] || 'Browser'} on ${match[2] || 'device'}`;
+      return userAgent.split(' ').slice(0, 5).join(' ') || 'New device';
+    })();
+    const nextKnownDevices = syncKnownDevice(user.knownDevices, { deviceId, userAgent, ip: req.ip || req.socket?.remoteAddress || 'unknown-ip', now: loginTime });
+    user.knownDevices = nextKnownDevices;
     user.lastLogin = loginTime;
     await user.save({ validateBeforeSave: false });
+
+    if (!existingDevice) {
+      try {
+        await sendNewDeviceAlertEmail({
+          email: user.notificationEmail || user.email,
+          name: user.name,
+          deviceName,
+          ipAddress: req.ip || req.socket?.remoteAddress || 'unknown IP',
+          sentAt: loginTime,
+        });
+      } catch (error) {
+        console.error('[auth] New device alert email failed:', error.message);
+      }
+    }
+
     await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
     return res.json({ success: true, token: issueToken(user), user: publicUser(user) });
   } catch (error) {
@@ -426,6 +515,12 @@ export const verifyEmail = async (req, res, next) => {
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
     await user.save({ validateBeforeSave: false });
+
+    try {
+      await sendAccountVerifiedEmail({ email: user.email, name: user.name });
+    } catch (error) {
+      console.error('[auth] Account verified email failed:', error.message);
+    }
 
     return res.json({ success: true, message: 'Email verified. You can now log in.' });
   } catch (error) {

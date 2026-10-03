@@ -89,3 +89,65 @@ export const sendTwoFactorCode = ({ email, name, code }) => {
     const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#172b4d"><h1>HazardWatch Dagupan</h1><p>Hi ${safeName},</p><p>Use this one-time security code to continue:</p><p style="font-size:32px;font-weight:700;letter-spacing:6px">${safeCode}</p><p>This code expires in 10 minutes.</p><p>If you did not request this code, secure your account immediately.</p></div>`;
     return sendEmail({ to: email, subject, html, text });
 };
+
+const appBaseUrl = () => (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://hazardwatch-dagupan.vercel.app').replace(/\/$/, '');
+
+export const buildNewDeviceAlertEmail = ({ name, email, deviceName, ipAddress, sentAt }) => {
+    const safeName = escapeHtml(name || 'there');
+    const safeDeviceName = escapeHtml(deviceName || 'a new device');
+    const safeIp = escapeHtml(ipAddress || 'unknown IP');
+    const actionLink = `${appBaseUrl()}/forgot-password`;
+    const safeTime = escapeHtml(sentAt ? new Date(sentAt).toLocaleString() : 'just now');
+    const subject = 'HazardWatch — New device sign-in';
+    const text = `Hi ${name || 'there'},\n\nWe detected a sign-in to your HazardWatch account from a new device at ${safeTime}.\n\nDevice: ${deviceName || 'Unrecognized device'}\nIP address: ${ipAddress || 'unknown IP'}\n\nIf this wasn’t you, reset your password immediately: ${actionLink}`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#172b4d;">
+            <div style="background-color:#1e40af;padding:20px;text-align:center;">
+                <h1 style="color:#ffffff;margin:0;font-size:26px;">HazardWatch Dagupan</h1>
+            </div>
+            <div style="padding:30px;background-color:#f9fafb;">
+                <p>Hi ${safeName},</p>
+                <p>We detected a new sign-in to your account on <strong>${safeTime}</strong>.</p>
+                <div style="background:#ffffff;border:1px solid #dfe7f5;border-radius:10px;padding:18px;margin:20px 0;">
+                    <p style="margin:0 0 8px;"><strong>Device:</strong> ${safeDeviceName}</p>
+                    <p style="margin:0 0 8px;"><strong>IP address:</strong> ${safeIp}</p>
+                    <p style="margin:0;"><strong>Approximate time:</strong> ${safeTime}</p>
+                </div>
+                <p>If this wasn’t you, please reset your password immediately to secure your account.</p>
+                <p><a href="${actionLink}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;">Reset your password</a></p>
+            </div>
+        </div>`;
+    return { to: email, subject, html, text };
+};
+
+export const sendNewDeviceAlertEmail = ({ email, name, deviceName, ipAddress, sentAt }) => {
+    const payload = buildNewDeviceAlertEmail({ name, email, deviceName, ipAddress, sentAt });
+    return sendEmail({ to: payload.to, subject: payload.subject, html: payload.html, text: payload.text });
+};
+
+export const buildAccountVerifiedEmail = ({ name, email }) => {
+    const safeName = escapeHtml(name || 'there');
+    const signInLink = `${appBaseUrl()}/login`;
+    const contactLink = `${appBaseUrl()}/contact`;
+    const subject = 'HazardWatch — Account Verified';
+    const text = `Hi ${name || 'there'},\n\nYour HazardWatch account is now verified and active.\n\nYou can sign in here: ${signInLink}\n\nIf you need support, visit: ${contactLink}`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#172b4d;">
+            <div style="background-color:#1e40af;padding:20px;text-align:center;">
+                <h1 style="color:#ffffff;margin:0;font-size:26px;">HazardWatch Dagupan</h1>
+            </div>
+            <div style="padding:30px;background-color:#f9fafb;">
+                <p>Hi ${safeName},</p>
+                <p>Your HazardWatch account is now verified and active.</p>
+                <p>You're ready to sign in and continue reporting hazards in Dagupan.</p>
+                <p><a href="${signInLink}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;">Sign in</a></p>
+                <p style="color:#4b5563;">Need help? <a href="${contactLink}" style="color:#2563eb;">Contact support</a></p>
+            </div>
+        </div>`;
+    return { to: email, subject, html, text };
+};
+
+export const sendAccountVerifiedEmail = ({ email, name }) => {
+    const payload = buildAccountVerifiedEmail({ name, email });
+    return sendEmail({ to: payload.to, subject: payload.subject, html: payload.html, text: payload.text });
+};

@@ -54,6 +54,32 @@ const createDangerIcon = (color, count, size) => {
     return icon;
 };
 
+const toAddressPart = (value) => {
+    if (value === null || value === undefined) return '';
+    const text = String(value).trim();
+    return text;
+};
+
+const formatNominatimAddress = (address = {}) => {
+    const barangay = [address.village, address.suburb, address.quarter, address.neighbourhood].find((value) => toAddressPart(value));
+    const street = [address.house_number, address.road].filter((value) => toAddressPart(value)).join(' ').trim();
+    const city = toAddressPart(address.city || address.town || address.municipality || 'Dagupan City');
+    const state = toAddressPart(address.state || 'Pangasinan');
+    const postcode = toAddressPart(address.postcode);
+    const barangayLabel = barangay ? (String(barangay).trim().toLowerCase().startsWith('barangay') ? String(barangay).trim() : `Barangay ${String(barangay).trim()}`) : '';
+
+    if (street || barangayLabel || city || state) {
+        const segments = [street, barangayLabel, city, state, postcode].filter(Boolean);
+        return segments.join(', ');
+    }
+
+    if (barangay) {
+        return `${city || 'Dagupan City'}, ${state || 'Pangasinan'}`;
+    }
+
+    return `${city || 'Dagupan City'}, ${state || 'Pangasinan'}`;
+};
+
 const createClusterMarkerElement = (markerStyle, color, count) => {
     const size = Math.min(64, Math.max(42, 32 + String(count).length * 8));
     const button = document.createElement('button');
@@ -222,19 +248,17 @@ const InteractiveMap = ({
 
             const data = response.data;
 
-            if (data && data.display_name) {
-                let address = data.display_name;
-
-                address = address.replace(/, Philippines$/, '');
-                address = address.replace(/^Dagupan, /, '');
-
-                const normalizedAddress = address.toLowerCase();
+            if (data && data.address) {
+                const rawAddress = data.address || {};
+                const formattedAddress = formatNominatimAddress(rawAddress);
+                const normalizedAddress = formattedAddress.toLowerCase();
                 const mappedStreet = Object.entries(STREET_BARANGAY_MAP).find(([street]) => normalizedAddress.includes(street));
                 const detectedBarangay = mappedStreet?.[1]
-                    || data.address?.suburb || data.address?.village || data.address?.neighbourhood || data.address?.town || '';
+                    || rawAddress?.suburb || rawAddress?.village || rawAddress?.quarter || rawAddress?.neighbourhood || rawAddress?.town || '';
+
                 return {
-                    address: detectedBarangay ? `${detectedBarangay}, Dagupan City, Pangasinan` : address,
-                    barangay: detectedBarangay,
+                    address: formattedAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                    barangay: detectedBarangay || '',
                 };
             }
 
