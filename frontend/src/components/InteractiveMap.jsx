@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import api from '../services/api';
-import { formatNominatimAddress } from '../services/locationAddress';
+import { formatNominatimAddress, resolveAddressBarangay } from '../services/locationAddress';
 import { HAZARD_CATEGORY_COLORS, STATUS_COLORS } from '../services/reportOptions';
 
 const CATEGORY_COLORS = {
@@ -231,10 +231,11 @@ const InteractiveMap = ({
             polygonBarangay = result.data?.barangay || '';
         } catch {}
 
-        const formattedAddress = formatNominatimAddress(rawAddress, polygonBarangay);
+        const detectedBarangay = resolveAddressBarangay({ address: rawAddress, polygonBarangay, lat, lng });
+        const formattedAddress = formatNominatimAddress(rawAddress, detectedBarangay);
         return {
             address: formattedAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-            barangay: polygonBarangay,
+            barangay: detectedBarangay,
         };
     };
 
