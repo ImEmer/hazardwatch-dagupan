@@ -52,6 +52,12 @@ const SubmitReport = () => {
         setErrors((prev) => ({ ...prev, location: '' }));
     };
 
+    const handleAddressChange = (event) => {
+        const address = event.target.value;
+        setSelectedAddress(address);
+        setSelectedLocation((current) => current ? { ...current, address } : current);
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value, ...(name === 'category' && value !== 'Other' ? { customCategory: '' } : {}) }));
@@ -222,6 +228,19 @@ const SubmitReport = () => {
                     )}
                 </div>
 
+                <div>
+                    <label htmlFor="locationAddress" className="mb-1.5 block text-sm font-medium text-gray-300">Address</label>
+                    <input
+                        id="locationAddress"
+                        name="locationAddress"
+                        type="text"
+                        value={selectedAddress}
+                        onChange={handleAddressChange}
+                        placeholder="Select a point on the map to fill the address"
+                        className="w-full rounded-lg border border-[#2e303a] bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]"
+                    />
+                </div>
+
                 {/* Description */}
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-1.5">
@@ -373,11 +392,6 @@ const SubmitReport = () => {
                         </svg>
                         <div className="min-w-0 flex-1">
                         <p className={`truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedAddress}</p>
-                        <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Detected Barangay: <span className="font-semibold text-[#3b82f6]">{selectedBarangay || 'Detecting...'}</span>
-                            {' '}
-                            <a href="/contact" className="ml-1 underline hover:text-[#60a5fa]">Report wrong barangay</a>
-                        </p>
                         </div>
                         <button
                         type="button"

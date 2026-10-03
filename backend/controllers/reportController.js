@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { logActivity } from '../utils/logActivity.js';
 import { createNotification } from '../utils/createNotification.js';
-import { isDagupanBarangay } from '../utils/dagupanBarangays.js';
+import { detectBarangayByLocation, isDagupanBarangay } from '../utils/dagupanBarangays.js';
 import { calculatePriority } from '../utils/priorityCalculator.js';
 import { cloudinary } from '../middleware/upload.js';
 
@@ -245,6 +245,15 @@ export const getReport = async (req, res, next) => {
     await report.save({ validateBeforeSave: false });
     res.json({ success: true, report });
   } catch (error) { next(error); }
+};
+
+export const resolveReportBarangay = (req, res) => {
+  const lat = Number(req.query.lat);
+  const lng = Number(req.query.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ success: false, message: 'Valid latitude and longitude are required.' });
+  }
+  return res.json({ success: true, barangay: detectBarangayByLocation({ lat, lng }) });
 };
 
 export const createReport = async (req, res, next) => {

@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { HAZARD_CATEGORY_COLORS, STATUS_COLORS, STREET_BARANGAY_MAP } from '../services/reportOptions';
+import api from '../services/api';
+import { formatNominatimAddress } from '../services/locationAddress';
+import { HAZARD_CATEGORY_COLORS, STATUS_COLORS } from '../services/reportOptions';
 
 const CATEGORY_COLORS = {
     ...HAZARD_CATEGORY_COLORS,
@@ -52,32 +54,6 @@ const createDangerIcon = (color, count, size) => {
         icon.appendChild(mark);
     }
     return icon;
-};
-
-const toAddressPart = (value) => {
-    if (value === null || value === undefined) return '';
-    const text = String(value).trim();
-    return text;
-};
-
-const formatNominatimAddress = (address = {}) => {
-    const barangay = [address.village, address.suburb, address.quarter, address.neighbourhood].find((value) => toAddressPart(value));
-    const street = [address.house_number, address.road].filter((value) => toAddressPart(value)).join(' ').trim();
-    const city = toAddressPart(address.city || address.town || address.municipality || 'Dagupan City');
-    const state = toAddressPart(address.state || 'Pangasinan');
-    const postcode = toAddressPart(address.postcode);
-    const barangayLabel = barangay ? (String(barangay).trim().toLowerCase().startsWith('barangay') ? String(barangay).trim() : `Barangay ${String(barangay).trim()}`) : '';
-
-    if (street || barangayLabel || city || state) {
-        const segments = [street, barangayLabel, city, state, postcode].filter(Boolean);
-        return segments.join(', ');
-    }
-
-    if (barangay) {
-        return `${city || 'Dagupan City'}, ${state || 'Pangasinan'}`;
-    }
-
-    return `${city || 'Dagupan City'}, ${state || 'Pangasinan'}`;
 };
 
 const createClusterMarkerElement = (markerStyle, color, count) => {
@@ -241,31 +217,25 @@ const InteractiveMap = ({
     const [zoom] = useState(mapPreferences.defaultZoom || 13);
 
     const reverseGeocode = async (lng, lat) => {
+        let rawAddress = {};
         try {
             const response = await axios.get(
                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
             );
+            rawAddress = response.data?.address || {};
+        } catch {}
 
-            const data = response.data;
+        let polygonBarangay = '';
+        try {
+            const result = await api.get('/reports/resolve-barangay', { params: { lat, lng } });
+            polygonBarangay = result.data?.barangay || '';
+        } catch {}
 
-            if (data && data.address) {
-                const rawAddress = data.address || {};
-                const formattedAddress = formatNominatimAddress(rawAddress);
-                const normalizedAddress = formattedAddress.toLowerCase();
-                const mappedStreet = Object.entries(STREET_BARANGAY_MAP).find(([street]) => normalizedAddress.includes(street));
-                const detectedBarangay = mappedStreet?.[1]
-                    || rawAddress?.suburb || rawAddress?.village || rawAddress?.quarter || rawAddress?.neighbourhood || rawAddress?.town || '';
-
-                return {
-                    address: formattedAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                    barangay: detectedBarangay || '',
-                };
-            }
-
-            return { address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, barangay: '' };
-        } catch (error) {
-            return { address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, barangay: '' };
-        }
+        const formattedAddress = formatNominatimAddress(rawAddress, polygonBarangay);
+        return {
+            address: formattedAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+            barangay: polygonBarangay,
+        };
     };
 
     // Initialize map

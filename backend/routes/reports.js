@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addComment, assignReport, createReport, deleteReport, deleteReportsBulk, exportReportsCsv, getArchivedReports, getMyReports, getPublicReports, getReport, getReports, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
+import { addComment, assignReport, createReport, deleteReport, deleteReportsBulk, exportReportsCsv, getArchivedReports, getMyReports, getPublicReports, getReport, getReports, resolveReportBarangay, updatePriority, updateReport, updateStatus } from '../controllers/reportController.js';
 import { allowRoles, isStaff, protect } from '../middleware/auth.js';
 import { uploadPhoto } from '../middleware/upload.js';
 import { validateBulkReportIds, validateId, validatePagination, validateReport, validateReportAssignment, validateReportComment, validateReportPriority, validateReportStatus, validateReportUpdate } from '../middleware/validate.js';
@@ -7,6 +7,7 @@ import { reportSubmitLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 router.get('/public', getPublicReports);
+router.get('/resolve-barangay', resolveReportBarangay);
 router.get('/export', protect, allowRoles('admin', 'superadmin'), exportReportsCsv);
 router.get('/search', protect, isStaff, validatePagination, getReports);
 router.get('/', protect, isStaff, validatePagination, getReports);
