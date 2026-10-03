@@ -2,7 +2,7 @@
     import * as maplibregl from 'maplibre-gl';
     import 'maplibre-gl/dist/maplibre-gl.css';
 
-    const StaticMap = () => {
+    const StaticMap = ({ animated = true }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const phaseTimeout = useRef(null);
@@ -66,7 +66,7 @@
             el.style.transition = 'opacity 800ms ease-in-out';
             
             el.innerHTML = `
-            <svg viewBox="0 0 40 52" width="24" height="32" style="filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8)) drop-shadow(0 0 30px rgba(239, 68, 68, 0.4)); animation: pulse-red-pin 1.5s infinite ease-in-out;">
+            <svg viewBox="0 0 40 52" width="24" height="32" style="filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8)) drop-shadow(0 0 30px rgba(239, 68, 68, 0.4)); animation: ${animated ? 'pulse-red-pin 1.5s infinite ease-in-out' : 'none'};">
                 <path d="M20 0 C8.95 0 0 8.95 0 20 C0 31.05 20 52 20 52 C20 52 40 31.05 40 20 C40 8.95 31.05 0 20 0 Z" 
                     fill="#EF4444" stroke="white" stroke-width="2.5"/>
                 <circle cx="20" cy="19" r="8" fill="white" stroke="#EF4444" stroke-width="2"/>
@@ -100,6 +100,7 @@
             markerRefs.current.push(labelMarker);
         });
 
+        if (animated) {
         // ========== ANIMATION WITH ZOOM AND ROTATION ==========
         const destinations = [
             [120.3333, 16.0433],
@@ -188,6 +189,7 @@
             runPhase1();
             }, 100);
         }
+        }
         });
 
         return () => {
@@ -203,6 +205,8 @@
 
     // Pulse animation for markers
     useEffect(() => {
+        if (!animated) return undefined;
+
         const style = document.createElement('style');
         style.textContent = `
         @keyframes pulse-red-pin {
@@ -215,7 +219,7 @@
         return () => {
         document.head.removeChild(style);
         };
-    }, []);
+    }, [animated]);
 
     return (
         <div 

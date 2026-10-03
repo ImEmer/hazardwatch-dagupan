@@ -3,6 +3,7 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { AlertTriangle, ArrowRight, Code2, LayoutGrid, Lightbulb, MapPin, Target, Users, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import StaticMap from '../../components/StaticMap';
 
 const TAGLINES = [
   'Building safer communities through real-time hazard reporting.',
@@ -139,27 +140,24 @@ const AboutPage = () => {
 
   return (
     <main className="overflow-hidden bg-white text-slate-900 dark:bg-[#0a0b0f] dark:text-white">
-      <section className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-20 text-center sm:px-6 lg:px-8">
-        <img
-          src="/dagupan-map-dark.png"
-          alt=""
-          aria-hidden="true"
-          loading="eager"
-          fetchPriority="high"
-          className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-30 dark:opacity-100"
-        />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/90 via-white/75 to-white/90 dark:from-black/80 dark:via-black/60 dark:to-black/80" />
-        <div className="mx-auto max-w-4xl pt-16">
-          <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">About HazardWatch</h1>
-          <TypingTagline />
-          <Link
-            to="/map"
-            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0a0b0f]"
-          >
-            Explore Live Map <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+      <section className="relative min-h-screen overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <StaticMap animated={false} />
+          <div className="absolute inset-0 bg-black/50 dark:bg-black/70" />
         </div>
-      </section>z 
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-8 py-24 text-center md:px-12 md:py-32">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">About HazardWatch</h1>
+            <TypingTagline />
+            <Link
+              to="/map"
+              className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-6 py-3 font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0a0b0f]"
+            >
+              Explore Live Map <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       <section className="bg-white dark:bg-[#0d0d0f]">
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-20 sm:px-6 md:py-24 lg:grid-cols-2 lg:gap-16 lg:px-8">

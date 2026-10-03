@@ -56,12 +56,6 @@ const SubmitReport = () => {
         setErrors((prev) => ({ ...prev, location: '' }));
     };
 
-    const handleAddressChange = (event) => {
-        const address = event.target.value;
-        setSelectedAddress(address);
-        setSelectedLocation((current) => current ? { ...current, address } : current);
-    };
-
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value, ...(name === 'category' && value !== 'Other' ? { customCategory: '' } : {}) }));
@@ -118,11 +112,11 @@ const SubmitReport = () => {
         if (!images.length) newErrors.photo = 'Photo evidence is required.';
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
         else if (!withinDagupanBounds(selectedLocation)) {
-            newErrors.location = 'This location is outside Dagupan City. Please pick a point within the city limits.';
+            newErrors.location = 'HazardWatch only accepts reports within Dagupan City. Please select a location inside Dagupan City.';
         } else if (locationResolution?.status !== 'resolved' || !selectedBarangay) {
             newErrors.location = locationResolution?.status === 'low_accuracy'
                 ? `GPS accuracy (${Math.round(selectedLocation.accuracyMeters)} m) overlaps a barangay boundary. Use a more accurate fix or select a point on the map.`
-                : 'Unable to determine the barangay for this location. Select a point inside a barangay boundary.';
+                : 'HazardWatch only accepts reports within Dagupan City. Please select a location inside Dagupan City.';
         }
         return newErrors;
     };
@@ -236,19 +230,6 @@ const SubmitReport = () => {
                         {errors.customCategory && <p className="mt-1 text-xs text-red-400">{errors.customCategory}</p>}
                     </div>
                     )}
-                </div>
-
-                <div>
-                    <label htmlFor="locationAddress" className="mb-1.5 block text-sm font-medium text-gray-300">Address</label>
-                    <input
-                        id="locationAddress"
-                        name="locationAddress"
-                        type="text"
-                        value={selectedAddress}
-                        onChange={handleAddressChange}
-                        placeholder="Select a point on the map to fill the address"
-                        className="w-full rounded-lg border border-[#2e303a] bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]"
-                    />
                 </div>
 
                 {/* Description */}
@@ -402,16 +383,15 @@ const SubmitReport = () => {
                         </svg>
                         <div className="min-w-0 flex-1">
                         <p className={`truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedAddress}</p>
-                        <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {locationResolution?.status === 'resolved'
-                                ? <>Detected Barangay: <span className="font-semibold text-[#3b82f6]">{selectedBarangay}</span></>
-                                : locationResolution?.status === 'low_accuracy'
+                        {(locationResolution?.status === 'low_accuracy' || locationResolution?.status !== 'resolved' || Number.isFinite(selectedLocation.accuracyMeters)) && (
+                            <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {locationResolution?.status === 'low_accuracy'
                                     ? `Location accuracy is too low (${Math.round(selectedLocation.accuracyMeters)} m).`
-                                    : 'Unable to determine barangay for this point.'}
-                            {Number.isFinite(selectedLocation.accuracyMeters) && locationResolution?.status === 'resolved'
-                                ? ` GPS accuracy: ${Math.round(selectedLocation.accuracyMeters)} m.`
-                                : ''}
-                        </p>
+                                    : locationResolution?.status !== 'resolved'
+                                        ? 'Location is outside Dagupan City.'
+                                        : `GPS accuracy: ${Math.round(selectedLocation.accuracyMeters)} m.`}
+                            </p>
+                        )}
                         </div>
                         <button
                         type="button"
