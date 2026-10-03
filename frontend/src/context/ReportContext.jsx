@@ -130,7 +130,8 @@
             payload.append('description', String(newReport.description).trim());
             payload.append('address', String(newReport.address || ''));
             payload.append('location', JSON.stringify(normalizedLocation));
-            payload.append('barangay', String(newReport.barangay || ''));
+            if (newReport.locationAccuracyMeters !== null && newReport.locationAccuracyMeters !== undefined && Number.isFinite(Number(newReport.locationAccuracyMeters))) payload.append('locationAccuracyMeters', String(newReport.locationAccuracyMeters));
+            if (newReport.locationCapturedAt) payload.append('locationCapturedAt', String(newReport.locationCapturedAt));
             if (newReport.allowDuplicate) payload.append('allowDuplicate', 'true');
             selectedFiles.slice(0, 3).forEach((file, index) => {
             payload.append('images', file, file.name || `photo-${index + 1}.jpg`);

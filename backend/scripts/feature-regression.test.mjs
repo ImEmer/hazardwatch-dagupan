@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createDeviceFingerprint, syncKnownDevice } from '../controllers/authController.js';
+import { detectBarangayByLocation } from '../utils/dagupanBarangays.js';
 import { buildAccountVerifiedEmail, buildNewDeviceAlertEmail } from '../utils/sendEmail.js';
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
@@ -34,4 +35,12 @@ test('new-device alert email template includes the reset link and device summary
   assert.match(email.html, /reset your password/i);
   assert.match(email.html, /Chrome on Windows/i);
   assert.match(email.html, /203.0.113.10/);
+});
+
+test('barangay detection resolves the Pantal boundary correctly instead of the wrong Pogo Grande label', () => {
+  const pantalPoint = { lat: 16.0495, lng: 120.3438 };
+  const pogoPoint = { lat: 16.0394, lng: 120.3185 };
+
+  assert.equal(detectBarangayByLocation(pantalPoint), 'Pantal');
+  assert.equal(detectBarangayByLocation(pogoPoint), 'Pogo Grande');
 });

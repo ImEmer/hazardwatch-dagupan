@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import api from '../services/api';
-import { formatNominatimAddress, resolveAddressBarangay } from '../services/locationAddress';
+import { formatNominatimAddress } from '../services/locationAddress';
 import { HAZARD_CATEGORY_COLORS, STATUS_COLORS } from '../services/reportOptions';
 
 const CATEGORY_COLORS = {
@@ -216,7 +216,7 @@ const InteractiveMap = ({
     const [lat] = useState(defaultCenter[1]);
     const [zoom] = useState(mapPreferences.defaultZoom || 13);
 
-    const reverseGeocode = async (lng, lat) => {
+    const reverseGeocode = async (lng, lat, accuracyMeters = null) => {
         let rawAddress = {};
         try {
             const response = await axios.get(
@@ -225,17 +225,17 @@ const InteractiveMap = ({
             rawAddress = response.data?.address || {};
         } catch {}
 
-        let polygonBarangay = '';
+        let resolution = { status: 'unavailable', barangay: null, matches: [], accuracyMeters };
         try {
-            const result = await api.get('/reports/resolve-barangay', { params: { lat, lng } });
-            polygonBarangay = result.data?.barangay || '';
+            const result = await api.get('/reports/resolve-barangay', { params: { lat, lng, accuracyMeters: accuracyMeters ?? undefined } });
+            resolution = result.data;
         } catch {}
 
-        const detectedBarangay = resolveAddressBarangay({ address: rawAddress, polygonBarangay, lat, lng });
-        const formattedAddress = formatNominatimAddress(rawAddress, detectedBarangay);
+        const formattedAddress = formatNominatimAddress(rawAddress, resolution?.barangay || '');
         return {
             address: formattedAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-            barangay: detectedBarangay,
+            barangay: resolution?.barangay || null,
+            resolution,
         };
     };
 
@@ -264,14 +264,24 @@ const InteractiveMap = ({
 
         const geolocateControl = new maplibregl.GeolocateControl({
             positionOptions: {
-                enableHighAccuracy: true
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0,
             },
-            trackUserLocation: true,
+            trackUserLocation: false,
             showUserLocation: true
         });
 
         // Geolocation is optional; the map remains usable when permission or browser support is unavailable.
         geolocateControl.on('error', () => {});
+        if (onMapClick) {
+            geolocateControl.on('geolocate', async (position) => {
+                const { latitude, longitude, accuracy } = position.coords;
+                const capturedAt = new Date(position.timestamp || Date.now()).toISOString();
+                const geocodedLocation = await reverseGeocode(longitude, latitude, accuracy);
+                onMapClick({ lng: longitude, lat: latitude, accuracyMeters: accuracy, capturedAt }, geocodedLocation.address, geocodedLocation.barangay, geocodedLocation.resolution);
+            });
+        }
         map.current.addControl(geolocateControl, 'top-right');
 
         // Force map to recalculate dimensions once fully loaded
@@ -291,7 +301,7 @@ const InteractiveMap = ({
 
             const { lng, lat } = e.lngLat;
             const geocodedLocation = await reverseGeocode(lng, lat);
-            onMapClick({ lng, lat }, geocodedLocation.address, geocodedLocation.barangay);
+            onMapClick({ lng, lat, accuracyMeters: null, capturedAt: null }, geocodedLocation.address, geocodedLocation.barangay, geocodedLocation.resolution);
         });
 
         if (onMapClick) {

@@ -11,6 +11,8 @@ const reportSchema = new mongoose.Schema({
   },
   address: String,
   barangay: String,
+  locationAccuracyMeters: { type: Number, min: 0, default: null },
+  locationCapturedAt: { type: Date, default: null },
   photo: String,
   images: [{ type: String }],
   status: { type: String, enum: ['Pending', 'In Progress', 'Resolved', 'Closed'], default: 'Pending' },

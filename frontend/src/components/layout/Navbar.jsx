@@ -10,7 +10,6 @@ const publicLinks = [
   { to: '/my-reports', label: 'My Reports', authenticated: true },
   { to: '/map', label: 'Hazard Map' },
   { to: '/about', label: 'About' },
-  { to: '/help', label: 'Help' },
 ];
 
 const PRIVILEGED_ROLES = ['superadmin', 'admin', 'barangay'];

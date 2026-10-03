@@ -39,33 +39,12 @@ export const PRIORITY_COLORS = {
 };
 
 export const DAGUPAN_BARANGAYS = [
-  'Bacayao Norte', 'Bacayao Sur', 'Banaoang', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV',
+  'Bacayao Norte', 'Bacayao Sur', 'Barangay I', 'Barangay II', 'Barangay IV',
   'Bolosan', 'Bonuan Binloc', 'Bonuan Boquig', 'Bonuan Gueset', 'Calmay', 'Carael', 'Caranglaan',
-  'Herrero', 'Herrero-Perez', 'Lasip Chico', 'Lasip Grande', 'Lomboy', 'Lucao', 'Malued', 'Mamalingling',
-  'Mangin', 'Mayombo', 'Pantal', 'Poblacion Oeste', 'Pogo Chico', 'Pogo Grande', 'Salapingao', 'San Fabian', 'Sapanglang',
-  'Tambac', 'Tapuac', 'Tebeng', 'Tondaligan',
+  'Herrero', 'Lasip Chico', 'Lasip Grande', 'Lomboy', 'Lucao', 'Malued', 'Mamalingling',
+  'Mangin', 'Mayombo', 'Pantal', 'Poblacion Oeste', 'Pogo Chico', 'Pogo Grande', 'Pugaro Suit', 'Salapingao', 'Salisay',
+  'Tambac', 'Tapuac', 'Tebeng',
 ].sort((left, right) => left.localeCompare(right));
-
-export const STREET_BARANGAY_MAP = {
-  'arellano st': 'Pantal',
-  'rizal st': 'Poblacion Oeste',
-  'magsaysay': 'Poblacion Oeste',
-  'bonuan': 'Bonuan Gueset',
-  'pantal road': 'Pantal',
-  'pogo chico': 'Pogo Chico',
-  'pogo grande': 'Pogo Grande',
-  'ab fernandez ave': 'Poblacion Oeste',
-  'alegre st': 'Poblacion Oeste',
-  'burgos st': 'Poblacion Oeste',
-  'roosevelt st': 'Poblacion Oeste',
-  'felix st': 'Pantal',
-  'torres bugallon': 'Pantal',
-  'mayombo': 'Mayombo',
-  'caranglaan': 'Caranglaan',
-  'malued': 'Malued',
-  'tap uac': 'Tapuac',
-  'tapuac': 'Tapuac',
-};
 
 export const DAGUPAN_BARANGAY_COORDINATES = {
   'Barangay I': [120.3340, 16.0430],
@@ -75,7 +54,7 @@ export const DAGUPAN_BARANGAY_COORDINATES = {
   'Bacayao Norte': [120.3480, 16.0380],
   'Bacayao Sur': [120.3450, 16.0350],
   Banaoang: [120.3550, 16.0450],
-  Bolosan: [120.3470, 16.0460],
+  Bolosan: [120.3659391627, 16.0471817420],
   'Bonuan Binloc': [120.3180, 16.0580],
   'Bonuan Boquig': [120.3220, 16.0610],
   'Bonuan Gueset': [120.3200, 16.0630],
@@ -83,7 +62,6 @@ export const DAGUPAN_BARANGAY_COORDINATES = {
   Carael: [120.3150, 16.0500],
   Caranglaan: [120.3450, 16.0380],
   Herrero: [120.3400, 16.0450],
-  'Herrero-Perez': [120.3400, 16.0450],
   'Lasip Chico': [120.3300, 16.0380],
   'Lasip Grande': [120.3320, 16.0360],
   Lomboy: [120.3380, 16.0330],
@@ -96,8 +74,9 @@ export const DAGUPAN_BARANGAY_COORDINATES = {
   'Poblacion Oeste': [120.3350, 16.0430],
   'Pogo Chico': [120.3330, 16.0380],
   'Pogo Grande': [120.3350, 16.0400],
-  Pugaro: [120.3130, 16.0470],
+  'Pugaro Suit': [120.3207964873, 16.0624184320],
   Salapingao: [120.3530, 16.0520],
+  Salisay: [120.3755237113, 16.0415987630],
   'San Fabian': [120.3260, 16.0580],
   Sapanglang: [120.3500, 16.0430],
   Tambac: [120.3350, 16.0600],

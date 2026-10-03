@@ -15,7 +15,8 @@ const MONGODUMP = process.env.MONGODUMP_PATH || (process.platform === 'win32'
   : 'mongodump');
 
 const requireBackupConfig = () => {
-  const required = ['MONGO_URI', 'B2_KEY_ID', 'B2_APP_KEY', 'B2_BUCKET_ID'];
+  if (!process.env.MONGO_URI?.trim()) throw new Error('MONGO_URI must be a non-empty MongoDB connection string.');
+  const required = ['B2_KEY_ID', 'B2_APP_KEY', 'B2_BUCKET_ID'];
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length) throw new Error(`Missing backup configuration: ${missing.join(', ')}`);
 };
@@ -38,7 +39,12 @@ const b2Post = (auth, action, body) => requestJson(`${auth.apiUrl}/b2api/${B2_AP
 });
 
 const createArchive = async (filePath) => new Promise((resolve, reject) => {
-  const child = spawn(MONGODUMP, ['--uri', process.env.MONGO_URI, '--archive', filePath, '--gzip'], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+  const mongoUri = process.env.MONGO_URI?.trim();
+  if (!mongoUri) return reject(new Error('MONGO_URI must be a non-empty MongoDB connection string.'));
+  const args = [`--uri=${mongoUri}`, `--archive=${filePath}`, '--gzip'];
+  console.log('[backup] args:', args.map((arg) => arg.startsWith('--uri=') ? '--uri=[redacted MongoDB URI]' : arg));
+  const child = spawn(MONGODUMP, args, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  child.stdout.on('data', () => {});
   let stderr = '';
   child.stderr.on('data', (chunk) => { stderr = `${stderr}${chunk}`.slice(-4096); });
   child.once('error', reject);
@@ -58,6 +64,8 @@ const sha1File = async (filePath) => {
 const uploadArchive = async (auth, filePath, fileName) => {
   const upload = await b2Post(auth, 'b2_get_upload_url', { bucketId: process.env.B2_BUCKET_ID });
   const fileStats = await stat(filePath);
+  const archiveSha1 = await sha1File(filePath);
+  console.log(`[backup] Archive size: ${fileStats.size} bytes`);
   const response = await fetch(upload.uploadUrl, {
     method: 'POST',
     headers: {
@@ -65,13 +73,19 @@ const uploadArchive = async (auth, filePath, fileName) => {
       'X-Bz-File-Name': encodeURIComponent(fileName),
       'Content-Type': 'application/gzip',
       'Content-Length': String(fileStats.size),
-      'X-Bz-Content-Sha1': await sha1File(filePath),
+      'X-Bz-Content-Sha1': archiveSha1,
     },
     body: createReadStream(filePath),
     duplex: 'half',
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.message || `B2 upload failed (${response.status}).`);
+  const verifiedSha1 = await sha1File(filePath);
+  const sha1Matches = verifiedSha1 === archiveSha1
+    && (!body.contentSha1 || String(body.contentSha1).toLowerCase() === archiveSha1);
+  if (!sha1Matches) throw new Error('Uploaded archive SHA-1 did not match the local archive.');
+  console.log(`[backup] B2 object key: ${fileName}`);
+  console.log(`[backup] SHA-1 verified: ${archiveSha1}`);
   return body;
 };
 
@@ -129,7 +143,10 @@ export const runBackup = async () => {
     await reportFailure(error);
     throw error;
   } finally {
-    if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });
+    if (temporaryDirectory) {
+      await rm(temporaryDirectory, { recursive: true, force: true });
+      console.log('[backup] Temporary archive cleaned up.');
+    }
   }
 };
 

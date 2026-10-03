@@ -35,7 +35,6 @@ import AdminArchivedPage from './pages/admin/AdminArchivedPage';
 import MyReportsPage from './pages/public/MyReportsPage';
 import ReportDetailPage from './pages/public/ReportDetailPage';
 import ProfilePage from './pages/public/ProfilePage';
-import HelpPage from './pages/public/HelpPage';
 import BarangayLayout from './components/layout/BarangayLayout';
 import BarangayDashboard from './pages/barangay/BarangayDashboard';
 import BarangayReportsPage from './pages/barangay/BarangayReportsPage';
@@ -68,7 +67,6 @@ const PublicPage = ({ children }) => <PublicLayout>{children}</PublicLayout>;
 const pageTitles = [
   { match: (pathname) => pathname === '/', title: 'Dagupan HazardWatch - Home' },
   { match: (pathname) => pathname === '/about', title: 'About HazardWatch | Dagupan Community Safety' },
-  { match: (pathname) => pathname === '/help', title: 'Help & FAQ | HazardWatch' },
   { match: (pathname) => pathname === '/privacy', title: 'Privacy Policy | HazardWatch' },
   { match: (pathname) => pathname === '/terms', title: 'Terms of Service | HazardWatch' },
   { match: (pathname) => pathname === '/contact', title: 'Contact | HazardWatch' },
@@ -126,15 +124,14 @@ function App() {
             <Route path="/map" element={<PublicPage><HazardMapPage /></PublicPage>} />
             <Route path="/track" element={<PublicPage><TrackReportPage /></PublicPage>} />
             <Route path="/about" element={<PublicPage><AboutPage /></PublicPage>} />
-            <Route path="/help" element={<PublicPage><HelpPage /></PublicPage>} />
             <Route path="/privacy" element={<PublicPage><PrivacyPolicyPage /></PublicPage>} />
             <Route path="/terms" element={<PublicPage><TermsOfServicePage /></PublicPage>} />
             <Route path="/contact" element={<PublicPage><ContactPage /></PublicPage>} />
             <Route path="/my-reports" element={<PublicPage><MyReportsPage /></PublicPage>} />
             <Route path="/reports/:id" element={<PublicPage><ReportDetailPage /></PublicPage>} />
             <Route path="/profile" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff', 'barangay', 'user']}><PublicPage><ProfilePage /></PublicPage></ProtectedRoute>} />
-            <Route path="/verify-2fa" element={<PublicPage><TwoFactorPage /></PublicPage>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
+            <Route path="/verify-2fa" element={<PublicPage><TwoFactorPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
             <Route path="/forgot-password" element={<PublicPage><ForgotPasswordPage /></PublicPage>} />
             <Route path="/enter-reset-code" element={<PublicPage><EnterResetCodePage /></PublicPage>} />

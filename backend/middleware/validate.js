@@ -1,5 +1,5 @@
 import { body, param, query, validationResult } from 'express-validator';
-import { isDagupanBarangay, isDagupanLocation } from '../utils/dagupanBarangays.js';
+import { resolveBarangayFromCoords } from '../utils/dagupanBarangays.js';
 
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -61,6 +61,8 @@ export const validateReport = [
     return true;
   }),
   body('description').trim().escape().isLength({ min: 10, max: 5000 }),
+  body('locationAccuracyMeters').optional().isFloat({ min: 0 }).toFloat().withMessage('GPS accuracy must be a non-negative number.'),
+  body('locationCapturedAt').optional().isISO8601().toDate().withMessage('GPS timestamp must be a valid date.'),
   body('location').custom((value, { req }) => {
     let location;
     try {
@@ -72,12 +74,12 @@ export const validateReport = [
       throw new Error('A valid map location is required.');
     }
     const [longitude, latitude] = location.coordinates.map(Number);
-    if (!isDagupanLocation({ lat: latitude, lng: longitude })) throw new Error('Location must be within Dagupan City.');
+    const resolution = resolveBarangayFromCoords(latitude, longitude, req.body.locationAccuracyMeters);
+    if (resolution.status === 'low_accuracy') throw new Error('GPS accuracy is insufficient to uniquely determine the barangay. Please wait for a more accurate location or select a map point.');
+    if (resolution.status === 'ambiguous') throw new Error('Location lies on a barangay boundary and cannot be uniquely resolved. Please select a nearby point.');
+    if (resolution.status !== 'resolved') throw new Error('Unable to determine a Dagupan barangay for this location.');
     req.body.location = location;
-    return true;
-  }),
-  body('barangay').trim().custom((value) => {
-    if (value && !isDagupanBarangay(value)) throw new Error('Invalid barangay.');
+    req.barangayResolution = resolution;
     return true;
   }),
   body('photo').custom((value, { req }) => {
@@ -97,22 +99,29 @@ const validateReportLocation = body('location').optional().custom((value, { req 
     throw new Error('A valid map location is required.');
   }
   const [longitude, latitude] = location.coordinates.map(Number);
-  if (!isDagupanLocation({ lat: latitude, lng: longitude })) throw new Error('Location must be within Dagupan City.');
+  const resolution = resolveBarangayFromCoords(latitude, longitude, req.body.locationAccuracyMeters);
+  if (resolution.status === 'low_accuracy') throw new Error('GPS accuracy is insufficient to uniquely determine the barangay.');
+  if (resolution.status !== 'resolved') throw new Error('Location must resolve to exactly one Dagupan barangay.');
   req.body.location = location;
   return true;
 });
 
 export const validateReportUpdate = [
   body().custom((value) => {
-    const allowed = ['title', 'description', 'category', 'priority', 'location'];
+    const allowed = ['title', 'description', 'category', 'priority', 'location', 'locationAccuracyMeters', 'locationCapturedAt'];
     const unknown = Object.keys(value || {}).find((key) => !allowed.includes(key));
     if (unknown) throw new Error(`Field ${unknown} is not allowed.`);
+    if ((value?.locationAccuracyMeters !== undefined || value?.locationCapturedAt !== undefined) && value?.location === undefined) {
+      throw new Error('Location accuracy and timestamp must be updated with a location.');
+    }
     return true;
   }),
   body('title').optional().trim().isLength({ min: 3, max: 120 }).escape(),
   body('description').optional().trim().isLength({ min: 10, max: 5000 }).escape(),
   body('category').optional().isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
   body('priority').optional().isIn(['Low', 'Medium', 'High', 'Urgent']),
+  body('locationAccuracyMeters').optional().isFloat({ min: 0 }).toFloat().withMessage('GPS accuracy must be a non-negative number.'),
+  body('locationCapturedAt').optional().isISO8601().toDate().withMessage('GPS timestamp must be a valid date.'),
   validateReportLocation,
   validateBadRequest,
 ];

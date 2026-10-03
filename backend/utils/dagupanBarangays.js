@@ -1,105 +1,85 @@
-export const DAGUPAN_BARANGAYS = [
-  'Bacayao Norte', 'Bacayao Sur', 'Banaoang', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV',
-  'Bolosan', 'Bonuan Binloc', 'Bonuan Boquig', 'Bonuan Gueset', 'Calmay', 'Carael', 'Caranglaan',
-  'Herrero', 'Herrero-Perez', 'Lasip Chico', 'Lasip Grande', 'Lomboy', 'Lucao', 'Malued', 'Mamalingling',
-  'Mangin', 'Mayombo', 'Pantal', 'Poblacion Oeste', 'Pogo Chico', 'Pogo Grande', 'Salapingao', 'San Fabian', 'Sapanglang',
-  'Tambac', 'Tapuac', 'Tebeng', 'Tondaligan'
-];
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+import booleanWithin from '@turf/boolean-within';
+import circle from '@turf/circle';
 
-export const DAGUPAN_BOUNDS = { minLat: 15.98, maxLat: 16.15, minLng: 120.25, maxLng: 120.45 };
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DAGUPAN_POLYGON_PATH = path.join(__dirname, '..', 'data', 'dagupan-barangays.geojson');
 
-export const STREET_BARANGAY_MAP = {
-  'arellano st': 'Pantal',
-  'rizal st': 'Poblacion Oeste',
-  magsaysay: 'Poblacion Oeste',
-  bonuan: 'Bonuan Gueset',
-  'pantal road': 'Pantal',
-  'pogo chico': 'Pogo Chico',
-  'pogo grande': 'Pogo Grande',
-  'ab fernandez ave': 'Poblacion Oeste',
-  'alegre st': 'Poblacion Oeste',
-  'burgos st': 'Poblacion Oeste',
-  'roosevelt st': 'Poblacion Oeste',
-  'felix st': 'Pantal',
-  'torres bugallon': 'Pantal',
-  mayombo: 'Mayombo',
-  caranglaan: 'Caranglaan',
-  malued: 'Malued',
-  tapuac: 'Tapuac',
+const geojson = JSON.parse(readFileSync(DAGUPAN_POLYGON_PATH, 'utf8'));
+if (geojson?.type !== 'FeatureCollection' || !Array.isArray(geojson.features) || !geojson.features.length) {
+  throw new Error(`Invalid Dagupan barangay GeoJSON: ${DAGUPAN_POLYGON_PATH}`);
+}
+
+const normalizeBarangayName = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
+const features = geojson.features;
+const barangayNames = features.map((feature) => normalizeBarangayName(feature.properties?.barangay));
+if (barangayNames.some((name) => !name) || new Set(barangayNames).size !== barangayNames.length) {
+  throw new Error('Dagupan barangay GeoJSON must have one unique barangay name per feature.');
+}
+if (features.some((feature) => !['Polygon', 'MultiPolygon'].includes(feature.geometry?.type))) {
+  throw new Error('Dagupan barangay GeoJSON contains a non-polygon geometry.');
+}
+
+export const DAGUPAN_BARANGAYS = Object.freeze(barangayNames);
+const pointFeature = (lng, lat) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [lng, lat] } });
+
+const coordinatePairs = [];
+const collectCoordinatePairs = (coordinates) => {
+  if (Array.isArray(coordinates?.[0])) {
+    coordinates.forEach(collectCoordinatePairs);
+  } else if (Number.isFinite(coordinates?.[0]) && Number.isFinite(coordinates?.[1])) {
+    coordinatePairs.push(coordinates);
+  }
 };
+features.forEach((feature) => collectCoordinatePairs(feature.geometry.coordinates));
+export const DAGUPAN_BOUNDS = Object.freeze({
+  minLng: Math.min(...coordinatePairs.map(([lng]) => lng)),
+  maxLng: Math.max(...coordinatePairs.map(([lng]) => lng)),
+  minLat: Math.min(...coordinatePairs.map(([, lat]) => lat)),
+  maxLat: Math.max(...coordinatePairs.map(([, lat]) => lat)),
+});
 
-const BARANGAY_CENTERS = {
-  'Barangay I': [120.3340, 16.0430], 'Barangay II': [120.3350, 16.0420], 'Barangay III': [120.3360, 16.0410], 'Barangay IV': [120.3370, 16.0400],
-  'Bacayao Norte': [120.3480, 16.0380], 'Bacayao Sur': [120.3450, 16.0350], Banaoang: [120.3550, 16.0450], Bolosan: [120.3470, 16.0460],
-  'Bonuan Binloc': [120.3180, 16.0580], 'Bonuan Boquig': [120.3220, 16.0610], 'Bonuan Gueset': [120.3200, 16.0630], Calmay: [120.3250, 16.0400],
-  Carael: [120.3150, 16.0500], Caranglaan: [120.3450, 16.0380], Herrero: [120.3400, 16.0450], 'Herrero-Perez': [120.3400, 16.0450],
-  'Lasip Chico': [120.3300, 16.0380], 'Lasip Grande': [120.3320, 16.0360], Lomboy: [120.3380, 16.0330], Lucao: [120.3400, 16.0380],
-  Malued: [120.3420, 16.0560], Mamalingling: [120.3520, 16.0480], Mangin: [120.3320, 16.0350], Mayombo: [120.3380, 16.0500],
-  Pantal: [120.3450, 16.0450], 'Poblacion Oeste': [120.3350, 16.0430], 'Pogo Chico': [120.3330, 16.0380], 'Pogo Grande': [120.3350, 16.0400],
-  Salapingao: [120.3530, 16.0520], 'San Fabian': [120.3260, 16.0580], Sapanglang: [120.3500, 16.0430], Tambac: [120.3350, 16.0600],
-  Tapuac: [120.3280, 16.0330], Tebeng: [120.3500, 16.0300], Tondaligan: [120.3150, 16.0380],
-};
+export const isDagupanBarangay = (value) => DAGUPAN_BARANGAYS.includes(normalizeBarangayName(value));
 
-const BARANGAY_BOUNDS = {
-  Pantal: { minLat: 16.02, maxLat: 16.08, minLng: 120.32, maxLng: 120.39 },
-  'Bonuan Gueset': { minLat: 16.04, maxLat: 16.12, minLng: 120.30, maxLng: 120.39 },
-  'Bonuan Boquig': { minLat: 16.02, maxLat: 16.08, minLng: 120.28, maxLng: 120.35 },
-  'Bonuan Binloc': { minLat: 16.05, maxLat: 16.11, minLng: 120.35, maxLng: 120.42 },
-  'Barangay I': { minLat: 16.04, maxLat: 16.07, minLng: 120.34, maxLng: 120.38 },
-  'Barangay II': { minLat: 16.04, maxLat: 16.07, minLng: 120.33, maxLng: 120.37 },
-  'Barangay III': { minLat: 16.04, maxLat: 16.07, minLng: 120.32, maxLng: 120.36 },
-  'Barangay IV': { minLat: 16.04, maxLat: 16.07, minLng: 120.31, maxLng: 120.35 },
-  'San Fabian': { minLat: 16.03, maxLat: 16.09, minLng: 120.25, maxLng: 120.31 },
-  'Bacayao Norte': { minLat: 16.06, maxLat: 16.15, minLng: 120.28, maxLng: 120.36 },
-  'Bacayao Sur': { minLat: 16.04, maxLat: 16.11, minLng: 120.30, maxLng: 120.38 },
-  Malued: { minLat: 16.00, maxLat: 16.07, minLng: 120.25, maxLng: 120.34 },
-  'Tondaligan': { minLat: 16.03, maxLat: 16.09, minLng: 120.35, maxLng: 120.45 },
-  'Tapuac': { minLat: 16.03, maxLat: 16.08, minLng: 120.33, maxLng: 120.42 },
-  'Salapingao': { minLat: 16.01, maxLat: 16.08, minLng: 120.28, maxLng: 120.35 },
-  'Banaoang': { minLat: 16.03, maxLat: 16.11, minLng: 120.26, maxLng: 120.35 },
-  'Calmay': { minLat: 15.99, maxLat: 16.08, minLng: 120.29, maxLng: 120.37 },
-  'Lomboy': { minLat: 16.01, maxLat: 16.07, minLng: 120.30, maxLng: 120.40 },
-  'Lasip Chico': { minLat: 16.02, maxLat: 16.08, minLng: 120.30, maxLng: 120.37 },
-  'Lasip Grande': { minLat: 16.01, maxLat: 16.08, minLng: 120.32, maxLng: 120.39 },
-  'Mangin': { minLat: 16.04, maxLat: 16.08, minLng: 120.31, maxLng: 120.37 },
-  'Mamangling': { minLat: 16.04, maxLat: 16.09, minLng: 120.30, maxLng: 120.37 },
-  'Mamalingling': { minLat: 16.04, maxLat: 16.09, minLng: 120.30, maxLng: 120.37 },
-  'Pogo Chico': { minLat: 16.01, maxLat: 16.06, minLng: 120.28, maxLng: 120.34 },
-  'Pogo Grande': { minLat: 16.02, maxLat: 16.08, minLng: 120.29, maxLng: 120.35 },
-  'Sapanglang': { minLat: 16.02, maxLat: 16.08, minLng: 120.31, maxLng: 120.38 },
-  'Carael': { minLat: 16.01, maxLat: 16.07, minLng: 120.35, maxLng: 120.42 },
-  'Tambac': { minLat: 16.04, maxLat: 16.12, minLng: 120.31, maxLng: 120.39 },
-  'Caranglaan': { minLat: 16.03, maxLat: 16.08, minLng: 120.33, maxLng: 120.40 },
-  'Bolosan': { minLat: 16.03, maxLat: 16.09, minLng: 120.30, maxLng: 120.36 },
-  'Lucao': { minLat: 16.03, maxLat: 16.10, minLng: 120.31, maxLng: 120.40 },
-  'Mayombo': { minLat: 16.00, maxLat: 16.07, minLng: 120.29, maxLng: 120.36 },
-  'Herrero': { minLat: 16.00, maxLat: 16.06, minLng: 120.27, maxLng: 120.35 },
-  'Herrero-Perez': { minLat: 16.00, maxLat: 16.06, minLng: 120.27, maxLng: 120.35 },
-  'Tebeng': { minLat: 16.01, maxLat: 16.07, minLng: 120.28, maxLng: 120.36 }
-};
+const matchingFeatures = (point) => features.filter((feature) => booleanPointInPolygon(point, feature, { ignoreBoundary: false }));
 
-export const isDagupanBarangay = (value) => DAGUPAN_BARANGAYS.includes(String(value || '').trim());
-
-export const detectBarangayByLocation = ({ lat, lng }) => {
+export const resolveBarangayFromCoords = (lat, lng, accuracyMeters = null) => {
   const latitude = Number(lat);
   const longitude = Number(lng);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '';
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return { status: 'invalid_coordinates', barangay: null, candidate: null, matches: [] };
+  }
+  if (accuracyMeters !== null && accuracyMeters !== undefined && (!Number.isFinite(Number(accuracyMeters)) || Number(accuracyMeters) < 0)) {
+    return { status: 'invalid_accuracy', barangay: null, candidate: null, matches: [] };
+  }
 
-  let nearest = '';
-  let nearestDistance = Number.POSITIVE_INFINITY;
-  for (const [barangay, [centerLng, centerLat]] of Object.entries(BARANGAY_CENTERS)) {
-    const distance = ((longitude - centerLng) * Math.cos(latitude * Math.PI / 180)) ** 2 + (latitude - centerLat) ** 2;
-    if (distance < nearestDistance) {
-      nearest = barangay;
-      nearestDistance = distance;
+  const point = pointFeature(longitude, latitude);
+  const matches = matchingFeatures(point);
+  const names = matches.map((feature) => normalizeBarangayName(feature.properties.barangay));
+  if (!names.length) return { status: 'unresolved', barangay: null, candidate: null, matches: [] };
+  if (names.length > 1) return { status: 'ambiguous', barangay: null, candidate: null, matches: names };
+
+  const accuracy = accuracyMeters === null || accuracyMeters === undefined ? null : Number(accuracyMeters);
+  if (accuracy > 0) {
+    const uncertaintyArea = circle(point, accuracy / 1000, { steps: 64, units: 'kilometers' });
+    const certainMatches = features.filter((feature) => booleanWithin(uncertaintyArea, feature));
+    if (certainMatches.length !== 1 || normalizeBarangayName(certainMatches[0].properties.barangay) !== names[0]) {
+      return { status: 'low_accuracy', barangay: null, candidate: names[0], matches: names, accuracyMeters: accuracy };
     }
   }
-  return nearest;
+
+  return { status: 'resolved', barangay: names[0], candidate: names[0], matches: names, accuracyMeters: accuracy };
 };
+
+export const detectBarangayByLocation = ({ lat, lng, accuracyMeters = null }) => resolveBarangayFromCoords(lat, lng, accuracyMeters).barangay;
 
 export const isDagupanLocation = ({ lat, lng }) => {
   const latitude = Number(lat);
   const longitude = Number(lng);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
-  return latitude >= DAGUPAN_BOUNDS.minLat && latitude <= DAGUPAN_BOUNDS.maxLat && longitude >= DAGUPAN_BOUNDS.minLng && longitude <= DAGUPAN_BOUNDS.maxLng;
+  return matchingFeatures(pointFeature(longitude, latitude)).length > 0;
 };

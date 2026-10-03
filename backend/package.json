@@ -12,6 +12,10 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
+    "@turf/boolean-point-in-polygon": "^7.4.0",
+    "@turf/boolean-within": "^7.4.0",
+    "@turf/circle": "^7.4.0",
+    "@turf/point-on-feature": "^7.4.0",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",

@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { logActivity } from '../utils/logActivity.js';
 import { createNotification } from '../utils/createNotification.js';
-import { detectBarangayByLocation, isDagupanBarangay } from '../utils/dagupanBarangays.js';
+import { resolveBarangayFromCoords } from '../utils/dagupanBarangays.js';
 import { calculatePriority } from '../utils/priorityCalculator.js';
 import { cloudinary } from '../middleware/upload.js';
 
@@ -250,20 +250,45 @@ export const getReport = async (req, res, next) => {
 export const resolveReportBarangay = (req, res) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+  const accuracyMeters = req.query.accuracyMeters === undefined ? null : Number(req.query.accuracyMeters);
+  const resolution = resolveBarangayFromCoords(lat, lng, accuracyMeters);
+  if (['invalid_coordinates', 'invalid_accuracy'].includes(resolution.status)) {
     return res.status(400).json({ success: false, message: 'Valid latitude and longitude are required.' });
   }
-  return res.json({ success: true, barangay: detectBarangayByLocation({ lat, lng }) });
+  if (resolution.status === 'ambiguous') console.warn('[BARANGAY RESOLUTION] WARNING: coordinate intersects multiple barangay polygons.', { lat, lng, matches: resolution.matches });
+  else if (process.env.NODE_ENV !== 'production') console.info('[BARANGAY RESOLUTION]', { lat, lng, accuracyMeters, ...resolution });
+  return res.json({
+    success: resolution.status === 'resolved',
+    status: resolution.status,
+    barangay: resolution.barangay,
+    accuracyMeters: resolution.accuracyMeters,
+  });
 };
 
 export const createReport = async (req, res, next) => {
   try {
-    if (req.body.barangay && !isDagupanBarangay(req.body.barangay)) return res.status(400).json({ success: false, message: 'Invalid barangay.' });
     const uploadedFiles = Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
     const photoValue = uploadedFiles[0] ? (uploadedFiles[0].path || uploadedFiles[0].secure_url) : (typeof req.body.photo === 'string' ? req.body.photo : '');
     const imageUrls = uploadedFiles.map((file) => file.path || file.secure_url).filter(Boolean);
     const location = typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location;
     const coordinates = location?.coordinates;
+    const locationAccuracyMeters = req.body.locationAccuracyMeters === undefined ? null : Number(req.body.locationAccuracyMeters);
+    const resolution = Array.isArray(coordinates) && coordinates.length === 2
+      ? resolveBarangayFromCoords(Number(coordinates[1]), Number(coordinates[0]), locationAccuracyMeters)
+      : { status: 'invalid_coordinates', barangay: null, matches: [] };
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[LOCATION]', { lat: coordinates?.[1], lng: coordinates?.[0], accuracyMeters: locationAccuracyMeters, capturedAt: req.body.locationCapturedAt || null });
+      console.info('[BARANGAY RESOLUTION]', { coordinates, ...resolution });
+    }
+    if (resolution.status !== 'resolved') {
+      await cleanupUploadedFiles(uploadedFiles);
+      const message = resolution.status === 'low_accuracy'
+        ? 'GPS accuracy is insufficient to uniquely determine the barangay.'
+        : resolution.status === 'ambiguous'
+          ? 'Location lies on a barangay boundary and cannot be uniquely resolved.'
+          : 'Unable to determine a Dagupan barangay for this location.';
+      return res.status(422).json({ success: false, code: resolution.status, message });
+    }
     const allowDuplicate = req.body.allowDuplicate === true || req.body.allowDuplicate === 'true';
     const duplicateReport = Array.isArray(coordinates) && coordinates.length === 2
       ? await Report.findOne({
@@ -289,7 +314,9 @@ export const createReport = async (req, res, next) => {
       priority: calculatePriority(req.body.category, req.body.description),
       customCategory: req.body.category === 'Other' ? String(req.body.customCategory || '').trim() : '',
       location,
-      barangay: req.body.barangay || '',
+      barangay: resolution.barangay,
+      locationAccuracyMeters,
+      locationCapturedAt: req.body.locationCapturedAt || null,
       isDuplicate: Boolean(duplicateReport && allowDuplicate),
       duplicateOf: duplicateReport?._id || null,
       photo: photoValue,
@@ -316,6 +343,22 @@ export const updateReport = async (req, res, next) => {
       return res.status(400).json({ success: false, message: `This report is ${existing.status} and can no longer be edited.` });
     }
     const payload = { ...req.body };
+    if (payload.location) {
+      const coordinates = payload.location.coordinates;
+      const resolution = Array.isArray(coordinates) && coordinates.length === 2
+        ? resolveBarangayFromCoords(Number(coordinates[1]), Number(coordinates[0]), payload.locationAccuracyMeters)
+        : { status: 'invalid_coordinates', barangay: null, matches: [] };
+      if (resolution.status !== 'resolved') {
+        const message = resolution.status === 'low_accuracy'
+          ? 'GPS accuracy is insufficient to uniquely determine the barangay.'
+          : 'Location must resolve to exactly one Dagupan barangay.';
+        return res.status(422).json({ success: false, code: resolution.status, message });
+      }
+      payload.barangay = resolution.barangay;
+      payload.address = `Barangay ${resolution.barangay}, Dagupan City, Pangasinan`;
+      payload.locationAccuracyMeters = payload.locationAccuracyMeters ?? null;
+      payload.locationCapturedAt = payload.locationCapturedAt ?? null;
+    }
     const report = await Report.findOneAndUpdate({ _id: req.params.id, ...scoped(req.user) }, payload, { new: true, runValidators: true });
     await logActivity({ actor: req.user, action: 'report_updated', message: `${req.user.name} edited report ${report._id}`, entityType: 'report', entityId: report._id }).catch(() => {});
     res.json({ success: true, report });

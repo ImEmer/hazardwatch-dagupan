@@ -25,6 +25,7 @@ const SubmitReport = () => {
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [selectedAddress, setSelectedAddress] = useState('');
     const [selectedBarangay, setSelectedBarangay] = useState('');
+    const [locationResolution, setLocationResolution] = useState(null);
     const [form, setForm] = useState({
         category: '',
         customCategory: '',
@@ -41,14 +42,17 @@ const SubmitReport = () => {
         AOS.refresh();
     }, []);
 
-    const handleMapClick = (location, address, barangay) => {
+    const handleMapClick = (location, address, barangay, resolution) => {
         setSelectedLocation({ 
             lng: location.lng, 
             lat: location.lat, 
-            address: address 
+            accuracyMeters: location.accuracyMeters,
+            capturedAt: location.capturedAt,
+            address: address,
         });
         setSelectedAddress(address || `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
         setSelectedBarangay(barangay || '');
+        setLocationResolution(resolution || { status: barangay ? 'resolved' : 'unresolved' });
         setErrors((prev) => ({ ...prev, location: '' }));
     };
 
@@ -84,6 +88,7 @@ const SubmitReport = () => {
         setSelectedLocation(null);
         setSelectedAddress('');
         setSelectedBarangay('');
+        setLocationResolution(null);
         setImages([]);
         setErrors({});
         if (photoInputRef.current) photoInputRef.current.value = '';
@@ -114,6 +119,10 @@ const SubmitReport = () => {
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
         else if (!withinDagupanBounds(selectedLocation)) {
             newErrors.location = 'This location is outside Dagupan City. Please pick a point within the city limits.';
+        } else if (locationResolution?.status !== 'resolved' || !selectedBarangay) {
+            newErrors.location = locationResolution?.status === 'low_accuracy'
+                ? `GPS accuracy (${Math.round(selectedLocation.accuracyMeters)} m) overlaps a barangay boundary. Use a more accurate fix or select a point on the map.`
+                : 'Unable to determine the barangay for this location. Select a point inside a barangay boundary.';
         }
         return newErrors;
     };
@@ -147,10 +156,11 @@ const SubmitReport = () => {
                 type: 'Point',
                 coordinates: [selectedLocation.lng, selectedLocation.lat]
             },
+            locationAccuracyMeters: selectedLocation.accuracyMeters,
+            locationCapturedAt: selectedLocation.capturedAt,
             address: selectedAddress,
             photoFile: images[0],
             photos: images,
-            barangay: selectedBarangay,
             allowDuplicate,
         };
         try {
@@ -392,6 +402,16 @@ const SubmitReport = () => {
                         </svg>
                         <div className="min-w-0 flex-1">
                         <p className={`truncate text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedAddress}</p>
+                        <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {locationResolution?.status === 'resolved'
+                                ? <>Detected Barangay: <span className="font-semibold text-[#3b82f6]">{selectedBarangay}</span></>
+                                : locationResolution?.status === 'low_accuracy'
+                                    ? `Location accuracy is too low (${Math.round(selectedLocation.accuracyMeters)} m).`
+                                    : 'Unable to determine barangay for this point.'}
+                            {Number.isFinite(selectedLocation.accuracyMeters) && locationResolution?.status === 'resolved'
+                                ? ` GPS accuracy: ${Math.round(selectedLocation.accuracyMeters)} m.`
+                                : ''}
+                        </p>
                         </div>
                         <button
                         type="button"
@@ -399,6 +419,7 @@ const SubmitReport = () => {
                             setSelectedLocation(null);
                             setSelectedAddress('');
                             setSelectedBarangay('');
+                            setLocationResolution(null);
                         }}
                         className="text-xs text-gray-500 hover:text-red-400 transition"
                         >
