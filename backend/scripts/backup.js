@@ -32,11 +32,17 @@ const authorizeB2 = () => requestJson('https://api.backblazeb2.com/b2api/v3/b2_a
   headers: { Authorization: `Basic ${Buffer.from(`${process.env.B2_KEY_ID}:${process.env.B2_APP_KEY}`).toString('base64')}` },
 });
 
-const b2Post = (auth, action, body) => requestJson(`${auth.apiUrl}/b2api/${B2_API_VERSION}/${action}`, {
-  method: 'POST',
-  headers: { Authorization: auth.authorizationToken, 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
+const getB2ApiUrl = (auth) => auth?.apiInfo?.storageApi?.apiUrl ?? auth?.apiUrl ?? null;
+
+const b2Post = (auth, action, body) => {
+  const base = getB2ApiUrl(auth);
+  if (!base) throw new Error('B2 authorization response missing apiInfo.storageApi.apiUrl');
+  return requestJson(`${base}/b2api/${B2_API_VERSION}/${action}`, {
+    method: 'POST',
+    headers: { Authorization: auth.authorizationToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+};
 
 const createArchive = async (filePath) => new Promise((resolve, reject) => {
   const mongoUri = process.env.MONGO_URI?.trim();
