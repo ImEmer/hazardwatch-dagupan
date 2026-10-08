@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Activity, Archive, Bell, FileText, LayoutDashboard, LogOut, Map, PanelLeftClose, PanelLeftOpen, Settings, X } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { confirmAction } from '../../services/alerts';
-import NotificationBell from '../common/NotificationBell';
 
-const MenuIcon = ({ close = false }) => <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">{close ? <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" /> : <><path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" /></>}</svg>;
-const LogoutIcon = () => <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M10 17l5-5-5-5M15 12H3m8 8h7a2 2 0 002-2V6a2 2 0 00-2-2h-7" /></svg>;
+const items = [
+  { to: '/barangay/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/barangay/reports', label: 'Reports', icon: FileText },
+  { to: '/barangay/archived', label: 'Archived', icon: Archive },
+  { to: '/barangay/map', label: 'Map View', icon: Map },
+  { to: '/barangay/notifications', label: 'Notifications', icon: Bell },
+  { to: '/barangay/settings', label: 'Settings', icon: Settings },
+];
 
 const BarangaySidebar = () => {
   const { user, logout } = useAuth();
@@ -14,15 +20,28 @@ const BarangaySidebar = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
   const isDark = theme === 'dark';
   const barangayPath = '/barangay';
 
   useEffect(() => setIsOpen(false), [pathname]);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(collapsed));
+    window.dispatchEvent(new CustomEvent('hw:barangay-sidebar-state', { detail: { collapsed } }));
+  }, [collapsed]);
+
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === 'Escape') setIsOpen(false); };
+    const handleSidebarToggle = () => setIsOpen((value) => !value);
     window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    window.addEventListener('hw:toggle-barangay-sidebar', handleSidebarToggle);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('hw:toggle-barangay-sidebar', handleSidebarToggle);
+    };
   }, []);
+
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -35,16 +54,61 @@ const BarangaySidebar = () => {
     await logout();
     navigate('/login');
   };
-  const linkClass = ({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive ? isDark ? 'bg-[#3b82f6]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-700' : isDark ? 'text-gray-300 hover:bg-[#14151d] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
-  const sidebar = <aside className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r transition-transform duration-300 lg:z-40 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'}`}>
-    <div className={`flex items-center justify-between border-b py-4 pl-5 pr-1 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><NavLink to={`${barangayPath}/dashboard`} onClick={() => setIsOpen(false)} className="text-lg font-bold tracking-tight text-[#3b82f6]">HazardWatch</NavLink><div className="flex items-center gap-2"><button type="button" onClick={() => setIsOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-white/10 lg:hidden" aria-label="Close menu"><MenuIcon close /></button><NotificationBell onOpen={() => { if (window.innerWidth < 1024) setIsOpen(false); }} /></div></div>
-    <div className={`border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{user?.barangay || 'Barangay'} Dashboard</p><p className={`mt-2 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{user?.name}</p></div>
-    <nav className="flex-1 space-y-1 px-3 py-4"><NavLink to={`${barangayPath}/dashboard`} end onClick={() => setIsOpen(false)} className={linkClass}>Dashboard</NavLink><NavLink to={`${barangayPath}/reports`} onClick={() => setIsOpen(false)} className={linkClass}>Reports</NavLink><NavLink to={`${barangayPath}/archived`} onClick={() => setIsOpen(false)} className={linkClass}>Archived</NavLink><NavLink to={`${barangayPath}/map`} onClick={() => setIsOpen(false)} className={linkClass}>Map View</NavLink><NavLink to={`${barangayPath}/notifications`} onClick={() => setIsOpen(false)} className={linkClass}>Notifications</NavLink><NavLink to={`${barangayPath}/settings`} onClick={() => setIsOpen(false)} className={linkClass}>Settings</NavLink></nav>
-    <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><button type="button" onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl border border-red-500 px-3 py-2.5 text-left text-sm font-medium text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950"><LogoutIcon />Logout</button></div>
+
+  const linkClass = ({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${collapsed ? 'justify-center px-2' : ''} ${isActive ? isDark ? 'bg-[#3b82f6]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-700' : isDark ? 'text-gray-300 hover:bg-[#14151d] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
+
+  const sidebar = <aside className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:z-40 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-20' : 'w-64'} ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'}`}>
+    <div className={`flex items-center border-b px-3 py-3 ${collapsed ? 'justify-center px-2' : 'justify-between'} ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+      {!collapsed && (
+        <NavLink to={`${barangayPath}/dashboard`} onClick={() => setIsOpen(false)} className="text-lg font-bold tracking-tight text-[#3b82f6]">HazardWatch</NavLink>
+      )}
+      <button
+        type="button"
+        onClick={() => setCollapsed((value) => !value)}
+        className={`inline-flex rounded-lg p-2 text-gray-400 hover:bg-white/10 ${collapsed ? 'mx-auto' : ''} ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+      </button>
+      {!collapsed && <button type="button" onClick={() => setIsOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-white/10 lg:hidden" aria-label="Close menu"><X className="h-4 w-4" /></button>}
+    </div>
+
+    {!collapsed && (
+      <div className={`border-b px-5 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+        <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Signed in as</p>
+        <p className={`mt-2 font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{user?.name || 'User'}</p>
+        <p className={`text-xs capitalize ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>{user?.role || 'barangay'}</p>
+      </div>
+    )}
+
+    <nav className="flex-1 space-y-1 px-3 py-4">
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <NavLink key={item.to} to={item.to} onClick={() => setIsOpen(false)} className={linkClass} title={collapsed ? item.label : undefined}>
+            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {!collapsed && <span>{item.label}</span>}
+          </NavLink>
+        );
+      })}
+    </nav>
+
+    <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+      <button
+        type="button"
+        onClick={handleLogout}
+        className={`flex items-center gap-3 rounded-xl border border-red-500 px-3 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950 ${collapsed ? 'justify-center px-2' : 'w-full text-left'}`}
+        title={collapsed ? 'Logout' : undefined}
+      >
+        <LogOut className="h-4 w-4" aria-hidden="true" />
+        {!collapsed && <span>Logout</span>}
+      </button>
+    </div>
   </aside>;
 
   return <>
-    <div className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 lg:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}><button type="button" onClick={() => setIsOpen((value) => !value)} className="rounded-lg p-2" aria-label={isOpen ? 'Close menu' : 'Open menu'}><MenuIcon close={isOpen} /></button><span className="text-sm font-semibold">{user?.barangay || 'Barangay'} Barangay</span><button type="button" onClick={handleLogout} className="rounded-lg border border-red-500 p-2 text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950" aria-label="Logout"><LogoutIcon /></button></div>
+    <div className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 lg:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}><button type="button" onClick={() => setIsOpen((value) => !value)} className="rounded-lg p-2" aria-label={isOpen ? 'Close menu' : 'Open menu'}><X className={`h-4 w-4 ${isOpen ? '' : 'rotate-180'}`} /></button><span className="text-sm font-semibold">{user?.barangay || 'Barangay'} Barangay</span><button type="button" onClick={handleLogout} className="rounded-lg border border-red-500 p-2 text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950" aria-label="Logout"><LogOut className="h-4 w-4" /></button></div>
     {isOpen && <button type="button" aria-label="Close navigation" onClick={() => setIsOpen(false)} className="fixed inset-0 z-40 bg-black/60 lg:hidden" />}
     {sidebar}
   </>;

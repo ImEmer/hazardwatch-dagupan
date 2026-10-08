@@ -16,7 +16,6 @@ const HazardMapPage = () => {
   const visibleReports = mapReports.filter((report) => visibleStatuses.includes(report.status));
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [flyTo, setFlyTo] = useState(null);
 
@@ -25,7 +24,6 @@ const HazardMapPage = () => {
     AOS.refresh();
   }, []);
 
-  const toggleHeatmap = () => setShowHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
   const handleBarangayChange = (event) => {
     const name = event.target.value;
     setSelectedBarangay(name);
@@ -47,19 +45,29 @@ const HazardMapPage = () => {
               <p className="mt-1 text-gray-400">Public map view shows live reports already submitted by the community.</p>
             </div>
           ) : (
-            <Link to="/submit" className="absolute left-5 top-5 z-10 rounded-lg border border-blue-400 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-blue-500">
-              Report a Hazard
+            <Link to="/submit" className="absolute right-5 top-5 z-10 rounded-lg border border-blue-400 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-blue-500">
+              Submit a Report
             </Link>
           )}
-          <div className={`absolute left-5 top-28 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
-            <label htmlFor="public-map-barangay" className="block text-xs font-semibold">Find Barangay</label>
-            <select id="public-map-barangay" value={selectedBarangay} onChange={handleBarangayChange} className={`mt-2 w-52 rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+          <div className={`absolute bottom-5 left-5 z-10 w-[min(18rem,calc(100%-2.5rem))] rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="public-map-barangay" className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#60a5fa]">Find Barangay</label>
+              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-100 text-slate-600'}`}>Select</span>
+            </div>
+            <select id="public-map-barangay" value={selectedBarangay} onChange={handleBarangayChange} className={`public-map-select mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
               <option value="">Select a barangay...</option>
               {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
             </select>
           </div>
-          <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-3 py-2 text-sm text-white shadow-lg">{showHeatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={showHeatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} />
+          <div className={`absolute left-5 top-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#60a5fa]">Report status</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#eab308]" aria-hidden="true" /><span className="text-gray-200">Pending</span></div>
+              <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#3b82f6]" aria-hidden="true" /><span className="text-gray-200">In Progress</span></div>
+              <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#10b981]" aria-hidden="true" /><span className="text-gray-200">Resolved</span></div>
+            </div>
+          </div>
+          <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={false} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} />
           {loading && (
             <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">
               Loading reports...

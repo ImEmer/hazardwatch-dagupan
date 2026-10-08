@@ -7,7 +7,7 @@ const pageNumbers = (pages, page) => {
   return [1, ...(start > 2 ? ['…'] : []), ...Array.from({ length: end - start + 1 }, (_, index) => start + index), ...(end < pages - 1 ? ['…'] : []), pages];
 };
 
-const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange, isDark = false }) => {
+const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange, isDark = false, showSummary = true }) => {
   const pages = Math.max(1, Number(totalPages) || 1);
   const page = Math.min(pages, Math.max(1, Number(currentPage) || 1));
   const total = Math.max(0, Number(totalItems) || 0);
@@ -18,8 +18,8 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
   const button = isDark ? 'text-gray-400 hover:text-white' : 'text-slate-500 hover:text-slate-900';
 
   return (
-    <footer className="mt-4 flex flex-col items-center gap-3 px-1 py-3 sm:flex-row sm:justify-between">
-      <p className={`text-sm ${muted}`}>Showing {first}-{last} of {total} entries</p>
+    <footer className={showSummary ? 'mt-4 flex flex-col items-center gap-3 px-1 py-3 sm:flex-row sm:justify-between' : 'sticky bottom-0 z-10 mt-0 flex w-full items-center justify-center gap-3 border-t bg-inherit px-1 py-3'}>
+      {showSummary && <p className={`text-sm ${muted}`}>Showing {first}-{last} of {total} entries</p>}
       <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
         {page > 1 && <button type="button" onClick={() => onPageChange(page - 1)} className={button}>Previous</button>}
         {pageNumbers(pages, page).map((value, index) => value === '…'
@@ -27,7 +27,7 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
           : <button type="button" key={value} aria-current={page === value ? 'page' : undefined} onClick={() => onPageChange(value)} className={page === value ? 'font-bold text-[#3b82f6]' : button}>{value}</button>)}
         {page < pages && <button type="button" onClick={() => onPageChange(page + 1)} className={button}>Next</button>}
       </div>
-      <p className={`text-xs ${muted}`}>{total} total entries</p>
+      {showSummary && <p className={`text-xs ${muted}`}>{total} total entries</p>}
     </footer>
   );
 };

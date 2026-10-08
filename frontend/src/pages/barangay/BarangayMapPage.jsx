@@ -23,7 +23,6 @@ const BarangayMapPage = () => {
   const isDark = theme === 'dark';
   const [status, setStatus] = useState('all');
   const [selectedReport, setSelectedReport] = useState(null);
-  const [heatmap, setHeatmap] = useState(() => localStorage.getItem('hazardwatch_heatmap') === 'true');
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [flyTo, setFlyTo] = useState(null);
 
@@ -32,7 +31,6 @@ const BarangayMapPage = () => {
     const visible = reports.filter((report) => visibleStatuses.includes(report.status));
     return status === 'all' ? visible : visible.filter((report) => report.status === status);
   }, [mapPreferences.showResolved, reports, status]);
-  const toggleHeatmap = () => setHeatmap((value) => { localStorage.setItem('hazardwatch_heatmap', String(!value)); return !value; });
   const handleBarangayChange = (event) => {
     const name = event.target.value;
     setSelectedBarangay(name);
@@ -58,8 +56,7 @@ const BarangayMapPage = () => {
               {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
             </select>
           </div>
-          <button type="button" onClick={toggleHeatmap} className="absolute right-5 top-5 z-10 rounded-lg bg-[#14151d]/95 px-3 py-2 text-sm text-white">{heatmap ? 'Show Markers' : 'Show Heatmap'}</button>
-          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={heatmap} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} onReportSelect={setSelectedReport} />
+          <InteractiveMap reports={filtered} height="100%" colorBy="status" showHeatmap={false} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} onReportSelect={setSelectedReport} />
           {loading && <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">Loading reports...</div>}
           {error && <div role="alert" className="absolute right-5 top-16 z-20 max-w-sm rounded-lg bg-red-600 px-4 py-3 text-sm text-white shadow-lg"><p>{error}</p><button type="button" className="mt-2 rounded border border-white/70 px-3 py-1 font-semibold hover:bg-white/10" onClick={retry}>Retry</button></div>}
           {!loading && !error && !filtered.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-2xl border border-slate-700 bg-slate-950/80 px-6 py-5 text-center text-slate-200 shadow-xl"><div className="text-2xl" aria-hidden="true">⚠</div><h3 className="mt-2 font-semibold">No reports to show</h3><p className="mt-1 text-sm text-slate-400">There are no active reports in this map view.</p></div></div>}

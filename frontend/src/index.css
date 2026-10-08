@@ -8,6 +8,28 @@
   box-sizing: border-box;
 }
 
+.public-map-select {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.public-map-select::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 html,
 body,
 #root {

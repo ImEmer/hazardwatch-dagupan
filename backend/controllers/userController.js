@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import { logActivity } from '../utils/logActivity.js';
 import { createNotification } from '../utils/createNotification.js';
+import { sendAccountSuspendedEmail, sendAdminAutoBanNotificationEmail, sendAutoBanEmail } from '../utils/sendEmail.js';
 
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
 const listFields = 'name email role barangay status isActive suspendedUntil suspensionReason lastLogin createdAt';
@@ -258,12 +259,100 @@ export const suspendUser = async (req, res, next) => {
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     const permissionError = managedTargetError(req.user, target, 'suspend');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
+    if (target.status === 'banned') return res.status(409).json({ success: false, message: 'This user is already permanently banned.' });
+
     const requestedDuration = req.body.durationInDays ?? req.body.duration;
     const durationMs = getDurationMs(requestedDuration);
     const until = requestedDuration === 'custom' ? new Date(req.body.suspendedUntil) : new Date(Date.now() + durationMs);
     if (!Number.isFinite(until.getTime()) || until <= new Date()) return res.status(400).json({ success: false, message: 'A valid suspension duration is required.' });
-    target.status = 'suspended'; target.isActive = false; target.suspendedUntil = until; target.suspensionReason = String(req.body.reason || 'Temporarily suspended by administrator').trim(); target.suspendedBy = req.user._id;
+
+    const reason = String(req.body.reason || 'Temporarily suspended by administrator').trim();
+    const suspensionCount = Number(target.suspensionCount || 0) + 1;
+    const suspensionDates = [...(Array.isArray(target.suspensionHistory) ? target.suspensionHistory : []), new Date()];
+
+    target.status = 'suspended';
+    target.isActive = false;
+    target.suspendedUntil = until;
+    target.suspensionReason = reason;
+    target.suspendedBy = req.user._id;
+    target.suspensionCount = suspensionCount;
+    target.suspensionHistory = suspensionDates;
+
     await target.save({ validateBeforeSave: false });
+
+    try {
+      await sendAccountSuspendedEmail({
+        email: target.email,
+        name: target.name,
+        reason,
+        suspendedUntil: until,
+      });
+    } catch (emailError) {
+      console.error('[users] Suspension email failed:', emailError.message);
+    }
+
+    if (suspensionCount >= 3) {
+      target.status = 'banned';
+      target.isActive = false;
+      target.bannedAt = new Date();
+      target.bannedBy = req.user._id;
+      target.banReason = 'Auto-banned after 3 suspensions';
+      target.suspendedUntil = undefined;
+      target.suspensionReason = undefined;
+      target.suspendedBy = undefined;
+      await target.save({ validateBeforeSave: false });
+
+      try {
+        await sendAutoBanEmail({
+          email: target.email,
+          name: target.name,
+          suspensionDates: suspensionDates.slice(-3),
+        });
+      } catch (emailError) {
+        console.error('[users] Auto-ban email failed:', emailError.message);
+      }
+
+      const adminNotificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.EMAIL_FROM || 'emersonisla06@gmail.com';
+      try {
+        await sendAdminAutoBanNotificationEmail({
+          email: adminNotificationEmail,
+          userName: target.name,
+          userEmail: target.email,
+          suspensionCount,
+          suspensionDates: suspensionDates.slice(-3),
+        });
+      } catch (emailError) {
+        console.error('[users] Admin auto-ban notification email failed:', emailError.message);
+      }
+
+      try {
+        await logActivity({
+          actor: req.user,
+          action: 'user_auto_banned',
+          message: `${req.user.name} auto-banned ${target.name} after ${suspensionCount} suspensions`,
+          scope: 'admin',
+          entityType: 'user',
+          entityId: target._id,
+        });
+      } catch (logError) {
+        console.error('[users] Auto-ban activity log failed:', logError.message);
+      }
+
+      if (['superadmin', 'admin', 'barangay'].includes(target.role)) {
+        await createNotification({
+          recipientId: target._id,
+          recipientRole: target.role,
+          type: 'account_banned',
+          title: 'Account Banned',
+          message: 'Your account has been permanently banned after three suspensions.',
+          reference: target._id,
+          referenceModel: 'User',
+        }).catch(() => {});
+      }
+
+      return res.json({ success: true, message: 'User auto-banned after 3 suspensions', user: target.toJSON() });
+    }
+
     if (['superadmin', 'admin', 'barangay'].includes(target.role)) {
       await createNotification({
         recipientId: target._id,
@@ -275,7 +364,15 @@ export const suspendUser = async (req, res, next) => {
         referenceModel: 'User',
       });
     }
-    res.json({ success: true, user: target.toJSON() });
+    await logActivity({
+      actor: req.user,
+      action: 'user_suspended',
+      message: `${req.user.name} suspended ${target.name} until ${until.toISOString()}`,
+      scope: 'admin',
+      entityType: 'user',
+      entityId: target._id,
+    }).catch(() => {});
+    return res.json({ success: true, user: target.toJSON() });
   } catch (error) { next(error); }
 };
 
@@ -289,6 +386,7 @@ export const banUser = async (req, res, next) => {
     target.status = 'banned';
     target.isActive = false;
     target.bannedAt = new Date();
+    target.bannedBy = req.user._id;
     target.banReason = String(req.body.reason || '').trim() || undefined;
     target.suspendedUntil = undefined;
     target.suspensionReason = undefined;

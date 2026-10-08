@@ -23,6 +23,7 @@ const BarangayDashboard = () => {
   const [selectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [timelineError, setTimelineError] = useState('');
   const [priorityAnimated, setPriorityAnimated] = useState(false);
 
   useEffect(() => {
@@ -46,13 +47,35 @@ const BarangayDashboard = () => {
     Promise.all([
       api.get(`/statistics/barangay/${encodedBarangay}`, { headers: { Authorization: `Bearer ${token}` } }),
       api.get('/reports', { params: { barangay, page: 1, limit: 5 }, headers: { Authorization: `Bearer ${token}` } }),
-      api.get(`/statistics/barangay/${encodedBarangay}/timeline`, { params: { month }, headers: { Authorization: `Bearer ${token}` } }),
-    ]).then(([overview, reports, timeline]) => {
+    ]).then(([overview, reports]) => {
       if (cancelled) return;
-      setDashboard({ total: overview.data?.total || 0, status: overview.data?.status || [], priority: overview.data?.priority || [], reports: reports.data?.reports || [], timeline: timeline.data?.data || [] });
+      setDashboard((current) => ({ ...current, total: overview.data?.total || 0, status: overview.data?.status || [], priority: overview.data?.priority || [], reports: reports.data?.reports || [] }));
     }).catch((requestError) => {
       if (!cancelled) setError(requestError.response?.data?.message || 'Unable to load barangay dashboard.');
     }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [barangay, token]);
+
+  useEffect(() => {
+    if (!token || !barangay) return undefined;
+
+    let cancelled = false;
+    const encodedBarangay = encodeURIComponent(barangay);
+    setTimelineError('');
+    setDashboard((current) => ({ ...current, timeline: [] }));
+    api.get(`/statistics/barangay/${encodedBarangay}/timeline`, {
+      params: { month },
+      headers: { Authorization: `****** }` },
+    }).then(({ data }) => {
+      if (!cancelled) {
+        setDashboard((current) => ({ ...current, timeline: data?.data || [] }));
+      }
+    }).catch((requestError) => {
+      if (!cancelled) {
+        setTimelineError(requestError.response?.data?.message || 'Unable to load report timeline.');
+      }
+    });
+
     return () => { cancelled = true; };
   }, [barangay, month, token]);
 
@@ -201,22 +224,26 @@ const BarangayDashboard = () => {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={timelineData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-              <defs>
-                <linearGradient id="barangayReportsTrend" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
-              <XAxis dataKey="date" stroke={chartText} tick={{ fontSize: 11 }} interval={Math.max(1, Math.floor(daysInMonth / 7))} />
-              <YAxis allowDecimals={false} stroke={chartText} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="reports" name="Reports" stroke="#3b82f6" fill="url(#barangayReportsTrend)" strokeWidth={2} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
-              <Line type="monotone" dataKey="reports" stroke="#60a5fa" strokeWidth={2} dot={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {timelineError ? (
+            <p role="alert" className="py-6 text-center text-sm text-red-500">{timelineError}</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={timelineData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <defs>
+                  <linearGradient id="barangayReportsTrend" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="date" stroke={chartText} tick={{ fontSize: 11 }} interval={Math.max(1, Math.floor(daysInMonth / 7))} />
+                <YAxis allowDecimals={false} stroke={chartText} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Area type="monotone" dataKey="reports" name="Reports" stroke="#3b82f6" fill="url(#barangayReportsTrend)" strokeWidth={2} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                <Line type="monotone" dataKey="reports" stroke="#60a5fa" strokeWidth={2} dot={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

@@ -205,6 +205,82 @@ export const sendTwoFactorCode = ({ email, name, code }) => {
     return sendEmail({ to: email, subject, html, text });
 };
 
+const formatAsiaManilaDate = (value) => new Intl.DateTimeFormat('en-PH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Manila',
+}).format(new Date(value));
+
+export const sendAccountSuspendedEmail = ({ email, name, reason, suspendedUntil }) => {
+    const safeName = escapeHtml(name || 'there');
+    const safeReason = escapeHtml(reason || 'Violation of platform rules');
+    const safeEndsAt = escapeHtml(formatAsiaManilaDate(suspendedUntil));
+    const subject = 'HazardWatch — Your account has been suspended';
+    const text = `Hi ${name || 'there'},\n\nYour HazardWatch account has been suspended.\n\nReason: ${reason || 'Violation of platform rules'}\nSuspension ends: ${formatAsiaManilaDate(suspendedUntil)} (Asia/Manila)\n\nYou will not be able to sign in until the suspension ends.\n\nIf you believe this action was taken in error, reply to this email or contact the HazardWatch team to appeal.\n`;
+    const html = `
+        <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
+            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
+                <div style="background:#1261a0;padding:24px 28px;color:#ffffff;font-size:22px;font-weight:700;">HazardWatch Dagupan</div>
+                <div style="padding:32px 28px;">
+                    <p style="margin:0 0 16px;">Hi ${safeName},</p>
+                    <p style="margin:0 0 16px;line-height:1.6;">Your HazardWatch account has been suspended.</p>
+                    <p style="margin:0 0 8px;"><strong>Reason:</strong> ${safeReason}</p>
+                    <p style="margin:0 0 16px;"><strong>Suspension ends:</strong> ${safeEndsAt} (Asia/Manila)</p>
+                    <p style="margin:0 0 16px;line-height:1.6;">You will not be able to sign in until the suspension ends.</p>
+                    <p style="margin:0;line-height:1.6;">If you believe this action was taken in error, reply to this email or use the contact page to appeal the decision.</p>
+                </div>
+            </div>
+        </div>`;
+    return sendEmail({ to: email, subject, html, text });
+};
+
+export const sendAutoBanEmail = ({ email, name, suspensionDates = [] }) => {
+    const safeName = escapeHtml(name || 'there');
+    const formattedDates = suspensionDates.length
+        ? suspensionDates.map((date) => escapeHtml(formatAsiaManilaDate(date))).join('<br/>')
+        : 'Not recorded';
+    const subject = 'HazardWatch — Your account has been permanently banned';
+    const text = `Hi ${name || 'there'},\n\nYour HazardWatch account was permanently banned after 3 suspensions.\n\nPrevious suspension dates:\n${suspensionDates.map((date) => `${formatAsiaManilaDate(date)} (Asia/Manila)`).join('\n') || 'Not recorded'}\n\nIf you believe this decision was made in error, reply to this email or use the contact page to appeal.\n`;
+    const html = `
+        <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
+            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
+                <div style="background:#5b0a1a;padding:24px 28px;color:#ffffff;font-size:22px;font-weight:700;">HazardWatch Dagupan</div>
+                <div style="padding:32px 28px;">
+                    <p style="margin:0 0 16px;">Hi ${safeName},</p>
+                    <p style="margin:0 0 16px;line-height:1.6;">Your account was permanently banned after 3 suspensions.</p>
+                    <p style="margin:0 0 8px;"><strong>Previous suspension dates:</strong></p>
+                    <div style="margin:0 0 16px;line-height:1.8;">${formattedDates}</div>
+                    <p style="margin:0;line-height:1.6;">If you believe this decision was made in error, reply to this email or use the contact page to appeal.</p>
+                </div>
+            </div>
+        </div>`;
+    return sendEmail({ to: email, subject, html, text });
+};
+
+export const sendAdminAutoBanNotificationEmail = ({ email, userName, userEmail, suspensionCount, suspensionDates = [] }) => {
+    const safeUserName = escapeHtml(userName || 'Unknown user');
+    const safeUserEmail = escapeHtml(userEmail || 'unknown');
+    const safeDates = suspensionDates.length
+        ? suspensionDates.map((date) => escapeHtml(formatAsiaManilaDate(date))).join('<br/>')
+        : 'No suspension dates recorded';
+    const subject = 'HazardWatch — User auto-banned after 3 suspensions';
+    const text = `A user was automatically banned after 3 suspensions.\n\nUser: ${userName || 'Unknown user'} (${userEmail || 'unknown'})\nSuspension count: ${suspensionCount || 0}\nRecent suspension dates:\n${suspensionDates.map((date) => formatAsiaManilaDate(date)).join('\n') || 'No suspension dates recorded'}\n`;
+    const html = `
+        <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
+            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
+                <div style="background:#1f2937;padding:24px 28px;color:#ffffff;font-size:22px;font-weight:700;">HazardWatch Admin Notice</div>
+                <div style="padding:32px 28px;">
+                    <p style="margin:0 0 16px;">A user was automatically banned after 3 suspensions.</p>
+                    <p style="margin:0 0 8px;"><strong>User:</strong> ${safeUserName} (${safeUserEmail})</p>
+                    <p style="margin:0 0 8px;"><strong>Suspension count:</strong> ${suspensionCount || 0}</p>
+                    <p style="margin:0 0 8px;"><strong>Suspension dates:</strong></p>
+                    <div style="margin:0 0 8px;line-height:1.8;">${safeDates}</div>
+                </div>
+            </div>
+        </div>`;
+    return sendEmail({ to: email, subject, html, text });
+};
+
 const appBaseUrl = () => (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://hazardwatch-dagupan.vercel.app').replace(/\/$/, '');
 
 export const buildNewDeviceAlertEmail = ({ name, email, deviceName, ipAddress, sentAt }) => {

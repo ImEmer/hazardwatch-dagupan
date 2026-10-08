@@ -60,21 +60,25 @@ const MapReportList = ({ endpoint, token, includeResolved = false, status, selec
         <div><h2 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports</h2><p className={`mt-0.5 text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{pagination.total || 0} reports</p></div>
         <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>{page} / {Math.max(1, pagination.pages || 1)}</span>
       </header>
-      <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3" aria-live="polite">
-        {loading && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Loading reports...</p>}
-        {!loading && error && <p role="alert" className="py-6 text-center text-sm text-red-500">{error}</p>}
-        {!loading && !error && visibleReports.length === 0 && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No reports found.</p>}
-        {!loading && !error && visibleReports.map((report) => {
-          const id = reportId(report);
-          const selected = id === selectedId;
-          return <button key={id} type="button" onClick={() => onSelectReport?.(report)} className={`w-full rounded-md border p-3 text-left transition ${selected ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30' : isDark ? 'border-[#2e303a] bg-[#0e0f14] hover:border-slate-500' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
-            <span className="flex items-start justify-between gap-2"><span className={`line-clamp-2 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category || 'Hazard'} report`}</span><span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${report.status === 'Resolved' ? 'bg-emerald-500/15 text-emerald-500' : report.status === 'In Progress' ? 'bg-blue-500/15 text-blue-500' : 'bg-amber-500/15 text-amber-500'}`}>{report.status || 'Pending'}</span></span>
-            <span className={`mt-1 block text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.category || 'Uncategorized'} · {report.address || report.barangay || 'Dagupan City'}</span>
-            <time className={`mt-1 block text-[11px] ${isDark ? 'text-gray-500' : 'text-slate-400'}`} dateTime={report.createdAt}>{report.createdAt ? new Date(report.createdAt).toLocaleString() : ''}</time>
-          </button>;
-        })}
+      <div ref={listRef} className="scrollbar-hide min-h-0 flex-1 overflow-y-auto p-3" aria-live="polite">
+        <div className="space-y-2">
+          {loading && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Loading reports...</p>}
+          {!loading && error && <p role="alert" className="py-6 text-center text-sm text-red-500">{error}</p>}
+          {!loading && !error && visibleReports.length === 0 && <p className={`py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No reports found.</p>}
+          {!loading && !error && visibleReports.map((report) => {
+            const id = reportId(report);
+            const selected = id === selectedId;
+            return <button key={id} type="button" onClick={() => onSelectReport?.(report)} className={`w-full rounded-md border p-3 text-left transition ${selected ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30' : isDark ? 'border-[#2e303a] bg-[#0e0f14] hover:border-slate-500' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
+              <span className="flex items-start justify-between gap-2"><span className={`line-clamp-2 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title || `${report.category || 'Hazard'} report`}</span><span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${report.status === 'Resolved' ? 'bg-emerald-500/15 text-emerald-500' : report.status === 'In Progress' ? 'bg-blue-500/15 text-blue-500' : 'bg-amber-500/15 text-amber-500'}`}>{report.status || 'Pending'}</span></span>
+              <span className={`mt-1 block text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{report.category || 'Uncategorized'} · {report.address || report.barangay || 'Dagupan City'}</span>
+              <time className={`mt-1 block text-[11px] ${isDark ? 'text-gray-500' : 'text-slate-400'}`} dateTime={report.createdAt}>{report.createdAt ? new Date(report.createdAt).toLocaleString() : ''}</time>
+            </button>;
+          })}
+        </div>
+        <div className="pt-2">
+          <Pagination currentPage={page} totalPages={pagination.pages || 1} totalItems={pagination.total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} isDark={isDark} showSummary={false} />
+        </div>
       </div>
-      <Pagination currentPage={page} totalPages={pagination.pages || 1} totalItems={pagination.total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} isDark={isDark} />
     </section>
   );
 };
