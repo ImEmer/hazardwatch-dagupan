@@ -115,7 +115,7 @@
         const problems = [
         {
             title: 'Too many channels',
-            description: 'Phone, email, mail, social media – reports land everywhere, just not consolidated.',
+            description: 'Phone, email, paper forms, social media — reports land everywhere, just not consolidated.',
             icon: (
             <svg className="w-5 h-5 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -364,40 +364,42 @@
         {/* ============================================================ */}
         <section 
             ref={addToRefs}
-            className={`w-full px-8 md:px-12 py-16 md:py-20 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(0)} border-t ${getBorderClass(0)}`}
+            className={`w-full px-4 sm:px-6 lg:px-8 py-20 md:py-24 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(0)} border-t ${getBorderClass(0)}`}
             data-aos="fade-up"
             data-aos-delay="100"
         >
             <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12" data-aos="fade-down" data-aos-delay="200">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Why email and phone are <span className="text-[#3b82f6]">no longer enough</span>
+            <div className="grid grid-cols-1 gap-12 md:grid-cols-[2fr_3fr] md:gap-16">
+            <header className="self-start md:sticky md:top-28" data-aos="fade-down" data-aos-delay="200">
+                <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl">
+                Why email and social media are <span className="text-[#3b82f6]">no longer enough</span>
                 </h2>
-                <p className="text-gray-400 text-lg max-w-3xl mx-auto">
+                <p className="text-lg leading-relaxed text-gray-400">
                 Citizens expect digital services. Administrations struggle with fragmented channels and rising demands.
                 </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            </header>
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
                 {problems.map((problem, index) => (
-                <div 
+                <div
                     key={index}
-                    className={`${getCardBgClass(0)} border ${getCardBorderClass(0)} rounded-xl p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`}
+                    className="flex gap-4 py-5 first:pt-0 last:pb-0"
                     data-aos="fade-up"
                     data-aos-delay={100 + index * 100}
                 >
-                    <div className="w-10 h-10 bg-[#3b82f6]/10 rounded-lg flex items-center justify-center mb-3">
-                    {problem.icon}  {/* <-- UPDATED: uses problem.icon */}
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#3b82f6]/10">
+                    {problem.icon}
                     </div>
-                    <h4 className="text-white font-semibold text-sm mb-2">{problem.title}</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed">{problem.description}</p>
+                    <div>
+                        <h3 className="mb-1 font-semibold text-white">{problem.title}</h3>
+                        <p className="text-sm leading-relaxed text-gray-400">{problem.description}</p>
+                    </div>
                 </div>
                 ))}
             </div>
-            <div className="text-center mt-8" data-aos="fade-up" data-aos-delay="500">
-                <p className="text-sm text-[#3b82f6] font-medium border border-[#3b82f6]/20 rounded-full px-6 py-2 inline-block bg-[#3b82f6]/5">
-                HazardWatch consolidates all channels, creates transparency, and delivers data for better decisions.
-                </p>
             </div>
+            <p className="mt-10 border-l-2 border-[#3b82f6] bg-[#3b82f6]/5 py-4 pl-5 text-sm font-medium leading-relaxed text-[#60a5fa] md:text-base" data-aos="fade-up" data-aos-delay="500">
+                HazardWatch consolidates all channels, creates transparency, and delivers data for better decisions.
+            </p>
             </div>
         </section>
 
@@ -406,28 +408,27 @@
         {/* ============================================================ */}
         <section 
             ref={addToRefs}
-            className={`w-full px-8 md:px-12 py-16 md:py-20 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(1)} border-t ${getBorderClass(1)}`}
+            className={`w-full px-4 sm:px-6 lg:px-8 py-20 md:py-24 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(1)} border-t ${getBorderClass(1)}`}
             data-aos="fade-up"
             data-aos-delay="100"
         >
             <div className="max-w-7xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12" data-aos="fade-down" data-aos-delay="200">
+            <h2 className="mb-12 text-3xl font-bold text-white md:text-4xl" data-aos="fade-down" data-aos-delay="200">
                 How <span className="text-[#3b82f6]">HazardWatch</span> Works
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
-                <div className="hidden lg:block absolute top-16 left-0 right-0 h-0.5 bg-[#1a2744] z-0"></div>
+            <ol className="relative grid grid-cols-1 gap-8 before:absolute before:bottom-6 before:left-5 before:top-5 before:w-px before:bg-slate-300 dark:before:bg-slate-700 md:grid-cols-4 md:gap-6 md:before:bottom-auto md:before:left-[12.5%] md:before:right-[12.5%] md:before:top-5 md:before:h-px md:before:w-auto">
                 {steps.map((step, index) => (
-                <div key={index} className="relative z-10" data-aos="fade-up" data-aos-delay={100 + index * 150}>
-                    <div className={`${getCardBgClass(1)} border ${getCardBorderClass(1)} rounded-xl p-6 text-center hover:border-[#3b82f6]/30 transition h-full`}>
-                    <div className="w-12 h-12 bg-[#3b82f6]/15 rounded-full flex items-center justify-center mx-auto mb-4 text-[#3b82f6] font-bold text-lg">
+                <li key={index} className="relative z-10 flex gap-5 md:flex-col md:gap-5" data-aos="fade-up" data-aos-delay={100 + index * 150}>
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#3b82f6] ${isDark ? 'bg-[#0f1729]' : 'bg-slate-50'} text-sm font-bold tabular-nums text-[#3b82f6] md:mx-auto`}>
                         {step.number}
                     </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">{step.title}</h3>
-                    <p className="text-sm text-gray-400 leading-relaxed">{step.description}</p>
+                    <div className="md:pt-1">
+                        <h3 className="mb-2 text-lg font-semibold text-white">{step.title}</h3>
+                        <p className="text-sm leading-relaxed text-gray-400">{step.description}</p>
                     </div>
-                </div>
+                </li>
                 ))}
-            </div>
+            </ol>
             </div>
         </section>
 
@@ -436,32 +437,32 @@
         {/* ============================================================ */}
         <section 
             ref={addToRefs}
-            className={`w-full px-8 md:px-12 py-16 md:py-20 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(2)} border-t ${getBorderClass(2)}`}
+            className={`w-full px-4 sm:px-6 lg:px-8 py-20 md:py-24 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(2)} border-t ${getBorderClass(2)}`}
             data-aos="fade-up"
             data-aos-delay="100"
         >
             <div className="max-w-7xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4" data-aos="fade-down" data-aos-delay="200">
+            <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl" data-aos="fade-down" data-aos-delay="200">
                 What Can You <span className="text-[#3b82f6]">Report</span>?
             </h2>
-            <p className="text-gray-400 text-center max-w-2xl mx-auto mb-12" data-aos="fade-up" data-aos-delay="300">
+            <p className="mb-12 max-w-2xl text-gray-400" data-aos="fade-up" data-aos-delay="300">
                 Browse the types of hazards you can report in your community.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-10">
                 {categories.map((category, index) => (
-                <div 
+                <article
                     key={index}
-                    className={`${getCardBgClass(2)} border ${getCardBorderClass(2)} rounded-xl p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`}
+                    className="text-left"
                     data-aos={index < 4 ? 'fade-right' : 'fade-left'}
                     data-aos-delay={(index % 4) * 100}
                     data-aos-once="true"
                 >
-                    <div className="w-12 h-12 bg-[#3b82f6]/10 rounded-lg flex items-center justify-center mb-3">
+                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
                     {category.icon}
                     </div>
-                    <h4 className="text-white font-semibold text-sm mb-1">{category.name}</h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">{category.description}</p>
-                </div>
+                    <h3 className="mb-1 font-semibold text-white">{category.name}</h3>
+                    <p className="text-sm leading-relaxed text-gray-400">{category.description}</p>
+                </article>
                 ))}
             </div>
             </div>
@@ -472,75 +473,74 @@
         {/* ============================================================ */}
         <section 
             ref={addToRefs}
-            className={`w-full px-8 md:px-12 py-16 md:py-20 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(3)} border-t ${getBorderClass(3)}`}
+            className={`w-full px-4 sm:px-6 lg:px-8 py-20 md:py-24 opacity-0 translate-y-10 transition-all duration-700 ${getBgClass(3)} border-t ${getBorderClass(3)}`}
             data-aos="fade-up"
             data-aos-delay="100"
         >
             <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12" data-aos="fade-down" data-aos-delay="200">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <div className="mb-12" data-aos="fade-down" data-aos-delay="200">
+                <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl">
                 Most <span className="text-[#3b82f6]">Hazard Reports</span>
                 </h2>
-                <p className="text-gray-400 max-w-2xl mx-auto">
+                <p className="max-w-2xl text-gray-400">
                 Overview of the most frequently reported hazards in Dagupan City.
                 </p>
             </div>
 
-            {/* STATISTICS CARDS */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+            <div className="mb-12 grid grid-cols-2 gap-x-8 gap-y-8 border-b border-slate-200 pb-10 dark:border-slate-800 md:grid-cols-4 md:gap-x-6" aria-label="Report statistics">
                 {statsLoading ? [1, 2, 3, 4].map((item) => (
-                <div key={item} className={`${getCardBgClass(3)} border ${getCardBorderClass(3)} rounded-xl p-6 text-center`}>
-                    <div className="mx-auto h-9 w-20 animate-pulse rounded-md bg-white/10" />
-                    <div className="mx-auto mt-2 h-4 w-24 animate-pulse rounded-md bg-white/10" />
+                <div key={item} className="py-1">
+                    <div className="h-9 w-24 animate-pulse rounded-md bg-slate-300/40 dark:bg-white/10" />
+                    <div className="mt-2 h-4 w-28 animate-pulse rounded-md bg-slate-300/40 dark:bg-white/10" />
                 </div>
                 )) : stats.map((stat, index) => (
-                <div 
+                <div
                     key={index}
-                    className={`${getCardBgClass(3)} border ${getCardBorderClass(3)} rounded-xl p-6 text-center hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5`}
+                    className="py-1"
                     data-aos="fade-up"
                     data-aos-delay={100 + index * 100}
                 >
-                    <div className="text-2xl md:text-3xl font-bold text-white">{stat.value}</div>
-                    <div className="text-sm text-gray-400 mt-1">{stat.label}</div>
+                    <div className="text-3xl font-bold tracking-tight text-white tabular-nums md:text-4xl">{Number(stat.value || 0).toLocaleString()}</div>
+                    <div className="mt-2 text-xs font-medium uppercase tracking-wide text-gray-400">{stat.label}</div>
                 </div>
                 ))}
             </div>
 
             {/* TOP HAZARDS LIST */}
-            <div className="flex items-center mb-6" data-aos="fade-right" data-aos-delay="200">
+            <div className="mb-5 flex items-center justify-between gap-4" data-aos="fade-right" data-aos-delay="200">
                 <h3 className="text-xl font-semibold text-white">Top Reported Hazards</h3>
+                <Link to="/map" className="shrink-0 text-sm font-medium text-[#60a5fa] transition hover:text-white">
+                    View reports <span aria-hidden="true">→</span>
+                </Link>
             </div>
-            <div className="relative overflow-hidden hazard-marquee-mask">
             {statsLoading ? (
-                <div className="flex gap-6">
-                    {[1, 2, 3].map((item) => <div key={item} className={`${getCardBgClass(3)} h-48 min-w-[280px] flex-1 animate-pulse rounded-xl border ${getCardBorderClass(3)}`} />)}
+                <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {[1, 2, 3, 4].map((item) => <div key={item} className="flex items-center gap-4 py-5"><div className="h-4 w-8 animate-pulse rounded bg-slate-300/40 dark:bg-white/10" /><div className="h-4 w-40 animate-pulse rounded bg-slate-300/40 dark:bg-white/10" /></div>)}
                 </div>
             ) : topHazards.length === 0 ? (
-                <p className="py-12 text-center text-gray-400">No data available yet.</p>
+                <p className="py-8 text-gray-400">No data available yet.</p>
             ) : (
-                <div className="hazard-marquee-track flex w-max gap-6 hover:[animation-play-state:paused]">
-                {[...topHazards, ...topHazards].map((hazard, index) => (
-                <div key={`${hazard.id}-${index}`} className={`${getCardBgClass(3)} w-[280px] flex-shrink-0 rounded-xl border p-6 hover:border-[#3b82f6]/30 transition hover:shadow-lg hover:shadow-[#3b82f6]/5 md:w-[340px]`}>
-                    <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-white font-semibold">{hazard.title}</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
+                <ol className="divide-y divide-slate-200 dark:divide-slate-800">
+                {topHazards.map((hazard, index) => (
+                <li key={hazard.id} className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 py-5 transition-colors hover:bg-slate-500/5 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto]">
+                    <span className="font-mono text-sm tabular-nums text-gray-500">{String(index + 1).padStart(2, '0')}</span>
+                    <div className="min-w-0">
+                        <h4 className="font-semibold text-white">{hazard.title}</h4>
+                        <p className="mt-1 truncate text-sm text-gray-400">{hazard.category} · {hazard.description}</p>
+                    </div>
+                    <div className="col-start-2 flex flex-wrap items-center gap-3 sm:col-start-auto sm:justify-end">
+                    <span className="text-sm tabular-nums text-gray-300">{Number(hazard.reports || 0).toLocaleString()} reports</span>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                         hazard.status === 'Most Reported' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
                         'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                     }`}>
                         {hazard.status}
                     </span>
                     </div>
-                    <div className="text-xs text-gray-400 mb-2">{hazard.category}</div>
-                    <div className="text-sm text-gray-300 mb-3">{hazard.description}</div>
-                    <div className="flex justify-between items-center">
-                    <span className="text-sm text-[#3b82f6] font-medium">{hazard.reports} reports</span>
-                    </div>
-                </div>
+                </li>
                 ))}
-                </div>
+                </ol>
             )}
-            </div>
-            <style>{`@keyframes hazard-marquee { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } } .hazard-marquee-track { animation: hazard-marquee 30s linear infinite; } .hazard-marquee-mask { mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent); } @media (max-width: 767px) { .hazard-marquee-track { animation-duration: 20s; } } @media (prefers-reduced-motion: reduce) { .hazard-marquee-track { animation: none; } }`}</style>
             </div>
         </section>
 

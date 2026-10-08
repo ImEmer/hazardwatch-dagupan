@@ -2,7 +2,7 @@
     import * as maplibregl from 'maplibre-gl';
     import 'maplibre-gl/dist/maplibre-gl.css';
 
-    const StaticMap = ({ animated = true }) => {
+    const StaticMap = ({ animated = true, showMarkers = true }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const phaseTimeout = useRef(null);
@@ -54,7 +54,7 @@
             { lng: 120.3450, lat: 16.0380, label: 'Lucao' }
         ];
 
-        locations.forEach((loc) => {
+        if (showMarkers) locations.forEach((loc) => {
             // VISIBLE RED PIN MARKER
             const el = document.createElement('div');
             el.className = 'flex items-center justify-center';

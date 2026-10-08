@@ -34,8 +34,8 @@ const Footer = () => {
         <div>
           <h4 className={`mb-3 font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Connect</h4>
           <ul className="space-y-3 text-sm">
-            <li className={muted}>hazardwatch@dagupan.gov.ph</li>
-            <li className={muted}>+63 (75) 123-4567</li>
+            <li className={muted}>superadmin@hazardwatch.com</li>
+            <li className={muted}>+63 9090 9073 37</li>
             <li className={muted}>Dagupan City, Pangasinan</li>
             <li className={muted}>Philippines</li>
           </ul>

@@ -142,8 +142,12 @@ const AboutPage = () => {
     <main className="overflow-hidden bg-white text-slate-900 dark:bg-[#0a0b0f] dark:text-white">
       <section className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <StaticMap animated={false} />
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70" />
+          <StaticMap animated={false} showMarkers={false} />
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(to_right,rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:48px_48px]"
+            aria-hidden="true"
+          />
+          <div className="pointer-events-none absolute inset-0 z-[2] bg-black/10 dark:bg-black/65" />
         </div>
         <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-8 py-24 text-center md:px-12 md:py-32">
           <div className="mx-auto max-w-4xl">
