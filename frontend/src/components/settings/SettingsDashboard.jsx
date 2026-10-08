@@ -3,10 +3,10 @@ import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
-import PasswordToggle from '../PasswordToggle';
 import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
 import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
+import AccountChangeDialogs from './AccountChangeDialogs';
 import CodeInput from '../common/CodeInput';
 import { authApi } from '../../services/api';
 
@@ -28,25 +28,15 @@ const saveButton = 'inline-flex items-center justify-center gap-2 rounded-md bg-
 const cancelButton = 'rounded-md border px-3 py-2 text-sm font-medium transition';
 
 const SettingsDashboard = () => {
-  const { user, updateProfile, changePassword, verifyPasswordChange, requestEmailChange, verifyEmailChange, verifyEmail, updatePreferences, getCurrentUser } = useAuth();
+  const { user, updateProfile, updatePreferences, getCurrentUser } = useAuth();
   const { theme, themePreference, setTheme } = useTheme();
   const isDark = theme === 'dark';
-  const [profile, setProfile] = useState({ name: '', email: '' });
-  const [verificationCode, setVerificationCode] = useState('');
-  const verificationInFlightRef = useRef(false);
-  const [verificationPending, setVerificationPending] = useState(false);
-  const [emailChangePending, setEmailChangePending] = useState(false);
-  const [emailChangeTarget, setEmailChangeTarget] = useState('');
-  const [emailChangeCode, setEmailChangeCode] = useState('');
+  const [profile, setProfile] = useState({ name: '' });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled));
   const [twoFactorSetupPending, setTwoFactorSetupPending] = useState(false);
   const [twoFactorSetupCode, setTwoFactorSetupCode] = useState('');
   const [twoFactorPassword, setTwoFactorPassword] = useState('');
   const twoFactorInFlightRef = useRef(false);
-  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
-  const [passwordChangePending, setPasswordChangePending] = useState(false);
-  const [passwordChangeCode, setPasswordChangeCode] = useState('');
-  const [passwordVisibility, setPasswordVisibility] = useState({ current: false, next: false, confirm: false });
   const [saving, setSaving] = useState('');
   const [notifications, setNotifications] = useState(DEFAULT_PREFERENCES.notifications);
   const [mapPreferences, setMapPreferences] = useState(DEFAULT_PREFERENCES.map);
@@ -56,7 +46,7 @@ const SettingsDashboard = () => {
   const secondaryButton = `${cancelButton} ${isDark ? 'border-[#343640] text-gray-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`;
 
   useEffect(() => {
-    setProfile({ name: user?.name || '', email: user?.email || '' });
+    setProfile({ name: user?.name || '' });
     setTwoFactorEnabled(Boolean(user?.twoFactorEnabled));
     setNotifications({ ...DEFAULT_PREFERENCES.notifications, ...user?.preferences?.notifications });
     setMapPreferences(normalizeMapPreferences(user?.preferences?.map));
@@ -80,81 +70,8 @@ const SettingsDashboard = () => {
 
   const saveProfile = async (event) => {
     event.preventDefault();
-    const emailChanged = profile.email.trim().toLowerCase() !== String(user?.email || '').toLowerCase();
-    await runSave('profile', async () => {
-      await updateProfile(profile.name, user.email);
-      if (emailChanged) {
-        await requestEmailChange(profile.email);
-        setProfile((current) => ({ ...current, email: profile.email }));
-        setEmailChangeTarget(profile.email);
-        setEmailChangeCode('');
-        setEmailChangePending(true);
-      }
-    }, emailChanged ? 'Name saved. A verification code was sent to your new email.' : 'Account details saved.');
+    await runSave('profile', () => updateProfile(profile.name, user.email), 'Account details saved.');
   };
-
-  const submitVerification = async (event, codeToVerify = verificationCode) => {
-    event?.preventDefault();
-    if (verificationInFlightRef.current || saving === 'verify-email') return;
-    if (!/^\d{6}$/.test(codeToVerify)) return toast.error('Enter the 6-digit verification code.');
-    verificationInFlightRef.current = true;
-    try {
-      await runSave('verify-email', async () => {
-        await verifyEmail(profile.email, codeToVerify);
-        setVerificationPending(false);
-        setVerificationCode('');
-      }, 'Email verified.');
-    } finally {
-      verificationInFlightRef.current = false;
-    }
-  };
-
-  const savePassword = async (event) => {
-    event.preventDefault();
-    if (passwords.next !== passwords.confirm) return toast.error('New passwords do not match.');
-    await runSave('password', async () => {
-      await changePassword(passwords.current, passwords.next);
-      setPasswordChangePending(true);
-      setPasswordChangeCode('');
-    }, 'A verification code was sent to your account email.');
-  };
-
-  const verifyEmailChangeCode = async (event) => {
-    event.preventDefault();
-    await runSave('verify-email-change', async () => {
-      await verifyEmailChange(emailChangeCode);
-      setEmailChangePending(false);
-      setEmailChangeTarget('');
-      setEmailChangeCode('');
-    }, 'Email address changed successfully.');
-  };
-
-  const resendEmailChangeCode = () => runSave('email-change-resend', async () => {
-    await requestEmailChange(emailChangeTarget);
-    setEmailChangeCode('');
-  }, 'A new verification code was sent.');
-
-  const verifyPasswordChangeCode = async (event) => {
-    event.preventDefault();
-    if (passwords.next !== passwords.confirm) return toast.error('New passwords do not match.');
-    setSaving('password-verify');
-    try {
-      const response = await verifyPasswordChange(passwordChangeCode, passwords.current);
-      setPasswords({ current: '', next: '', confirm: '' });
-      setPasswordChangePending(false);
-      toast.success(response.message || 'Password changed. Please log in again.');
-      window.location.href = '/login';
-    } catch (error) {
-      toast.error(error.response?.data?.message || error.message || 'Unable to verify the password change.');
-    } finally {
-      setSaving('');
-    }
-  };
-
-  const resendPasswordChangeCode = () => runSave('password-resend', async () => {
-    await changePassword(passwords.current, passwords.next);
-    setPasswordChangeCode('');
-  }, 'A new verification code was sent.');
 
   const savePreferences = (key, values, successMessage) => runSave(key, () => updatePreferences(values), successMessage);
   const restoreNotifications = () => setNotifications({ ...DEFAULT_PREFERENCES.notifications, ...user?.preferences?.notifications });
@@ -221,27 +138,18 @@ const SettingsDashboard = () => {
         <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Manage your account, preferences, and security.</p>
       </header>
 
-      <SettingsSection title="Account" description="Update your account details and email verification status." actions={<><button type="button" onClick={() => { setProfile({ name: user?.name || '', email: user?.email || '' }); setVerificationPending(false); setVerificationCode(''); setEmailChangePending(false); setEmailChangeTarget(''); setEmailChangeCode(''); }} className={secondaryButton}>Cancel</button><button form="account-settings-form" type="submit" disabled={saving === 'profile' || emailChangePending} className={saveButton}>{saving === 'profile' ? 'Saving...' : 'Save changes'}</button></>}>
+      <SettingsSection title="Account" description="Update your account name and email address." actions={<><button type="button" onClick={() => setProfile({ name: user?.name || '' })} className={secondaryButton}>Cancel</button><button form="account-settings-form" type="submit" disabled={saving === 'profile'} className={saveButton}>{saving === 'profile' ? 'Saving...' : 'Save changes'}</button></>}>
         <form id="account-settings-form" onSubmit={saveProfile} className="grid gap-4 sm:grid-cols-2">
           <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Full name<input required minLength={2} maxLength={50} autoComplete="name" value={profile.name} onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))} className={`${inputClass} mt-1.5`} /></label>
-          <label className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Email address<input required type="email" autoComplete="email" disabled={emailChangePending} value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} className={`${inputClass} mt-1.5`} /><span className={`mt-1.5 block text-xs ${user?.emailVerified ? 'text-emerald-500' : 'text-amber-500'}`}>{emailChangePending ? `Verification pending for ${emailChangeTarget}` : user?.emailVerified ? 'Verified' : verificationPending ? 'Verification required' : 'Not verified'}</span></label>
+          <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Email address<p className={`${inputClass} mt-1.5`}>{user?.email}</p><span className={`mt-1.5 block text-xs ${user?.emailVerified ? 'text-emerald-500' : 'text-amber-500'}`}>{user?.emailVerified ? 'Verified' : 'Not verified'}</span></div>
           <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Role<span className={`mt-1.5 block rounded-md border px-3 py-2 capitalize ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-gray-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{user?.role || 'user'}</span></div>
           {user?.barangay && <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Barangay<span className={`mt-1.5 block rounded-md border px-3 py-2 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-gray-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{user.barangay}</span></div>}
         </form>
-        {verificationPending && <form onSubmit={submitVerification} className={`mt-4 flex flex-wrap items-end gap-3 border-t pt-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Verification code<CodeInput value={verificationCode} onChange={setVerificationCode} onComplete={(fullCode) => submitVerification(null, fullCode)} disabled={saving === 'verify-email'} className={`${inputClass} mt-1.5`} inputProps={{ required: true }} /></label><button type="submit" disabled={saving === 'verify-email'} className={saveButton}>{saving === 'verify-email' ? 'Verifying...' : 'Verify email'}</button></form>}
-        {emailChangePending && <form onSubmit={verifyEmailChangeCode} className={`mt-4 flex flex-wrap items-end gap-3 border-t pt-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}><label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>New email verification code<CodeInput value={emailChangeCode} onChange={setEmailChangeCode} className={`${inputClass} mt-1.5`} inputProps={{ required: true, 'aria-label': '6-digit new email verification code' }} /></label><button type="submit" disabled={saving === 'verify-email-change' || emailChangeCode.length !== 6} className={saveButton}>Verify email</button><button type="button" onClick={resendEmailChangeCode} disabled={Boolean(saving)} className={secondaryButton}>Resend code</button></form>}
+        <div className="mt-4"><AccountChangeDialogs mode="email" inputClass={inputClass} primaryButtonClass={saveButton} secondaryButtonClass={secondaryButton} isDark={isDark} /></div>
       </SettingsSection>
 
-      <SettingsSection title="Security" description="Change your password. Use at least 8 characters with uppercase, lowercase, a number, and a symbol." actions={<><button type="button" onClick={() => { setPasswords({ current: '', next: '', confirm: '' }); setPasswordChangePending(false); setPasswordChangeCode(''); }} className={secondaryButton}>Cancel</button><button form="password-settings-form" type="submit" disabled={Boolean(saving)} className={saveButton}>{passwordChangePending ? 'Verify and update password' : 'Update password'}</button></>}>
-        <form id="password-settings-form" onSubmit={passwordChangePending ? verifyPasswordChangeCode : savePassword} className="grid gap-4 sm:grid-cols-3">
-          {[
-            ['current', 'Current password', 'current-password'],
-            ['next', 'New password', 'new-password'],
-            ['confirm', 'Confirm new password', 'new-password'],
-          ].map(([key, label, autocomplete]) => <label key={key} className={`block text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{label}<span className="relative mt-1.5 block"><input required minLength={key === 'current' ? undefined : 8} type={passwordVisibility[key] ? 'text' : 'password'} autoComplete={autocomplete} value={passwords[key]} onChange={(event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))} className={`${inputClass} pr-11`} /><PasswordToggle visible={passwordVisibility[key]} onToggle={() => setPasswordVisibility((current) => ({ ...current, [key]: !current[key] }))} label={label.toLowerCase()} /></span></label>)}
-          {passwordChangePending && <label className={`block text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Verification code<CodeInput value={passwordChangeCode} onChange={setPasswordChangeCode} className={`${inputClass} mt-1.5`} inputProps={{ required: true, 'aria-label': '6-digit password change verification code' }} /></label>}
-          {passwordChangePending && <button type="button" onClick={resendPasswordChangeCode} disabled={Boolean(saving)} className={secondaryButton}>Resend code</button>}
-        </form>
+      <SettingsSection title="Security" description="Change your password. Use at least 8 characters with uppercase, lowercase, a number, and a symbol.">
+        <AccountChangeDialogs mode="password" inputClass={inputClass} primaryButtonClass={saveButton} secondaryButtonClass={secondaryButton} isDark={isDark} />
       </SettingsSection>
 
       {['superadmin', 'admin', 'barangay'].includes(user?.role) && <SettingsSection title="Two-factor authentication" description="Protect your privileged account with an emailed sign-in code." actions={!twoFactorEnabled && !twoFactorSetupPending ? <button type="button" onClick={startTwoFactorSetup} disabled={Boolean(saving)} className={saveButton}>{saving === 'two-factor-setup' ? 'Sending code...' : 'Enable 2FA'}</button> : undefined}>
