@@ -23,6 +23,10 @@ export const authLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 100 
 export const contactLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });
 export const forgotPasswordLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 3 });
 export const resetPasswordLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });
+export const emailChangeRequestLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 3, keyGenerator: (req) => `user:${req.user?._id || req.ip}` });
+export const emailChangeVerifyLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 10, keyGenerator: (req) => `user:${req.user?._id || req.ip}` });
+export const passwordChangeRequestLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 3, keyGenerator: (req) => `user:${req.user?._id || req.ip}` });
+export const passwordChangeVerifyLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 10, keyGenerator: (req) => `user:${req.user?._id || req.ip}` });
 export const reportSubmitLimiter = createLimiter({
   windowMs: 60 * 60 * 1000,
   limit: 10,

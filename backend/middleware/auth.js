@@ -14,6 +14,9 @@ export const protect = async (req, res, next) => {
     if (await TokenBlacklist.exists({ token: tokenHash })) return res.status(401).json({ success: false, message: 'Token has been revoked.' });
     const user = await User.findById(decoded.id);
     if (!user || !user.isActive) return res.status(401).json({ success: false, message: 'User is inactive or no longer exists.' });
+    if ((decoded.authVersion || 0) !== (user.authVersion || 0)) {
+      return res.status(401).json({ success: false, message: 'Your session has been revoked. Please log in again.' });
+    }
     req.user = user;
     next();
   } catch (error) {

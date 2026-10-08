@@ -5,13 +5,13 @@ import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
-import { sendAccountVerifiedEmail, sendNewDeviceAlertEmail, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
+import { sendAccountVerifiedEmail, sendEmailChangeCode, sendEmailChangeNotice, sendEmailChangedConfirmation, sendNewDeviceAlertEmail, sendPasswordChangeCode, sendPasswordChangedConfirmation, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
 export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled, preferences: user.preferences });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
-export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
+export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role, authVersion: user.authVersion || 0 }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
@@ -429,15 +429,224 @@ export const logout = async (req, res, next) => {
 };
 export const getMe = (req, res) => res.json({ success: true, user: publicUser(req.user) });
 
-export const changePassword = async (req, res, next) => {
+const incrementChangeCodeAttempts = async ({ userId, codeHash, codeField, expiresField, attemptsField, pendingFields }) => {
+  const result = await User.updateOne(
+    { _id: userId, [codeField]: codeHash, [attemptsField]: { $lt: 5 } },
+    { $inc: { [attemptsField]: 1 } },
+  );
+  const updated = await User.findById(userId).select(`+${codeField} +${attemptsField}`);
+  const sameCode = updated?.[codeField] === codeHash;
+  const locked = !updated?.[codeField] || (sameCode && (updated[attemptsField] || 0) >= 5);
+  if (locked && sameCode) {
+    await User.updateOne(
+      { _id: userId, [codeField]: codeHash, [attemptsField]: { $gte: 5 } },
+      { $unset: Object.fromEntries([codeField, expiresField, attemptsField, ...pendingFields].map((field) => [field, 1])) },
+    );
+  }
+  return locked || !result.matchedCount && !sameCode;
+};
+
+export const requestEmailChange = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    const newEmail = String(req.body.newEmail || '').trim().toLowerCase();
+    const currentEmail = String(user.email || '').trim().toLowerCase();
+    if (newEmail === currentEmail) return res.status(400).json({ success: false, message: 'Enter a different email address.' });
+    if (await User.exists({ email: newEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
+
+    const code = createOtp();
+    user.pendingEmail = newEmail;
+    user.emailChangeCode = await bcrypt.hash(code, 12);
+    user.emailChangeCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+    user.emailChangeAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+
+    try {
+      await sendEmailChangeCode({ email: newEmail, name: user.name, code });
+    } catch (error) {
+      console.error('[auth] Email change code delivery failed:', error.message);
+      return res.status(502).json({ success: false, message: 'Unable to send the verification code. Please try again.' });
+    }
+    try {
+      await sendEmailChangeNotice({ email: currentEmail, name: user.name, newEmail });
+    } catch (error) {
+      console.error('[auth] Email change notification delivery failed:', error.message);
+    }
+    return res.json({ success: true, message: 'A verification code was sent to your new email address.' });
+  } catch (error) { return next(error); }
+};
+
+export const verifyEmailChange = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('+pendingEmail +emailChangeCode +emailChangeCodeExpires +emailChangeAttempts');
+    if (!user?.pendingEmail || !user.emailChangeCode || !user.emailChangeCodeExpires) {
+      return res.status(400).json({ success: false, message: 'No active email change request. Request a new code.' });
+    }
+    if (user.emailChangeCodeExpires <= new Date()) {
+      await User.updateOne(
+        { _id: user._id, emailChangeCode: user.emailChangeCode, emailChangeCodeExpires: { $lte: new Date() } },
+        { $unset: { pendingEmail: 1, emailChangeCode: 1, emailChangeCodeExpires: 1, emailChangeAttempts: 1 } },
+      );
+      return res.status(400).json({ success: false, message: 'The verification code expired. Request a new code.' });
+    }
+    if (!await bcrypt.compare(String(req.body.code || ''), user.emailChangeCode)) {
+      const locked = await incrementChangeCodeAttempts({
+        userId: user._id,
+        codeHash: user.emailChangeCode,
+        codeField: 'emailChangeCode',
+        expiresField: 'emailChangeCodeExpires',
+        attemptsField: 'emailChangeAttempts',
+        pendingFields: ['pendingEmail'],
+      });
+      return res.status(locked ? 429 : 400).json({
+        success: false,
+        message: locked ? 'Too many incorrect codes. Request a new code.' : 'Invalid verification code.',
+      });
+    }
+
+    const newEmail = user.pendingEmail;
+    try {
+      const result = await User.updateOne(
+        {
+          _id: user._id,
+          pendingEmail: newEmail,
+          emailChangeCode: user.emailChangeCode,
+          emailChangeCodeExpires: { $gt: new Date() },
+          emailChangeAttempts: { $lt: 5 },
+        },
+        {
+          $set: { email: newEmail, emailVerified: true, verificationRequired: false },
+          $unset: { pendingEmail: 1, emailChangeCode: 1, emailChangeCodeExpires: 1, emailChangeAttempts: 1 },
+        },
+      );
+      if (!result.matchedCount) {
+        return res.status(400).json({ success: false, message: 'The verification code expired. Request a new code.' });
+      }
+    } catch (error) {
+      if (error.code === 11000) return res.status(409).json({ success: false, message: 'Email already registered.' });
+      throw error;
+    }
+
+    user.email = newEmail;
+    user.emailVerified = true;
+    user.verificationRequired = false;
+    await logActivity({ actor: user, action: 'email_changed', message: `${user.name} changed their email`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: user._id }).catch((error) => {
+      console.error('[auth] Email change activity logging failed:', error.message);
+    });
+    try {
+      await sendEmailChangedConfirmation({ email: newEmail, name: user.name });
+    } catch (error) {
+      console.error('[auth] Email change confirmation delivery failed:', error.message);
+    }
+    return res.json({ success: true, message: 'Email address changed successfully.', user: publicUser(user) });
+  } catch (error) { return next(error); }
+};
+
+export const requestPasswordChange = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select('+password');
-    if (!(await user.comparePassword(req.body.currentPassword))) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
-    user.password = req.body.newPassword;
-    await user.save();
-    await logActivity({ actor: req.user, action: 'password_changed', message: `${req.user.name} changed their password`, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: req.user._id }).catch(() => {});
-    res.json({ success: true, message: 'Password changed successfully.' });
-  } catch (error) { next(error); }
+    if (!user || !(await user.comparePassword(String(req.body.currentPassword || '')))) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    }
+    const code = createOtp();
+    user.pendingPasswordHash = await bcrypt.hash(req.body.newPassword, 12);
+    user.passwordChangeCode = await bcrypt.hash(code, 12);
+    user.passwordChangeCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+    user.passwordChangeAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+
+    try {
+      await sendPasswordChangeCode({ email: user.email, name: user.name, code });
+    } catch (error) {
+      console.error('[auth] Password change code delivery failed:', error.message);
+      return res.status(502).json({ success: false, message: 'Unable to send the verification code. Please try again.' });
+    }
+    return res.json({ success: true, message: 'A verification code was sent to your account email.' });
+  } catch (error) { return next(error); }
+};
+
+export const verifyPasswordChange = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('+password +pendingPasswordHash +passwordChangeCode +passwordChangeCodeExpires +passwordChangeAttempts');
+    if (!user?.pendingPasswordHash || !user.passwordChangeCode || !user.passwordChangeCodeExpires) {
+      return res.status(400).json({ success: false, message: 'No active password change request. Request a new code.' });
+    }
+    if (user.passwordChangeCodeExpires <= new Date()) {
+      await User.updateOne(
+        { _id: user._id, passwordChangeCode: user.passwordChangeCode, passwordChangeCodeExpires: { $lte: new Date() } },
+        { $unset: { pendingPasswordHash: 1, passwordChangeCode: 1, passwordChangeCodeExpires: 1, passwordChangeAttempts: 1 } },
+      );
+      return res.status(400).json({ success: false, message: 'The verification code expired. Request a new code.' });
+    }
+    if (!await bcrypt.compare(String(req.body.code || ''), user.passwordChangeCode)) {
+      const locked = await incrementChangeCodeAttempts({
+        userId: user._id,
+        codeHash: user.passwordChangeCode,
+        codeField: 'passwordChangeCode',
+        expiresField: 'passwordChangeCodeExpires',
+        attemptsField: 'passwordChangeAttempts',
+        pendingFields: ['pendingPasswordHash'],
+      });
+      return res.status(locked ? 429 : 400).json({
+        success: false,
+        message: locked ? 'Too many incorrect codes. Request a new code.' : 'Invalid verification code.',
+      });
+    }
+    if (privilegedRoles.includes(user.role)
+      && !(await user.comparePassword(String(req.body.currentPassword || '')))) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    }
+
+    const result = await User.updateOne(
+      {
+        _id: user._id,
+        pendingPasswordHash: user.pendingPasswordHash,
+        passwordChangeCode: user.passwordChangeCode,
+        passwordChangeCodeExpires: { $gt: new Date() },
+        passwordChangeAttempts: { $lt: 5 },
+      },
+      {
+        $set: { password: user.pendingPasswordHash },
+        $inc: { authVersion: 1 },
+        $unset: {
+          pendingPasswordHash: 1,
+          passwordChangeCode: 1,
+          passwordChangeCodeExpires: 1,
+          passwordChangeAttempts: 1,
+        },
+      },
+    );
+    if (!result.matchedCount) {
+      return res.status(400).json({ success: false, message: 'The verification code expired. Request a new code.' });
+    }
+
+    try {
+      await revokeToken(req);
+    } catch (error) {
+      console.error('[auth] Current session blacklist failed after password change:', error.message);
+    }
+    await logActivity({ actor: user, action: 'password_changed', message: `${user.name} changed their password`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: user._id }).catch((error) => {
+      console.error('[auth] Password change activity logging failed:', error.message);
+    });
+
+    let confirmationEmailSent = true;
+    try {
+      await sendPasswordChangedConfirmation({ email: user.email, name: user.name, changedAt: new Date() });
+    } catch (error) {
+      confirmationEmailSent = false;
+      console.error('[auth] Password change confirmation delivery failed:', error.message);
+    }
+    return res.json({
+      success: true,
+      message: confirmationEmailSent
+        ? 'Password changed successfully. Please log in again.'
+        : 'Password changed, but the confirmation email could not be sent. Please log in again.',
+      confirmationEmailSent,
+    });
+  } catch (error) { return next(error); }
 };
 
 export const updateProfile = async (req, res, next) => {
@@ -447,32 +656,13 @@ export const updateProfile = async (req, res, next) => {
     const normalizedEmail = email.trim().toLowerCase();
     const currentEmail = String(req.user.email || '').trim().toLowerCase();
     const emailChanged = currentEmail !== normalizedEmail;
-    if (emailChanged) {
-      const duplicate = await User.findOne({ email: normalizedEmail, _id: { $ne: req.user._id } });
-      if (duplicate) return res.status(409).json({ success: false, message: 'Email already registered.' });
-    }
+    if (emailChanged) return res.status(400).json({ success: false, message: 'Use the email verification flow to change your email address.' });
     const nameChanged = req.user.name !== name.trim();
+    if (!nameChanged) return res.json({ success: true, user: publicUser(req.user) });
     req.user.name = name.trim();
-    req.user.email = normalizedEmail;
-    let verificationCode;
-    if (emailChanged) {
-      verificationCode = crypto.randomInt(100000, 1000000).toString();
-      req.user.emailVerified = false;
-      req.user.verificationRequired = true;
-      req.user.emailVerificationCode = await bcrypt.hash(verificationCode, 12);
-      req.user.emailVerificationExpires = Date.now() + 15 * 60 * 1000;
-    }
     await req.user.save({ validateBeforeSave: false });
-    if (verificationCode) {
-      try {
-        await sendVerificationEmail({ email: req.user.email, name: req.user.name, code: verificationCode });
-      } catch (emailError) {
-        console.error('[profile] Verification email failed:', emailError.message);
-      }
-    }
-    const action = nameChanged && emailChanged ? 'profile_updated' : nameChanged ? 'name_updated' : 'email_updated';
-    const message = action === 'profile_updated' ? `${req.user.name} updated their profile` : `${req.user.name} updated their ${action === 'name_updated' ? 'name' : 'email'}`;
-    await logActivity({ actor: req.user, action, message, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: req.user._id }).catch(() => {});
+    const message = `${req.user.name} updated their name`;
+    await logActivity({ actor: req.user, action: 'name_updated', message, scope: req.user.role === 'barangay' ? 'barangay' : req.user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: req.user._id }).catch(() => {});
     res.json({ success: true, user: publicUser(req.user) });
   } catch (error) { next(error); }
 };

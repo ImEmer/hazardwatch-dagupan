@@ -69,6 +69,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem('token');
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem('token');
     window.__hw_redirecting = false;
   }, []);
 
@@ -207,10 +210,38 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const changePassword = useCallback(async (currentPassword, newPassword) => {
-    return request('/auth/change-password', { 
+    return request('/auth/request-password-change', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     }, token);
+  }, [token]);
+
+  const verifyPasswordChange = useCallback(async (code, currentPassword) => {
+    const response = await request('/auth/verify-password-change', {
+      method: 'POST',
+      body: JSON.stringify({ code, currentPassword }),
+    }, token);
+    clearSession();
+    return response;
+  }, [clearSession, token]);
+
+  const requestEmailChange = useCallback(async (newEmail) => {
+    return request('/auth/request-email-change', {
+      method: 'POST',
+      body: JSON.stringify({ newEmail }),
+    }, token);
+  }, [token]);
+
+  const verifyEmailChange = useCallback(async (code) => {
+    const response = await request('/auth/verify-email-change', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }, token);
+    if (response.user) {
+      setUser(response.user);
+      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    }
+    return response;
   }, [token]);
 
   const verifyEmail = useCallback(async (email, code) => {
@@ -287,6 +318,9 @@ export const AuthProvider = ({ children }) => {
     register,
     getCurrentUser,
     changePassword,
+    verifyPasswordChange,
+    requestEmailChange,
+    verifyEmailChange,
     verifyEmail,
     updateProfile,
     updatePreferences,
@@ -294,7 +328,7 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     verifyResetCode,
     resetPassword,
-  }), [changePassword, completeLogin, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyResetCode]);
+  }), [changePassword, completeLogin, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, requestEmailChange, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyEmailChange, verifyPasswordChange, verifyResetCode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

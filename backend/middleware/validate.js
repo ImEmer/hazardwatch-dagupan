@@ -197,4 +197,21 @@ export const validateProfile = [
   body('email').trim().isEmail().normalizeEmail(),
   validateBadRequest,
 ];
+export const validateEmailChangeRequest = [
+  mutationFieldAllowlist(['newEmail']),
+  body('newEmail').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  validateBadRequest,
+];
+export const validateChangeCode = [
+  mutationFieldAllowlist(['code', 'currentPassword']),
+  body('code').trim().isLength({ min: 6, max: 6 }).isNumeric(),
+  body('currentPassword').optional().isString().isLength({ min: 1, max: 128 }),
+  validateBadRequest,
+];
+export const validatePasswordChangeRequest = [
+  mutationFieldAllowlist(['currentPassword', 'newPassword']),
+  body('currentPassword').isString().isLength({ min: 1, max: 128 }),
+  passwordPolicy('newPassword'),
+  validateBadRequest,
+];
 export const validateStatusAction = [body('status').optional().isIn(['active', 'suspended', 'banned', 'deleted', 'pending']), validateBadRequest];

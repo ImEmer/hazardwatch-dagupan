@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { changePassword, checkEmail, deleteAccount, disableTwoFactor, enableTwoFactor, forgotPassword, getMe, login, logout, refresh, register, resendTwoFactorLoginCode, resetPassword, updateProfile, verifyEmail, verifyResetCode, verifyTwoFactorLogin, verifyTwoFactorSetup } from '../controllers/authController.js';
+import { checkEmail, deleteAccount, disableTwoFactor, enableTwoFactor, forgotPassword, getMe, login, logout, refresh, register, requestEmailChange, requestPasswordChange, resendTwoFactorLoginCode, resetPassword, updateProfile, verifyEmail, verifyEmailChange, verifyPasswordChange, verifyResetCode, verifyTwoFactorLogin, verifyTwoFactorSetup } from '../controllers/authController.js';
 import { allowRoles, protect } from '../middleware/auth.js';
-import { passwordPolicy, validateBadRequest, validateEmail, validateEmailVerification, validateLogin, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
+import { validateChangeCode, validateEmail, validateEmailChangeRequest, validateEmailVerification, validateLogin, validatePasswordChangeRequest, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
-import { authLimiter, forgotPasswordLimiter, resetPasswordLimiter } from '../middleware/rateLimit.js';
+import { authLimiter, emailChangeRequestLimiter, emailChangeVerifyLimiter, forgotPasswordLimiter, passwordChangeRequestLimiter, passwordChangeVerifyLimiter, resetPasswordLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 router.use(authLimiter);
@@ -19,7 +19,10 @@ router.post('/2fa/disable', protect, allowRoles('superadmin', 'admin', 'barangay
 router.post('/refresh', protect, refresh);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
-router.post('/change-password', protect, passwordPolicy('newPassword'), validateBadRequest, changePassword);
+router.post('/request-email-change', protect, emailChangeRequestLimiter, validateEmailChangeRequest, requestEmailChange);
+router.post('/verify-email-change', protect, emailChangeVerifyLimiter, validateChangeCode, verifyEmailChange);
+router.post('/request-password-change', protect, passwordChangeRequestLimiter, validatePasswordChangeRequest, requestPasswordChange);
+router.post('/verify-password-change', protect, passwordChangeVerifyLimiter, validateChangeCode, verifyPasswordChange);
 router.put('/profile', protect, validateProfile, updateProfile);
 router.delete('/account', protect, deleteAccount);
 router.post('/forgot-password', forgotPasswordLimiter, validateEmail, forgotPassword);

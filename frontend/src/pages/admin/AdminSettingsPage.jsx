@@ -7,9 +7,14 @@ import PasswordToggle from '../../components/PasswordToggle';
 const AdminSettingsPage = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile, changePassword, verifyPasswordChange, requestEmailChange, verifyEmailChange } = useAuth();
   const [profile, setProfile] = useState({ name: '', email: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
+  const [emailChangePending, setEmailChangePending] = useState(false);
+  const [emailChangeTarget, setEmailChangeTarget] = useState('');
+  const [emailChangeCode, setEmailChangeCode] = useState('');
+  const [passwordChangePending, setPasswordChangePending] = useState(false);
+  const [passwordChangeCode, setPasswordChangeCode] = useState('');
   const [saving, setSaving] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -21,8 +26,18 @@ const AdminSettingsPage = () => {
     event.preventDefault();
     setSaving(true);
     try {
-      await updateProfile(profile.name, profile.email);
-      await showSuccess('Profile updated successfully.');
+      const emailChanged = profile.email.trim().toLowerCase() !== String(user?.email || '').toLowerCase();
+      await updateProfile(profile.name, user.email);
+      if (emailChanged) {
+        await requestEmailChange(profile.email);
+        setProfile((current) => ({ ...current, email: profile.email }));
+        setEmailChangePending(true);
+        setEmailChangeTarget(profile.email);
+        setEmailChangeCode('');
+        await showSuccess('Name saved. A verification code was sent to your new email address.');
+      } else {
+        await showSuccess('Profile updated successfully.');
+      }
     } catch (error) {
       await showError(error.message || 'Unable to update profile.');
     } finally {
@@ -38,10 +53,73 @@ const AdminSettingsPage = () => {
     setSaving(true);
     try {
       await changePassword(passwords.current, passwords.next);
-      setPasswords({ current: '', next: '', confirm: '' });
-      await showSuccess('Password changed successfully.');
+      setPasswordChangePending(true);
+      setPasswordChangeCode('');
+      await showSuccess('A verification code was sent to your account email.');
     } catch (error) {
       await showError(error.message || 'Unable to change password.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verifyEmailChangeCode = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await verifyEmailChange(emailChangeCode);
+      setProfile((current) => ({ ...current, email: response.user?.email || emailChangeTarget }));
+      setEmailChangePending(false);
+      setEmailChangeTarget('');
+      setEmailChangeCode('');
+      await showSuccess('Email address changed successfully.');
+    } catch (error) {
+      await showError(error.message || 'Unable to verify the new email.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resendEmailChangeCode = async () => {
+    setSaving(true);
+    try {
+      await requestEmailChange(emailChangeTarget);
+      setEmailChangeCode('');
+      await showSuccess('A new verification code was sent.');
+    } catch (error) {
+      await showError(error.message || 'Unable to resend the verification code.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verifyPasswordChangeCode = async (event) => {
+    event.preventDefault();
+    if (passwords.next !== passwords.confirm) {
+      await showError('New passwords do not match.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await verifyPasswordChange(passwordChangeCode, passwords.current);
+      setPasswords({ current: '', next: '', confirm: '' });
+      await showSuccess(response.message || 'Password changed. Please log in again.');
+      window.location.href = '/login';
+    } catch (error) {
+      await showError(error.message || 'Unable to verify the password change.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resendPasswordChangeCode = async () => {
+    setSaving(true);
+    try {
+      await changePassword(passwords.current, passwords.next);
+      setPasswordChangeCode('');
+      await showSuccess('A new verification code was sent.');
+    } catch (error) {
+      await showError(error.message || 'Unable to resend the verification code.');
     } finally {
       setSaving(false);
     }
@@ -59,18 +137,20 @@ const AdminSettingsPage = () => {
           </label>
           <label className="block">
             <span className={`mb-2 block text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Email</span>
-            <input id="profileEmail" name="profileEmail" autoComplete="email" type="email" value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} className={inputClass} />
+            <input id="profileEmail" name="profileEmail" autoComplete="email" type="email" disabled={emailChangePending} value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} className={inputClass} />
           </label>
-          <button type="submit" disabled={saving} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Save profile</button>
+          {!emailChangePending && <button type="submit" disabled={saving} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Save profile</button>}
         </form>
-        <form onSubmit={savePassword} className={`mt-8 space-y-4 border-t pt-6 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+        {emailChangePending && <form onSubmit={verifyEmailChangeCode} className="mt-4 space-y-3"><p className="text-sm text-gray-400">Enter the code sent to {emailChangeTarget}.</p><input aria-label="Email verification code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={emailChangeCode} onChange={(event) => setEmailChangeCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={inputClass} placeholder="Verification code" /><div className="flex gap-3"><button disabled={saving || emailChangeCode.length !== 6} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Verify email</button><button type="button" disabled={saving} onClick={resendEmailChangeCode} className="rounded-lg border border-current px-4 py-2 text-sm">Resend code</button></div></form>}
+        <form onSubmit={passwordChangePending ? verifyPasswordChangeCode : savePassword} className={`mt-8 space-y-4 border-t pt-6 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
           <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Change password</h3>
           {[
             ['current', 'Current password'],
             ['next', 'New password'],
             ['confirm', 'Confirm new password'],
           ].map(([key, label]) => <div key={key} className="relative"><input type={key === 'current' ? (showCurrentPassword ? 'text' : 'password') : key === 'next' ? (showNewPassword ? 'text' : 'password') : (showConfirmPassword ? 'text' : 'password')} placeholder={label} autoComplete={key === 'current' ? 'current-password' : 'new-password'} value={passwords[key]} onChange={(event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))} className={`${inputClass} pr-10`} /><PasswordToggle visible={key === 'current' ? showCurrentPassword : key === 'next' ? showNewPassword : showConfirmPassword} onToggle={() => (key === 'current' ? setShowCurrentPassword : key === 'next' ? setShowNewPassword : setShowConfirmPassword)((value) => !value)} label={label.toLowerCase()} /></div>)}
-          <button type="submit" disabled={saving} className="rounded-lg border border-[#3b82f6] px-4 py-2 text-sm font-semibold text-[#60a5fa] disabled:opacity-50">Change password</button>
+          {passwordChangePending && <><p className="text-sm text-gray-400">Enter the code sent to your account email. Re-enter your current password above to verify.</p><input aria-label="Password change verification code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={passwordChangeCode} onChange={(event) => setPasswordChangeCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={inputClass} placeholder="Verification code" /></>}
+          <div className="flex gap-3"><button type="submit" disabled={saving || (passwordChangePending && passwordChangeCode.length !== 6)} className="rounded-lg border border-[#3b82f6] px-4 py-2 text-sm font-semibold text-[#60a5fa] disabled:opacity-50">{passwordChangePending ? 'Verify and change password' : 'Change password'}</button>{passwordChangePending && <button type="button" disabled={saving} onClick={resendPasswordChangeCode} className="rounded-lg border border-current px-4 py-2 text-sm">Resend code</button>}</div>
         </form>
       </div>
     </div>
