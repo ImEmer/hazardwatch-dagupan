@@ -10,10 +10,11 @@ const AccountChangeDialogs = ({
   secondaryButtonClass = 'rounded-lg border border-current px-4 py-2 text-sm disabled:opacity-50',
   isDark = true,
 }) => {
-  const { user, changePassword, verifyPasswordChange, requestEmailChange, verifyEmailChange } = useAuth();
+  const { user, changePassword, verifyPasswordChange, requestEmailChange, verifyEmailChangeOld, verifyEmailChangeNew } = useAuth();
   const [dialog, setDialog] = useState(null);
   const [email, setEmail] = useState('');
-  const [emailCode, setEmailCode] = useState('');
+  const [oldEmailCode, setOldEmailCode] = useState('');
+  const [newEmailCode, setNewEmailCode] = useState('');
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [passwordCode, setPasswordCode] = useState('');
   const [verificationCurrentPassword, setVerificationCurrentPassword] = useState('');
@@ -24,7 +25,8 @@ const AccountChangeDialogs = ({
   const closeDialog = () => {
     setDialog(null);
     setEmail('');
-    setEmailCode('');
+    setOldEmailCode('');
+    setNewEmailCode('');
     setPasswordCode('');
     setVerificationCurrentPassword('');
     setPasswords({ current: '', next: '', confirm: '' });
@@ -35,9 +37,10 @@ const AccountChangeDialogs = ({
     setSaving(true);
     try {
       await requestEmailChange(email);
-      setDialog('email-verify');
-      setEmailCode('');
-      await showSuccess('A verification code was sent to your new email address.');
+      setDialog('email-verify-old');
+      setOldEmailCode('');
+      setNewEmailCode('');
+      await showSuccess('Verification codes were sent to your current and new email addresses.');
     } catch (error) {
       await showError(error.message || 'Unable to request an email change.');
     } finally {
@@ -45,13 +48,29 @@ const AccountChangeDialogs = ({
     }
   };
 
-  const verifyEmailCode = async (event) => {
+  const verifyOldEmailCode = async (event) => {
     event.preventDefault();
     setSaving(true);
     try {
-      await verifyEmailChange(emailCode);
+      await verifyEmailChangeOld(oldEmailCode);
+      setDialog('email-verify-new');
+      setNewEmailCode('');
+      await showSuccess('Current email verified. Continue with the code sent to your new email.');
+    } catch (error) {
+      await showError(error.message || 'Unable to verify the current email.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verifyNewEmailCode = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await verifyEmailChangeNew(newEmailCode);
       closeDialog();
-      await showSuccess('Email changed successfully.');
+      await showSuccess('Email changed successfully. Please log in again.');
+      window.location.href = '/login';
     } catch (error) {
       await showError(error.message || 'Unable to verify the new email.');
     } finally {
@@ -63,8 +82,10 @@ const AccountChangeDialogs = ({
     setSaving(true);
     try {
       await requestEmailChange(email);
-      setEmailCode('');
-      await showSuccess('A new verification code was sent.');
+      setDialog('email-verify-old');
+      setOldEmailCode('');
+      setNewEmailCode('');
+      await showSuccess('New codes were sent. The two-step verification restarted at step 1.');
     } catch (error) {
       await showError(error.message || 'Unable to resend the verification code.');
     } finally {
@@ -166,20 +187,38 @@ const AccountChangeDialogs = ({
               </form>
             )}
 
-            {dialog === 'email-verify' && (
-              <form onSubmit={verifyEmailCode} className="mt-5 space-y-4">
-                <p className={`text-sm ${mutedTextClass}`}>Enter the 6-digit code sent to {email}.</p>
+            {dialog === 'email-verify-old' && (
+              <form onSubmit={verifyOldEmailCode} className="mt-5 space-y-4">
+                <p className={`text-sm ${mutedTextClass}`}>Step 1 of 2: enter the 6-digit code sent to your current email, {user?.email}.</p>
                 <CodeInput
-                  value={emailCode}
-                  onChange={setEmailCode}
+                  value={oldEmailCode}
+                  onChange={setOldEmailCode}
                   disabled={saving}
                   className={`${inputClass} text-center font-mono tracking-[0.5em]`}
-                  inputProps={{ required: true, 'aria-label': '6-digit email verification code' }}
+                  inputProps={{ required: true, 'aria-label': '6-digit current email verification code' }}
                 />
                 <div className="flex flex-wrap justify-end gap-3">
                   <button type="button" onClick={closeDialog} disabled={saving} className={secondaryButtonClass}>Cancel</button>
                   <button type="button" onClick={resendEmailCode} disabled={saving} className={secondaryButtonClass}>Resend</button>
-                  <button type="submit" disabled={saving || emailCode.length !== 6} className={primaryButtonClass}>{saving ? 'Verifying...' : 'Verify'}</button>
+                  <button type="submit" disabled={saving || oldEmailCode.length !== 6} className={primaryButtonClass}>{saving ? 'Verifying...' : 'Verify'}</button>
+                </div>
+              </form>
+            )}
+
+            {dialog === 'email-verify-new' && (
+              <form onSubmit={verifyNewEmailCode} className="mt-5 space-y-4">
+                <p className={`text-sm ${mutedTextClass}`}>Step 2 of 2: now enter the 6-digit code sent to your new email, {email}.</p>
+                <CodeInput
+                  value={newEmailCode}
+                  onChange={setNewEmailCode}
+                  disabled={saving}
+                  className={`${inputClass} text-center font-mono tracking-[0.5em]`}
+                  inputProps={{ required: true, 'aria-label': '6-digit new email verification code' }}
+                />
+                <div className="flex flex-wrap justify-end gap-3">
+                  <button type="button" onClick={closeDialog} disabled={saving} className={secondaryButtonClass}>Cancel</button>
+                  <button type="button" onClick={resendEmailCode} disabled={saving} className={secondaryButtonClass}>Resend</button>
+                  <button type="submit" disabled={saving || newEmailCode.length !== 6} className={primaryButtonClass}>{saving ? 'Verifying...' : 'Verify'}</button>
                 </div>
               </form>
             )}

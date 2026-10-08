@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuth from '../../hooks/useAuth';
@@ -7,8 +7,6 @@ import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
 import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
 import AccountChangeDialogs from './AccountChangeDialogs';
-import CodeInput from '../common/CodeInput';
-import { authApi } from '../../services/api';
 
 const DEFAULT_PREFERENCES = {
   theme: 'dark',
@@ -28,15 +26,10 @@ const saveButton = 'inline-flex items-center justify-center gap-2 rounded-md bg-
 const cancelButton = 'rounded-md border px-3 py-2 text-sm font-medium transition';
 
 const SettingsDashboard = () => {
-  const { user, updateProfile, updatePreferences, getCurrentUser } = useAuth();
+  const { user, updateProfile, updatePreferences } = useAuth();
   const { theme, themePreference, setTheme } = useTheme();
   const isDark = theme === 'dark';
   const [profile, setProfile] = useState({ name: '' });
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled));
-  const [twoFactorSetupPending, setTwoFactorSetupPending] = useState(false);
-  const [twoFactorSetupCode, setTwoFactorSetupCode] = useState('');
-  const [twoFactorPassword, setTwoFactorPassword] = useState('');
-  const twoFactorInFlightRef = useRef(false);
   const [saving, setSaving] = useState('');
   const [notifications, setNotifications] = useState(DEFAULT_PREFERENCES.notifications);
   const [mapPreferences, setMapPreferences] = useState(DEFAULT_PREFERENCES.map);
@@ -47,12 +40,11 @@ const SettingsDashboard = () => {
 
   useEffect(() => {
     setProfile({ name: user?.name || '' });
-    setTwoFactorEnabled(Boolean(user?.twoFactorEnabled));
     setNotifications({ ...DEFAULT_PREFERENCES.notifications, ...user?.preferences?.notifications });
     setMapPreferences(normalizeMapPreferences(user?.preferences?.map));
     setAppearanceDraft(user?.preferences?.theme || themePreference);
     setSavedAppearance(user?.preferences?.theme || themePreference);
-  }, [user?.email, user?.name, user?.preferences, user?.twoFactorEnabled]);
+  }, [user?.email, user?.name, user?.preferences]);
 
   const runSave = async (key, task, successMessage) => {
     setSaving(key);
@@ -81,53 +73,6 @@ const SettingsDashboard = () => {
     setTheme(value);
   };
 
-  const startTwoFactorSetup = async () => {
-    if (saving) return;
-    setSaving('two-factor-setup');
-    try {
-      const { data } = await authApi.enableTwoFactor();
-      setTwoFactorSetupPending(true);
-      setTwoFactorSetupCode('');
-      toast.success(data.message || 'Security code sent to your email.');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to start two-factor setup.');
-    } finally { setSaving(''); }
-  };
-
-  const verifyTwoFactorSetup = async (codeToVerify = twoFactorSetupCode) => {
-    if (twoFactorInFlightRef.current || saving || !/^\d{6}$/.test(codeToVerify)) return;
-    twoFactorInFlightRef.current = true;
-    setSaving('two-factor-verify');
-    try {
-      await authApi.verifyTwoFactorSetup(codeToVerify);
-      const updatedUser = await getCurrentUser();
-      setTwoFactorEnabled(Boolean(updatedUser?.twoFactorEnabled));
-      setTwoFactorSetupPending(false);
-      setTwoFactorSetupCode('');
-      toast.success('Two-factor authentication enabled.');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to verify the setup code.');
-    } finally {
-      twoFactorInFlightRef.current = false;
-      setSaving('');
-    }
-  };
-
-  const disableTwoFactor = async (event) => {
-    event.preventDefault();
-    if (saving || !twoFactorPassword) return;
-    setSaving('two-factor-disable');
-    try {
-      await authApi.disableTwoFactor(twoFactorPassword);
-      const updatedUser = await getCurrentUser();
-      setTwoFactorEnabled(Boolean(updatedUser?.twoFactorEnabled));
-      setTwoFactorPassword('');
-      toast.success('Two-factor authentication disabled.');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to disable two-factor authentication.');
-    } finally { setSaving(''); }
-  };
-
   const preferenceSaveActions = (key, onSave, onCancel) => <><button type="button" onClick={onCancel} className={secondaryButton}>Cancel</button><button type="button" onClick={onSave} disabled={saving === key} className={saveButton}>{saving === key ? 'Saving...' : 'Save changes'}</button></>;
 
   return (
@@ -152,19 +97,6 @@ const SettingsDashboard = () => {
         <AccountChangeDialogs mode="password" inputClass={inputClass} primaryButtonClass={saveButton} secondaryButtonClass={secondaryButton} isDark={isDark} />
       </SettingsSection>
 
-      {['superadmin', 'admin', 'barangay'].includes(user?.role) && <SettingsSection title="Two-factor authentication" description="Protect your privileged account with an emailed sign-in code." actions={!twoFactorEnabled && !twoFactorSetupPending ? <button type="button" onClick={startTwoFactorSetup} disabled={Boolean(saving)} className={saveButton}>{saving === 'two-factor-setup' ? 'Sending code...' : 'Enable 2FA'}</button> : undefined}>
-        {twoFactorEnabled ? <form onSubmit={disableTwoFactor} className="flex flex-wrap items-end gap-3">
-          <label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Current password<input type="password" autoComplete="current-password" required value={twoFactorPassword} onChange={(event) => setTwoFactorPassword(event.target.value)} className={`${inputClass} mt-1.5`} /></label>
-          <button type="submit" disabled={Boolean(saving)} className={`${secondaryButton} disabled:opacity-50`}>{saving === 'two-factor-disable' ? 'Disabling...' : 'Disable 2FA'}</button>
-        </form> : twoFactorSetupPending ? <div className="space-y-4">
-          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Enter the six-digit code sent to your notification email to finish enabling 2FA.</p>
-          <form onSubmit={(event) => { event.preventDefault(); verifyTwoFactorSetup(); }} className="flex flex-wrap items-end gap-3">
-            <label className={`min-w-[14rem] flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>Email verification code<CodeInput value={twoFactorSetupCode} onChange={setTwoFactorSetupCode} onComplete={verifyTwoFactorSetup} disabled={saving === 'two-factor-verify'} className={`${inputClass} mt-1.5 text-center font-mono tracking-widest`} inputProps={{ required: true, 'aria-label': '6-digit 2FA setup code' }} /></label>
-            <button type="submit" disabled={Boolean(saving) || twoFactorSetupCode.length !== 6} className={`${saveButton} disabled:opacity-50`}>{saving === 'two-factor-verify' ? 'Verifying...' : 'Verify and enable'}</button>
-            <button type="button" onClick={() => { setTwoFactorSetupPending(false); setTwoFactorSetupCode(''); }} disabled={Boolean(saving)} className={secondaryButton}>Cancel setup</button>
-          </form>
-        </div> : <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Two-factor authentication is disabled.</p>}
-      </SettingsSection>}
 
       <SettingsSection title="Appearance" description="Choose the theme for this account. System follows your device appearance." actions={preferenceSaveActions('appearance', () => savePreferences('appearance', { theme: appearanceDraft }, 'Appearance saved.'), () => changeAppearance(savedAppearance))}>
         <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Theme preference">

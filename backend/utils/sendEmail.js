@@ -81,41 +81,72 @@ export const sendVerificationEmail = ({ email, name, code }) => {
     return sendEmail({ to: email, subject, html, text });
 };
 
-export const sendEmailChangeCode = ({ email, name, code }) => {
+const sendEmailChangeTemplate = ({ email, name, subject, text, bodyHtml }) => {
     const safeName = escapeHtml(name || 'there');
-    const safeCode = escapeHtml(code);
-    const subject = 'HazardWatch — Verify your new email address';
-    const text = `Hi ${name || 'there'},\n\nYour email change verification code is ${code}. Enter it in your HazardWatch profile to confirm this email address. The code expires in 15 minutes.`;
     const html = `
         <div style="margin:0;background:#f4f8fc;padding:32px 16px;font-family:Arial,sans-serif;color:#172b4d;">
             <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8e4f0;border-radius:12px;overflow:hidden;">
                 <div style="background:#1261a0;padding:24px 28px;color:#ffffff;font-size:22px;font-weight:700;">HazardWatch Dagupan</div>
                 <div style="padding:32px 28px;">
                     <p>Hi ${safeName},</p>
-                    <p>Use this code to confirm your new HazardWatch email address:</p>
-                    <p style="font-size:30px;font-weight:700;letter-spacing:6px;color:#1261a0;">${safeCode}</p>
-                    <p style="color:#52708f;">This code expires in 15 minutes. Your email will not change until it is verified.</p>
+                    ${bodyHtml}
+                    <p style="margin-top:28px;color:#52708f;">HazardWatch Dagupan</p>
                 </div>
             </div>
         </div>`;
     return sendEmail({ to: email, subject, html, text });
 };
 
-export const sendEmailChangeNotice = ({ email, name, newEmail }) => {
-    const safeName = escapeHtml(name || 'there');
-    const safeNewEmail = escapeHtml(newEmail);
-    const subject = 'HazardWatch — Email change requested';
-    const text = `Hi ${name || 'there'},\n\nA request was made to change your HazardWatch email address to ${newEmail}. The change will not take effect until that address is verified. If you did not make this request, secure your account immediately.`;
-    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#172b4d"><h1>HazardWatch Dagupan</h1><p>Hi ${safeName},</p><p>A request was made to change your account email address to <strong>${safeNewEmail}</strong>.</p><p>The change will not take effect until the new address is verified. If you did not make this request, secure your account immediately.</p></div>`;
-    return sendEmail({ to: email, subject, html, text });
+export const sendEmailChangeCodeOld = ({ email, name, code }) => {
+    const safeCode = escapeHtml(code);
+    return sendEmailChangeTemplate({
+        email,
+        name,
+        subject: 'HazardWatch — Confirm email change (1 of 2)',
+        text: `Hi ${name || 'there'},\n\nYour code to confirm the email change from your current address is ${code}. Enter this first. The code expires in 15 minutes.`,
+        bodyHtml: `<p>Use this code to confirm the request from your current email address (step 1 of 2):</p><p style="font-size:30px;font-weight:700;letter-spacing:6px;color:#1261a0;">${safeCode}</p><p style="color:#52708f;">Enter this first. It expires in 15 minutes.</p>`,
+    });
 };
 
-export const sendEmailChangedConfirmation = ({ email, name }) => {
-    const safeName = escapeHtml(name || 'there');
-    const subject = 'HazardWatch — Email changed successfully';
-    const text = `Hi ${name || 'there'},\n\nYour HazardWatch account email address was changed successfully. If you did not make this change, secure your account immediately.`;
-    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#172b4d"><h1>HazardWatch Dagupan</h1><p>Hi ${safeName},</p><p>Your HazardWatch account email address was changed successfully.</p><p>If you did not make this change, secure your account immediately.</p></div>`;
-    return sendEmail({ to: email, subject, html, text });
+export const sendEmailChangeNoticeOld = ({ email, name, newEmail }) => {
+    const safeNewEmail = escapeHtml(newEmail);
+    return sendEmailChangeTemplate({
+        email,
+        name,
+        subject: 'HazardWatch — Email change requested',
+        text: `Hi ${name || 'there'},\n\nA request was made to change your HazardWatch email address to ${newEmail}. Do not share any verification code. If you did not request this, secure your account immediately.`,
+        bodyHtml: `<p>A request was made to change your HazardWatch email address to <strong>${safeNewEmail}</strong>.</p><p>Do not share any verification code. If you did not request this change, secure your account immediately.</p>`,
+    });
+};
+
+export const sendEmailChangeCodeNew = ({ email, name, code }) => {
+    const safeCode = escapeHtml(code);
+    return sendEmailChangeTemplate({
+        email,
+        name,
+        subject: 'HazardWatch — Confirm email change (2 of 2)',
+        text: `Hi ${name || 'there'},\n\nYour code to confirm the new email address is ${code}. Enter this after step 1. The code expires in 15 minutes.`,
+        bodyHtml: `<p>Use this code to confirm ownership of this new email address (step 2 of 2):</p><p style="font-size:30px;font-weight:700;letter-spacing:6px;color:#1261a0;">${safeCode}</p><p style="color:#52708f;">Enter this after step 1. It expires in 15 minutes.</p>`,
+    });
+};
+
+export const sendEmailChangeConfirmationNew = ({ email, name }) => sendEmailChangeTemplate({
+    email,
+    name,
+    subject: 'HazardWatch — Email successfully updated',
+    text: `Hi ${name || 'there'},\n\nYour HazardWatch email has been updated successfully. If you did not make this change, secure your account immediately.`,
+    bodyHtml: '<p>Your HazardWatch email has been updated successfully.</p><p>If you did not make this change, secure your account immediately.</p>',
+});
+
+export const sendEmailChangeConfirmationOld = ({ email, name, newEmail }) => {
+    const safeNewEmail = escapeHtml(newEmail);
+    return sendEmailChangeTemplate({
+        email,
+        name,
+        subject: 'HazardWatch — Your email was changed',
+        text: `Hi ${name || 'there'},\n\nYour HazardWatch email was changed to ${newEmail}. If this was not you, contact support immediately.`,
+        bodyHtml: `<p>Your HazardWatch email was changed to <strong>${safeNewEmail}</strong>.</p><p>If this was not you, contact support immediately.</p>`,
+    });
 };
 
 export const sendPasswordChangeCode = ({ email, name, code }) => {

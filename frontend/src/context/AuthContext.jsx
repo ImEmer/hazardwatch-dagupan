@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import api from '../services/api';
+import api, { authApi } from '../services/api';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'hazardwatch_token';
@@ -47,6 +47,18 @@ const request = async (path, options = {}, token = null) => {
       response = await api.get(path, config);
     }
 
+    return response.data;
+  } catch (error) {
+    const requestError = new Error(error.response?.data?.message || 'The request could not be completed.');
+    requestError.status = error.response?.status;
+    requestError.data = error.response?.data;
+    throw requestError;
+  }
+};
+
+const unwrapAuthApiCall = async (apiCall) => {
+  try {
+    const response = await apiCall;
     return response.data;
   } catch (error) {
     const requestError = new Error(error.response?.data?.message || 'The request could not be completed.');
@@ -226,23 +238,18 @@ export const AuthProvider = ({ children }) => {
   }, [clearSession, token]);
 
   const requestEmailChange = useCallback(async (newEmail) => {
-    return request('/auth/request-email-change', {
-      method: 'POST',
-      body: JSON.stringify({ newEmail }),
-    }, token);
+    return unwrapAuthApiCall(authApi.requestEmailChange(newEmail, token));
   }, [token]);
 
-  const verifyEmailChange = useCallback(async (code) => {
-    const response = await request('/auth/verify-email-change', {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    }, token);
-    if (response.user) {
-      setUser(response.user);
-      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-    }
+  const verifyEmailChangeOld = useCallback(async (code) => (
+    unwrapAuthApiCall(authApi.verifyEmailChangeOld(code, token))
+  ), [token]);
+
+  const verifyEmailChangeNew = useCallback(async (code) => {
+    const response = await unwrapAuthApiCall(authApi.verifyEmailChangeNew(code, token));
+    clearSession();
     return response;
-  }, [token]);
+  }, [clearSession, token]);
 
   const verifyEmail = useCallback(async (email, code) => {
     const response = await request('/auth/verify-email', {
@@ -320,7 +327,8 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     verifyPasswordChange,
     requestEmailChange,
-    verifyEmailChange,
+    verifyEmailChangeOld,
+    verifyEmailChangeNew,
     verifyEmail,
     updateProfile,
     updatePreferences,
@@ -328,7 +336,7 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     verifyResetCode,
     resetPassword,
-  }), [changePassword, completeLogin, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, requestEmailChange, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyEmailChange, verifyPasswordChange, verifyResetCode]);
+  }), [changePassword, completeLogin, deleteAccount, forgotPassword, getCurrentUser, loading, login, logout, refreshSession, register, requestEmailChange, resetPassword, token, updatePreferences, updateProfile, user, verifyEmail, verifyEmailChangeNew, verifyEmailChangeOld, verifyPasswordChange, verifyResetCode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

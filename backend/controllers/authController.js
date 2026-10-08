@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
-import { sendAccountVerifiedEmail, sendEmailChangeCode, sendEmailChangeNotice, sendEmailChangedConfirmation, sendNewDeviceAlertEmail, sendPasswordChangeCode, sendPasswordChangedConfirmation, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
+import { sendAccountVerifiedEmail, sendEmailChangeCodeNew, sendEmailChangeCodeOld, sendEmailChangeConfirmationNew, sendEmailChangeConfirmationOld, sendEmailChangeNoticeOld, sendNewDeviceAlertEmail, sendPasswordChangeCode, sendPasswordChangedConfirmation, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
@@ -15,6 +15,26 @@ export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role, au
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
+const EMAIL_CHANGE_CLEAR_FIELDS = [
+  'pendingEmail',
+  'emailChangeCodeOld',
+  'emailChangeExpiresOld',
+  'emailChangeCodeNew',
+  'emailChangeExpiresNew',
+  'emailChangeCode',
+  'emailChangeCodeExpires',
+  'emailChangeAttempts',
+];
+const clearEmailChangeUpdate = () => ({
+  $set: { emailChangeStage: null, emailChangeAttemptsOld: 0, emailChangeAttemptsNew: 0 },
+  $unset: Object.fromEntries(EMAIL_CHANGE_CLEAR_FIELDS.map((field) => [field, 1])),
+});
+const canonicalizeEmailAlias = (email) => {
+  const separator = email.lastIndexOf('@');
+  if (separator < 1) return email;
+  const localPart = email.slice(0, separator).split('+', 1)[0];
+  return `${localPart}${email.slice(separator)}`;
+};
 const createLoginChallenge = (user) => jwt.sign({ id: user._id, purpose: 'login-2fa' }, process.env.JWT_SECRET, { expiresIn: '10m' });
 export const createDeviceFingerprint = ({ userAgent = '', acceptLanguage = '', deviceId = '' }) => {
   const fingerprintSource = deviceId || `${userAgent || 'unknown'}|${acceptLanguage || 'unknown'}`;
@@ -354,61 +374,6 @@ export const resendTwoFactorLoginCode = async (req, res, next) => {
   }
 };
 
-export const enableTwoFactor = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id).select('+notificationEmail');
-    if (!user || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
-    if (user.twoFactorEnabled) return res.status(409).json({ success: false, message: 'Two-factor authentication is already enabled.' });
-    const code = createOtp();
-    const setupHash = await bcrypt.hash(code, 12);
-    await deliverTwoFactorCode(user, code);
-    user.twoFactorSetupCode = setupHash;
-    user.twoFactorSetupExpires = new Date(Date.now() + 10 * 60 * 1000);
-    user.twoFactorSetupAttempts = 0;
-    await user.save({ validateBeforeSave: false });
-    res.json({ success: true, requiresOTP: true, message: 'Enter the emailed code to finish enabling 2FA.' });
-  } catch (error) { next(error); }
-};
-
-export const verifyTwoFactorSetup = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id).select('+twoFactorSetupCode +twoFactorSetupExpires +twoFactorSetupAttempts');
-    if (!user || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
-    if (!user.twoFactorSetupCode || !user.twoFactorSetupExpires || user.twoFactorSetupExpires <= new Date()) return res.status(400).json({ success: false, message: 'The setup code expired. Start 2FA setup again.' });
-    const valid = await bcrypt.compare(String(req.body.code || ''), user.twoFactorSetupCode);
-    if (!valid) {
-      user.twoFactorSetupAttempts = (user.twoFactorSetupAttempts || 0) + 1;
-      if (user.twoFactorSetupAttempts >= 5) {
-        user.twoFactorSetupCode = undefined;
-        user.twoFactorSetupExpires = undefined;
-      }
-      await user.save({ validateBeforeSave: false });
-      return res.status(400).json({ success: false, message: user.twoFactorSetupAttempts >= 5 ? 'Setup locked. Start 2FA setup again.' : 'Invalid setup code.' });
-    }
-    user.twoFactorEnabled = true;
-    user.twoFactorSetupCode = undefined;
-    user.twoFactorSetupExpires = undefined;
-    user.twoFactorSetupAttempts = 0;
-    await user.save({ validateBeforeSave: false });
-    res.json({ success: true, user: publicUser(user) });
-  } catch (error) { next(error); }
-};
-
-export const disableTwoFactor = async (req, res, next) => {
-  try {
-    if (!privilegedRoles.includes(req.user.role)) return res.status(403).json({ success: false, message: 'Two-factor authentication is only available to privileged accounts.' });
-    const user = await User.findById(req.user._id).select('+password +otpCode +otpExpires');
-    if (!user || !(await user.comparePassword(String(req.body.currentPassword || '')))) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
-    user.twoFactorEnabled = false;
-    user.otpCode = undefined;
-    user.otpExpires = undefined;
-    user.otpAttempts = 0;
-    user.otpBlockedUntil = undefined;
-    await user.save({ validateBeforeSave: false });
-    res.json({ success: true, user: publicUser(user) });
-  } catch (error) { next(error); }
-};
-
 export const refresh = async (req, res, next) => {
   try {
     await revokeToken(req);
@@ -452,95 +417,232 @@ export const requestEmailChange = async (req, res, next) => {
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
     const newEmail = String(req.body.newEmail || '').trim().toLowerCase();
     const currentEmail = String(user.email || '').trim().toLowerCase();
-    if (newEmail === currentEmail) return res.status(400).json({ success: false, message: 'Enter a different email address.' });
-    if (await User.exists({ email: newEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
-
-    const code = createOtp();
-    user.pendingEmail = newEmail;
-    user.emailChangeCode = await bcrypt.hash(code, 12);
-    user.emailChangeCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
-    user.emailChangeAttempts = 0;
-    await user.save({ validateBeforeSave: false });
-
-    try {
-      await sendEmailChangeCode({ email: newEmail, name: user.name, code });
-    } catch (error) {
-      console.error('[auth] Email change code delivery failed:', error.message);
-      return res.status(502).json({ success: false, message: 'Unable to send the verification code. Please try again.' });
+    if (newEmail === currentEmail || canonicalizeEmailAlias(newEmail) === canonicalizeEmailAlias(currentEmail)) {
+      return res.status(400).json({ success: false, message: 'Enter a different email address.' });
     }
-    try {
-      await sendEmailChangeNotice({ email: currentEmail, name: user.name, newEmail });
-    } catch (error) {
-      console.error('[auth] Email change notification delivery failed:', error.message);
+    if (await User.exists({ email: newEmail, _id: { $ne: user._id } })) {
+      return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
-    return res.json({ success: true, message: 'A verification code was sent to your new email address.' });
+
+    const oldCode = createOtp();
+    let newCode = createOtp();
+    while (newCode === oldCode) newCode = createOtp();
+    const [oldCodeHash, newCodeHash] = await Promise.all([
+      bcrypt.hash(oldCode, 12),
+      bcrypt.hash(newCode, 12),
+    ]);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const result = await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          pendingEmail: newEmail,
+          emailChangeStage: 'awaiting_old',
+          emailChangeCodeOld: oldCodeHash,
+          emailChangeExpiresOld: expiresAt,
+          emailChangeAttemptsOld: 0,
+          emailChangeCodeNew: newCodeHash,
+          emailChangeExpiresNew: expiresAt,
+          emailChangeAttemptsNew: 0,
+        },
+        $unset: {
+          emailChangeCode: 1,
+          emailChangeCodeExpires: 1,
+          emailChangeAttempts: 1,
+        },
+      },
+    );
+    if (!result.matchedCount) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const deliveryResults = await Promise.allSettled([
+      sendEmailChangeCodeOld({ email: currentEmail, name: user.name, code: oldCode }),
+      sendEmailChangeNoticeOld({ email: currentEmail, name: user.name, newEmail }),
+      sendEmailChangeCodeNew({ email: newEmail, name: user.name, code: newCode }),
+    ]);
+    const deliveryFailures = deliveryResults.filter((result) => result.status === 'rejected');
+    if (deliveryFailures.length) {
+      await User.updateOne(
+        { _id: user._id, emailChangeCodeOld: oldCodeHash, emailChangeCodeNew: newCodeHash },
+        clearEmailChangeUpdate(),
+      );
+      deliveryFailures.forEach(({ reason }) => {
+        console.error('[auth] Double email change verification delivery failed:', reason?.message || String(reason));
+      });
+      return res.status(502).json({ success: false, message: 'Unable to send both verification codes. Please request a new email change.' });
+    }
+    return res.json({ success: true, message: 'Verification codes were sent to your current and new email addresses.' });
   } catch (error) { return next(error); }
 };
 
-export const verifyEmailChange = async (req, res, next) => {
+const incrementEmailChangeAttempts = async ({ userId, stage, codeHash, codeField, attemptsField }) => {
+  const updatedUser = await User.findOneAndUpdate(
+    {
+      _id: userId,
+      emailChangeStage: stage,
+      [codeField]: codeHash,
+      [attemptsField]: { $lt: 5 },
+    },
+    { $inc: { [attemptsField]: 1 } },
+    { new: true },
+  ).select(`+${attemptsField}`);
+  if (!updatedUser) return { stale: true, locked: false };
+  if (updatedUser[attemptsField] < 5) return { stale: false, locked: false };
+
+  await User.updateOne(
+    {
+      _id: userId,
+      emailChangeStage: stage,
+      [codeField]: codeHash,
+      [attemptsField]: { $gte: 5 },
+    },
+    clearEmailChangeUpdate(),
+  );
+  return { stale: false, locked: true };
+};
+
+export const verifyEmailChangeOld = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id)
-      .select('+pendingEmail +emailChangeCode +emailChangeCodeExpires +emailChangeAttempts');
-    if (!user?.pendingEmail || !user.emailChangeCode || !user.emailChangeCodeExpires) {
-      return res.status(400).json({ success: false, message: 'No active email change request. Request a new code.' });
+      .select('+pendingEmail +emailChangeStage +emailChangeCodeOld +emailChangeExpiresOld +emailChangeAttemptsOld');
+    if (user?.emailChangeStage !== 'awaiting_old' || !user.pendingEmail || !user.emailChangeCodeOld || !user.emailChangeExpiresOld) {
+      return res.status(400).json({ success: false, message: 'No active current-email verification. Request a new email change.' });
     }
-    if (user.emailChangeCodeExpires <= new Date()) {
+    if (user.emailChangeExpiresOld <= new Date()) {
       await User.updateOne(
-        { _id: user._id, emailChangeCode: user.emailChangeCode, emailChangeCodeExpires: { $lte: new Date() } },
-        { $unset: { pendingEmail: 1, emailChangeCode: 1, emailChangeCodeExpires: 1, emailChangeAttempts: 1 } },
+        {
+          _id: user._id,
+          emailChangeStage: 'awaiting_old',
+          emailChangeCodeOld: user.emailChangeCodeOld,
+          emailChangeExpiresOld: { $lte: new Date() },
+        },
+        clearEmailChangeUpdate(),
       );
-      return res.status(400).json({ success: false, message: 'The verification code expired. Request a new code.' });
+      return res.status(400).json({ success: false, message: 'Code expired. Request a new email change.' });
     }
-    if (!await bcrypt.compare(String(req.body.code || ''), user.emailChangeCode)) {
-      const locked = await incrementChangeCodeAttempts({
+    if (!await bcrypt.compare(String(req.body.code || ''), user.emailChangeCodeOld)) {
+      const attempt = await incrementEmailChangeAttempts({
         userId: user._id,
-        codeHash: user.emailChangeCode,
-        codeField: 'emailChangeCode',
-        expiresField: 'emailChangeCodeExpires',
-        attemptsField: 'emailChangeAttempts',
-        pendingFields: ['pendingEmail'],
+        stage: 'awaiting_old',
+        codeHash: user.emailChangeCodeOld,
+        codeField: 'emailChangeCodeOld',
+        attemptsField: 'emailChangeAttemptsOld',
       });
-      return res.status(locked ? 429 : 400).json({
+      return res.status(attempt.locked ? 429 : 400).json({
         success: false,
-        message: locked ? 'Too many incorrect codes. Request a new code.' : 'Invalid verification code.',
+        message: attempt.locked ? 'Too many attempts. Request a new email change.' : 'Invalid code.',
+      });
+    }
+
+    const transition = await User.updateOne(
+      {
+        _id: user._id,
+        emailChangeStage: 'awaiting_old',
+        emailChangeCodeOld: user.emailChangeCodeOld,
+        emailChangeExpiresOld: { $gt: new Date() },
+        emailChangeAttemptsOld: { $lt: 5 },
+      },
+      {
+        $set: { emailChangeStage: 'awaiting_new', emailChangeAttemptsOld: 0 },
+        $unset: { emailChangeCodeOld: 1, emailChangeExpiresOld: 1 },
+      },
+    );
+    if (!transition.matchedCount) {
+      return res.status(400).json({ success: false, message: 'Code expired or request changed. Request a new email change.' });
+    }
+    return res.json({ success: true, message: 'Current email verified. Now verify your new email address.' });
+  } catch (error) { return next(error); }
+};
+
+export const verifyEmailChangeNew = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('+pendingEmail +emailChangeStage +emailChangeCodeNew +emailChangeExpiresNew +emailChangeAttemptsNew');
+    if (user?.emailChangeStage !== 'awaiting_new' || !user.pendingEmail || !user.emailChangeCodeNew || !user.emailChangeExpiresNew) {
+      return res.status(400).json({ success: false, message: 'Verify the current email first, then enter your new email code.' });
+    }
+    if (user.emailChangeExpiresNew <= new Date()) {
+      await User.updateOne(
+        {
+          _id: user._id,
+          emailChangeStage: 'awaiting_new',
+          emailChangeCodeNew: user.emailChangeCodeNew,
+          emailChangeExpiresNew: { $lte: new Date() },
+        },
+        clearEmailChangeUpdate(),
+      );
+      return res.status(400).json({ success: false, message: 'Code expired. Request a new email change.' });
+    }
+    if (!await bcrypt.compare(String(req.body.code || ''), user.emailChangeCodeNew)) {
+      const attempt = await incrementEmailChangeAttempts({
+        userId: user._id,
+        stage: 'awaiting_new',
+        codeHash: user.emailChangeCodeNew,
+        codeField: 'emailChangeCodeNew',
+        attemptsField: 'emailChangeAttemptsNew',
+      });
+      return res.status(attempt.locked ? 429 : 400).json({
+        success: false,
+        message: attempt.locked ? 'Too many attempts. Request a new email change.' : 'Invalid code.',
       });
     }
 
     const newEmail = user.pendingEmail;
+    if (await User.exists({ email: newEmail, _id: { $ne: user._id } })) {
+      return res.status(409).json({ success: false, message: 'Email already registered.' });
+    }
     try {
       const result = await User.updateOne(
         {
           _id: user._id,
           pendingEmail: newEmail,
-          emailChangeCode: user.emailChangeCode,
-          emailChangeCodeExpires: { $gt: new Date() },
-          emailChangeAttempts: { $lt: 5 },
+          emailChangeStage: 'awaiting_new',
+          emailChangeCodeNew: user.emailChangeCodeNew,
+          emailChangeExpiresNew: { $gt: new Date() },
+          emailChangeAttemptsNew: { $lt: 5 },
         },
         {
-          $set: { email: newEmail, emailVerified: true, verificationRequired: false },
-          $unset: { pendingEmail: 1, emailChangeCode: 1, emailChangeCodeExpires: 1, emailChangeAttempts: 1 },
+          $set: {
+            email: newEmail,
+            emailVerified: true,
+            verificationRequired: false,
+            emailChangeStage: null,
+            emailChangeAttemptsOld: 0,
+            emailChangeAttemptsNew: 0,
+          },
+          $inc: { authVersion: 1 },
+          $unset: Object.fromEntries(EMAIL_CHANGE_CLEAR_FIELDS.map((field) => [field, 1])),
         },
       );
       if (!result.matchedCount) {
-        return res.status(400).json({ success: false, message: 'The verification code expired. Request a new code.' });
+        return res.status(400).json({ success: false, message: 'Code expired or request changed. Request a new email change.' });
       }
     } catch (error) {
       if (error.code === 11000) return res.status(409).json({ success: false, message: 'Email already registered.' });
       throw error;
     }
 
+    try {
+      await revokeToken(req);
+    } catch (error) {
+      console.error('[auth] Current session blacklist failed after email change:', error.message);
+    }
     user.email = newEmail;
     user.emailVerified = true;
     user.verificationRequired = false;
-    await logActivity({ actor: user, action: 'email_changed', message: `${user.name} changed their email`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: user._id }).catch((error) => {
+    user.authVersion = (user.authVersion || 0) + 1;
+    await logActivity({ actor: user, action: 'EMAIL_CHANGED', message: `${user.name} changed their email`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'profile', entityId: user._id }).catch((error) => {
       console.error('[auth] Email change activity logging failed:', error.message);
     });
-    try {
-      await sendEmailChangedConfirmation({ email: newEmail, name: user.name });
-    } catch (error) {
-      console.error('[auth] Email change confirmation delivery failed:', error.message);
+    const emailResults = await Promise.allSettled([
+      sendEmailChangeConfirmationNew({ email: newEmail, name: user.name }),
+      sendEmailChangeConfirmationOld({ email: req.user.email, name: user.name, newEmail }),
+    ]);
+    for (const result of emailResults) {
+      if (result.status === 'rejected') {
+        console.error('[auth] Email change confirmation delivery failed:', result.reason?.message || String(result.reason));
+      }
     }
-    return res.json({ success: true, message: 'Email address changed successfully.', user: publicUser(user) });
+    return res.json({ success: true, message: 'Email address changed successfully. Please log in again.' });
   } catch (error) { return next(error); }
 };
 

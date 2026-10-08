@@ -23,6 +23,16 @@ Protected routes enforce active-user checks plus role rules. `staff` means `supe
 | 11 | POST | `/auth/forgot-password` | Public | Create short-lived hashed reset token. |
 | 12 | POST | `/auth/reset-password` | Public token | Consume reset token and enforce password policy. |
 
+Email changes require verification codes sent independently to the current and requested new addresses:
+
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| POST | `/auth/request-email-change` | Authenticated | Start/restart a double-verification request and send codes to both addresses. |
+| POST | `/auth/verify-email-change-old` | Authenticated | Verify the code sent to the current address. |
+| POST | `/auth/verify-email-change-new` | Authenticated | Verify the code sent to the new address, apply the change, and revoke sessions. |
+
+Privileged roles (`superadmin`, `admin`, and `barangay`) require email OTP at login. The login challenge is completed with `POST /auth/2fa/verify` or resent with `POST /auth/2fa/resend`. Manual 2FA enrollment and disable endpoints are not available.
+
 ## Reports
 
 | # | Method | Endpoint | Access | Purpose |

@@ -82,9 +82,15 @@ export const preferencesApi = {
 };
 
 export const authApi = {
-  enableTwoFactor: () => api.post('/auth/2fa/enable'),
-  verifyTwoFactorSetup: (code) => api.post('/auth/2fa/enable/verify', { code }),
-  disableTwoFactor: (currentPassword) => api.post('/auth/2fa/disable', { currentPassword }),
+  requestEmailChange: (newEmail, token) => api.post('/auth/request-email-change', { newEmail }, token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : {}),
+  verifyEmailChangeOld: (code, token) => api.post('/auth/verify-email-change-old', { code }, token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : {}),
+  verifyEmailChangeNew: (code, token) => api.post('/auth/verify-email-change-new', { code }, token
+    ? { headers: { Authorization: `Bearer ${token}` } }
+    : {}),
   verifyTwoFactorLogin: (tempToken, code) => api.post('/auth/2fa/verify', { tempToken, code }),
   resendTwoFactorLoginCode: (tempToken) => api.post('/auth/2fa/resend', { tempToken }),
 };
@@ -98,4 +104,3 @@ export const systemSettingsApi = {
     return api.patch('/system/settings/logo', body);
   },
 };
-

@@ -473,7 +473,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/models/Report.js` | Hazard description, category, GeoJSON location, evidence, reporter, assignment, status/priority, resolution/comments, archive/duplicate/activity fields and indexes. | Mongo 2dsphere, text, and compound status/category/priority indexes. |
 | `backend/models/SystemSettings.js` | Singleton system name/logo, categories, statuses, roles, maintenance/notification flags, hierarchy and permission matrix. | Key defaults to `global`. |
 | `backend/models/TokenBlacklist.js` | SHA-256 token hash, user ID, expiry, timestamps. | TTL index removes expired blacklist entries. |
-| `backend/models/User.js` | Identity, credentials, role/barangay, account lifecycle, preferences, email verification, 2FA OTP/setup, and reset fields. | Passwords are `select: false`; bcryptjs hashing cost 12; timestamps and search/status indexes. |
+| `backend/models/User.js` | Identity, credentials, role/barangay, account lifecycle, preferences, email verification, login 2FA OTP, and reset fields. | Passwords are `select: false`; bcryptjs hashing cost 12; timestamps and search/status indexes. |
 
 ### 6.6 Backend routes
 
@@ -500,6 +500,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/scripts/clearSeededReports.js` | Requires typed confirmation and refuses production; deletes only `seeded: true` reports. |
 | `backend/scripts/clearSeededUsers.js` | Requires typed confirmation and refuses production; deletes users with role `user`. |
 | `backend/scripts/enable2FA.js` | Enables 2FA for privileged roles and disables it for other roles. No production guard; migration. |
+| `backend/scripts/enforce2FAPrivileged.js` | Dry-run by default; with `--confirm`, enables 2FA only for privileged users missing it and writes an activity log per update. Refuses production without `--confirm`. |
 | `backend/scripts/fixSuperAdminRole.js` | Repairs one canonical superadmin record and prints remaining `user` accounts. | Contains source-coded account identifier; do not treat as general provisioning. |
 | `backend/scripts/removeBackupCodes.js` | Unsets legacy backup-code fields for all matching users. No production guard. |
 | `backend/scripts/reset-db-state.mjs` | Destructively clears reports and selected users, then inserts fixture accounts. No production guard; do not run against production. |
@@ -739,7 +740,7 @@ Only variable names are documented. Do not copy values from local `.env` files. 
 
 ## 8. Data Models / Schema
 
-- **User (`users`):** Name/email, hidden password hash, role (`superadmin`, `admin`, `staff`, `barangay`, `user`), barangay/phone, active/status and suspension/ban/deletion lifecycle, profile image, nested theme/map/notification preferences, email verification codes/expiry, 2FA OTP/setup state, reset code/token state, timestamps. Passwords hash through bcryptjs cost 12. Legacy Google identity fields remain in schema.
+- **User (`users`):** Name/email, hidden password hash, role (`superadmin`, `admin`, `staff`, `barangay`, `user`), barangay/phone, active/status and suspension/ban/deletion lifecycle, profile image, nested theme/map/notification preferences, email verification codes/expiry, login 2FA OTP state, reset code/token state, timestamps. Passwords hash through bcryptjs cost 12. Legacy Google identity fields remain in schema.
 - **Report (`reports`):** Title, category/custom category, description, GeoJSON Point `[longitude, latitude]`, address/barangay, photo/image URLs, status (`Pending`, `In Progress`, `Resolved`, `Closed`), priority (`Low`, `Medium`, `High`, `Urgent`), reporter snapshot, assignee/assigned barangay, resolution, comments, views, archive/duplicate/active/seeded/deleted fields, timestamps. Includes 2dsphere, text, and compound status/category/priority indexes. Although `deletedAt` exists in the schema, current report DELETE handlers physically delete documents and stored images.
 - **ActivityLog (`activitylogs`):** User/actor references, actor name/role/barangay, scope, action/message/details, entity/target type and IDs, timestamps.
 - **Notification (`notifications`):** Recipient ID/role, event type, title/message, optional referenced model/ID, read/readAt, creation date; indexes by recipient/read/time.
@@ -764,9 +765,6 @@ Base path: `/api`. Protected routes require `Authorization: Bearer <JWT>` plus t
 | POST | `/auth/login` | Public, auth limiter + lockout | Authenticate and either issue JWT or start privileged OTP challenge. |
 | POST | `/auth/2fa/verify` | Public temporary challenge | Verify login OTP and issue access JWT. |
 | POST | `/auth/2fa/resend` | Public temporary challenge | Resend login OTP. |
-| POST | `/auth/2fa/enable` | Authenticated: superadmin/admin/barangay | Begin 2FA enrollment. |
-| POST | `/auth/2fa/enable/verify` | Authenticated: superadmin/admin/barangay | Complete 2FA enrollment. |
-| POST | `/auth/2fa/disable` | Authenticated: superadmin/admin/barangay | Disable 2FA after current-password verification. |
 | POST | `/auth/refresh` | Authenticated | Revoke current token and issue replacement. |
 | POST | `/auth/logout` | Authenticated | Revoke current token and log logout. |
 | GET | `/auth/me` | Authenticated | Return public current-user projection. |
@@ -776,6 +774,8 @@ Base path: `/api`. Protected routes require `Authorization: Bearer <JWT>` plus t
 | POST | `/auth/forgot-password` | Public, dedicated limiter | Send reset code with generic account-existence response. |
 | POST | `/auth/verify-reset-code` | Public | Verify code and return short-lived reset token. |
 | POST | `/auth/reset-password` | Public, dedicated limiter | Consume reset token and update password. |
+
+Privileged roles (`superadmin`, `admin`, and `barangay`) require email OTP at login. Registration and managed-user creation enable 2FA automatically; `backend/scripts/enforce2FAPrivileged.js` migrates existing privileged users. Only the login `/auth/2fa/verify` and `/auth/2fa/resend` endpoints remain; manual enrollment and disabling are not available.
 
 ### Reports
 
@@ -875,7 +875,7 @@ No `/users/:id/preferences` route is currently declared; older API documentation
 - **Access tokens:** JWT bearer tokens signed with `JWT_SECRET`; privileged admin/superadmin/barangay roles receive one-day tokens, other roles seven-day tokens. Protected middleware validates signature, denies temporary 2FA challenge tokens, checks blacklist, loads the active user, then applies role guards.
 - **Refresh/logout revocation:** Refresh and logout store the SHA-256 of the current token in `TokenBlacklist`; MongoDB TTL removes expired entries. These paths do revoke the presented token (contrary to older documentation).
 - **Passwords and one-time codes:** Passwords and email OTP/reset codes are bcrypt-hashed; reset completion tokens are SHA-256 hashed and short-lived. Password policy requires at least eight characters with upper/lower/digit/special and no spaces.
-- **Email verification and 2FA:** New/pending accounts require email verification. Privileged roles (`superadmin`, `admin`, `barangay`) use email OTP login 2FA; codes expire, failed attempts are bounded, and temporary blocking is applied. `staff` is not included in that privileged-role list.
+- **Email verification and 2FA:** New/pending accounts require email verification. Privileged roles (`superadmin`, `admin`, `barangay`) have mandatory, always-active email OTP login 2FA; codes expire, failed attempts are bounded, and temporary blocking is applied. New privileged accounts enable 2FA automatically; manual enable/disable endpoints have been removed. `staff` is not included in that privileged-role list.
 - **Authorization:** Backend route guards are authoritative. Report, statistics, and activity operations include barangay scope checks. User-management handlers apply target role hierarchy and protect the last superadmin in covered operations.
 - **Rate limits:** Global 200 requests/15 min; auth 100/15 min; contact 5/hour; forgot-password 3/hour; reset-password 5/hour; report submissions 10/hour. Login lockout is three failures for five minutes per IP/email. Default limiter and lockout stores are process-local.
 - **Request and transport controls:** Helmet CSP/HSTS/frame/referrer/MIME options, explicit CORS origins, 2 MB JSON body cap, Express validators, maximum three 5 MB image uploads, and controlled common error responses. TLS termination is delegated to hosting infrastructure.
