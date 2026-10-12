@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { checkEmail, deleteAccount, forgotPassword, getBiometricDevices, getMe, login, loginBiometricChallenge, loginBiometricVerify, logout, refresh, register, registerBiometricChallenge, registerBiometricVerify, removeBiometricCredential, requestEmailChange, requestPasswordChange, resendTwoFactorLoginCode, resetPassword, updateProfile, verifyEmail, verifyEmailChangeNew, verifyEmailChangeOld, verifyPasswordChange, verifyResetCode, verifyTwoFactorLogin } from '../controllers/authController.js';
+import { checkEmail, deleteAccount, forgotPassword, getBiometricDevices, getMe, login, loginBiometricChallenge, loginBiometricVerify, logout, refresh, register, registerBiometricChallenge, registerBiometricVerify, removeBiometricCredential, requestEmailChange, requestPasswordChange, resendTwoFactorLoginCode, resetPassword, toggleBiometric, updateProfile, verifyEmail, verifyEmailChangeNew, verifyEmailChangeOld, verifyPasswordChange, verifyResetCode, verifyTwoFactorLogin } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import { validateChangeCode, validateEmail, validateEmailChangeRequest, validateEmailVerification, validateLogin, validatePasswordChangeRequest, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
@@ -16,6 +16,7 @@ router.post('/2fa/resend', resendTwoFactorLoginCode);
 router.post('/biometric/register-challenge', biometricLimiter, protect, registerBiometricChallenge);
 router.post('/biometric/register-verify', biometricLimiter, protect, registerBiometricVerify);
 router.get('/biometric/devices', biometricLimiter, protect, getBiometricDevices);
+router.patch('/biometric/toggle', biometricLimiter, protect, toggleBiometric);
 router.post('/biometric/login-challenge', biometricLimiter, loginBiometricChallenge);
 router.post('/biometric/login-verify', biometricLimiter, loginBiometricVerify);
 router.post('/biometric/remove', biometricLimiter, protect, removeBiometricCredential);

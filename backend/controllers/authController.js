@@ -277,7 +277,14 @@ export const login = async (req, res, next) => {
       user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save({ validateBeforeSave: false });
       clearFailedLogins(req, normalizedEmail);
-      return res.json({ success: true, requiresOTP: true, biometricEnabled: Boolean(user.biometricEnabled), tempToken: createLoginChallenge(user), message: 'A security code was sent to your email.' });
+      return res.json({
+        success: true,
+        requiresOTP: true,
+        biometricEnabled: Boolean(user.biometricEnabled),
+        biometricAvailable: Boolean(user.biometricEnabled && user.biometricCredentials?.length),
+        tempToken: createLoginChallenge(user),
+        message: 'A security code was sent to your email.',
+      });
     }
     clearFailedLogins(req, normalizedEmail);
     const userAgent = String(req.headers['user-agent'] || '');
@@ -510,6 +517,44 @@ export const getBiometricDevices = (req, res) => res.json({
     lastUsedAt,
   })),
 });
+
+export const toggleBiometric = async (req, res, next) => {
+  try {
+    if (typeof req.body.enabled !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'A boolean enabled value is required.' });
+    }
+    const user = await User.findById(req.user._id).select('+biometricCredentials');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (req.body.enabled && !user.biometricCredentials?.length) {
+      return res.status(400).json({ success: false, message: 'Register a biometric device before enabling biometric login.' });
+    }
+
+    user.biometricEnabled = req.body.enabled;
+    await user.save({ validateBeforeSave: false });
+    if (!req.body.enabled) {
+      await logActivity({
+        actor: user,
+        action: 'BIOMETRIC_DISABLED',
+        message: `${user.name} paused biometric login`,
+        details: { registeredDeviceCount: user.biometricCredentials.length, timestamp: new Date().toISOString() },
+        scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+        entityType: 'auth',
+        entityId: user._id,
+      });
+    } else {
+      await logActivity({
+        actor: user,
+        action: 'BIOMETRIC_ENABLED',
+        message: `${user.name} re-enabled biometric login`,
+        details: { registeredDeviceCount: user.biometricCredentials.length, timestamp: new Date().toISOString() },
+        scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+        entityType: 'auth',
+        entityId: user._id,
+      });
+    }
+    res.json({ success: true, biometricEnabled: user.biometricEnabled });
+  } catch (error) { next(error); }
+};
 
 export const loginBiometricChallenge = async (req, res, next) => {
   try {

@@ -13,7 +13,7 @@ const TwoFactorPage = () => {
   const { completeLogin } = useAuth();
   const tempToken = state?.tempToken;
   const email = state?.email || 'your email';
-  const biometricEnabled = Boolean(state?.biometricEnabled);
+  const biometricEnabled = Boolean(state?.biometricAvailable);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -22,6 +22,7 @@ const TwoFactorPage = () => {
   const [resendSeconds, setResendSeconds] = useState(60);
   const requestInFlightRef = useRef(false);
   const biometricStartedRef = useRef(false);
+  const automaticPromptStartedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +81,9 @@ const TwoFactorPage = () => {
       if (isBiometricPromptCancelled(requestError)) {
         setBiometricFallbackMessage('Biometric sign-in was cancelled. You can continue with your email code.');
         setError('');
+      } else if (requestError?.name === 'NotAllowedError') {
+        setBiometricFallbackMessage('');
+        setError('');
       } else {
         setBiometricFallbackMessage('Biometric sign-in was unavailable. You can continue with your email code.');
         setError(requestError.response?.data?.message || requestError.message || 'Unable to sign in with biometrics.');
@@ -100,6 +104,12 @@ const TwoFactorPage = () => {
       setError(requestError.response?.data?.message || 'Unable to resend the security code.');
     }
   };
+
+  useEffect(() => {
+    if (!biometricAvailable || automaticPromptStartedRef.current) return;
+    automaticPromptStartedRef.current = true;
+    finishBiometric();
+  }, [biometricAvailable]);
 
   return (
     <AuthCard title="Two-factor verification" description={`Enter the security code sent to ${email}.`}>

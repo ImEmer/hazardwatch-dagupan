@@ -65,21 +65,18 @@ const BiometricSettingsSection = () => {
     }
   };
 
-  const disableBiometric = async () => {
-    const { isConfirmed } = await confirmAction('Remove all registered devices and turn off biometric login?', 'Disable biometric login');
-    if (!isConfirmed) return;
-    setBusy('remove-all');
+  const toggleBiometric = async (nextEnabled) => {
+    if (nextEnabled && !credentials.length) {
+      await enableBiometric();
+      return;
+    }
+    setBusy('toggle');
     try {
-      for (const credential of credentials) {
-        await authApi.removeBiometricCredential(credential.credentialId);
-      }
+      await authApi.toggleBiometric(nextEnabled);
       await refreshDevices();
-      toast.success('Biometric login disabled.');
+      toast.success(nextEnabled ? 'Biometric login enabled.' : 'Biometric login paused.');
     } catch (error) {
-      await refreshDevices().catch((refreshError) => {
-        toast.error(refreshError.response?.data?.message || refreshError.message || 'Unable to refresh biometric devices.');
-      });
-      toast.error(error.response?.data?.message || error.message || 'Unable to disable biometric login.');
+      toast.error(error.response?.data?.message || error.message || 'Unable to update biometric settings.');
     } finally {
       setBusy('');
     }
@@ -107,12 +104,19 @@ const BiometricSettingsSection = () => {
     >
       <SettingsToggle
         label="Enable biometric login"
-        description={!available && availabilityChecked ? 'Not available on this device.' : 'Use a registered device for biometric sign-in; other devices can continue with your email code.'}
+        description={!available && availabilityChecked
+          ? 'Not available on this device.'
+          : 'Turning off biometric login pauses it on this account. Your registered devices will remain and can be used again when you re-enable biometric login.'}
         checked={enabled}
         disabled={!availabilityChecked || Boolean(busy) || (!available && !enabled)}
-        onChange={(nextEnabled) => (nextEnabled ? enableBiometric() : disableBiometric())}
+        onChange={toggleBiometric}
       />
-      {credentials.length > 0 && (
+      {!enabled && credentials.length > 0 && (
+        <p role="status" className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          Biometric login is off. {credentials.length} {credentials.length === 1 ? 'device is' : 'devices are'} registered. Turn it on to use {credentials.length === 1 ? 'it' : 'them'} again.
+        </p>
+      )}
+      {enabled && credentials.length > 0 && (
         <div className="border-t border-slate-200 pt-4 dark:border-[#2e303a]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold">Registered devices</h3>

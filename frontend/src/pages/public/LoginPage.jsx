@@ -1,20 +1,18 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
 import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
-import { authenticateBiometricLogin, isBiometricPromptCancelled, isPlatformAuthenticatorAvailable } from '../../services/biometric';
 
 const LoginPage = () => {
-  const { login, completeLogin, user, isAuthenticated } = useAuth();
+  const { login, user, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const biometricStartedRef = useRef(false);
   const navigate = useNavigate();
   const getFriendlyError = (message = '') => {
     const normalized = message.toLowerCase();
@@ -77,30 +75,8 @@ const LoginPage = () => {
           tempToken: loggedInUser.tempToken,
           email,
           biometricEnabled: Boolean(loggedInUser.biometricEnabled),
+          biometricAvailable: Boolean(loggedInUser.biometricAvailable),
         };
-        if (loggedInUser.biometricEnabled && await isPlatformAuthenticatorAvailable() && !biometricStartedRef.current) {
-          biometricStartedRef.current = true;
-          try {
-            const session = await authenticateBiometricLogin(email, loggedInUser.tempToken);
-            const biometricUser = completeLogin(session);
-            const role = biometricUser?.role?.toLowerCase();
-            const targetRoute = role === 'barangay'
-              ? '/barangay/dashboard'
-              : role === 'superadmin'
-                ? '/superadmin/dashboard'
-                : role === 'admin'
-                  ? '/admin/dashboard'
-                  : '/';
-            await showSuccess(`Welcome back, ${biometricUser?.name || email}!`);
-            navigate(targetRoute, { replace: true });
-            return;
-          } catch (biometricError) {
-            biometricStartedRef.current = false;
-            twoFactorState.biometricFallbackMessage = isBiometricPromptCancelled(biometricError)
-              ? 'Biometric sign-in was cancelled. You can continue with your email code.'
-              : 'Biometric sign-in was unavailable. You can continue with your email code.';
-          }
-        }
         navigate('/verify-2fa', { replace: true, state: twoFactorState });
         return;
       }

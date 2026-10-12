@@ -94,6 +94,7 @@ export const authApi = {
   verifyTwoFactorLogin: (tempToken, code) => api.post('/auth/2fa/verify', { tempToken, code }),
   resendTwoFactorLoginCode: (tempToken) => api.post('/auth/2fa/resend', { tempToken }),
   getBiometricDevices: () => api.get('/auth/biometric/devices'),
+  toggleBiometric: (enabled) => api.patch('/auth/biometric/toggle', { enabled }),
   registerBiometricChallenge: () => api.post('/auth/biometric/register-challenge'),
   verifyBiometricRegistration: (credential, deviceLabel) => api.post('/auth/biometric/register-verify', { credential, deviceLabel }),
   removeBiometricCredential: (credentialId) => api.post('/auth/biometric/remove', { credentialId }),
