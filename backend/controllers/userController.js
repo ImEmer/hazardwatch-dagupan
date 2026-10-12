@@ -250,7 +250,7 @@ export const deleteUser = async (req, res, next) => {
 };
 
 const getDurationMs = (duration) => {
-  if (duration === 'custom' || duration === '20s') return duration === '20s' ? 20 * 1000 : null;
+  if (duration === 'custom' || duration === '5s') return duration === '5s' ? 5 * 1000 : null;
   const days = Number(duration);
   return [1, 3, 7, 30].includes(days) ? days * 24 * 60 * 60 * 1000 : null;
 };
