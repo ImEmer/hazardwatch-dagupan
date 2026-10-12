@@ -377,11 +377,13 @@ export const suspendUser = async (req, res, next) => {
     await logActivity({
       actor: req.user,
       action: 'user_suspended',
-      message: `${req.user.name} suspended ${target.name} until ${until.toISOString()}`,
+      message: `${req.user.name} suspended ${target.name} until ${until.toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT`,
       details: {
+        reason,
         suspensionReason: reason,
         suspendedUntil: until.toISOString(),
         suspendedBy: req.user.name,
+        duration: requestedDuration,
       },
       scope: 'admin',
       entityType: 'user',
@@ -445,13 +447,14 @@ export const unsuspendUser = async (req, res, next) => {
     if (target.status === 'banned') return res.status(403).json({ success: false, message: 'Permanently banned users cannot be unsuspended.' });
     const permissionError = managedTargetError(req.user, target, 'modify');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
+    const reason = target.suspensionReason || '';
     target.status = 'active'; target.isActive = true; target.suspendedUntil = undefined; target.suspensionReason = undefined; target.suspendedBy = undefined;
     await target.save({ validateBeforeSave: false });
     await logActivity({
       actor: req.user,
       action: 'UNSUSPENDED',
       message: `${req.user.name} unsuspended ${target.name}'s account`,
-      details: { unsuspendedAt: new Date().toISOString() },
+      details: { reason, unsuspendedAt: new Date().toISOString() },
       scope: 'admin',
       entityType: 'user',
       entityId: target._id,
