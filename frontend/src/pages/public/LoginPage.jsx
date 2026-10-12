@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
 import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
+import { authenticateBiometricLogin, isPlatformAuthenticatorAvailable } from '../../services/biometric';
 
 const LoginPage = () => {
-  const { login, user, isAuthenticated } = useAuth();
+  const { login, completeLogin, user, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const biometricStartedRef = useRef(false);
   const navigate = useNavigate();
   const getFriendlyError = (message = '') => {
     const normalized = message.toLowerCase();
@@ -70,7 +72,34 @@ const LoginPage = () => {
     try {
       const loggedInUser = await login(form.email, form.password);
       if (loggedInUser?.requiresOTP) {
-        navigate('/verify-2fa', { replace: true, state: { tempToken: loggedInUser.tempToken, email: form.email.trim().toLowerCase() } });
+        const email = form.email.trim().toLowerCase();
+        const twoFactorState = {
+          tempToken: loggedInUser.tempToken,
+          email,
+          biometricEnabled: Boolean(loggedInUser.biometricEnabled),
+        };
+        if (loggedInUser.biometricEnabled && await isPlatformAuthenticatorAvailable() && !biometricStartedRef.current) {
+          biometricStartedRef.current = true;
+          try {
+            const session = await authenticateBiometricLogin(email, loggedInUser.tempToken);
+            const biometricUser = completeLogin(session);
+            const role = biometricUser?.role?.toLowerCase();
+            const targetRoute = role === 'barangay'
+              ? '/barangay/dashboard'
+              : role === 'superadmin'
+                ? '/superadmin/dashboard'
+                : role === 'admin'
+                  ? '/admin/dashboard'
+                  : '/';
+            await showSuccess(`Welcome back, ${biometricUser?.name || email}!`);
+            navigate(targetRoute, { replace: true });
+            return;
+          } catch {
+            biometricStartedRef.current = false;
+            twoFactorState.biometricFallbackMessage = 'Biometric sign-in was unsuccessful. Continue with your email code or retry biometrics.';
+          }
+        }
+        navigate('/verify-2fa', { replace: true, state: twoFactorState });
         return;
       }
       const role = loggedInUser?.role?.toLowerCase();

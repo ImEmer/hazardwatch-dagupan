@@ -5,6 +5,7 @@ import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { confirmAction } from '../../services/alerts';
 import NotificationBell from '../common/NotificationBell';
+import { HEADER_HEIGHT } from './layoutConstants';
 
 const PrivilegedTopBar = ({ sidebarWidthClass = 'lg:left-72 lg:w-[calc(100%-18rem)]', sidebarCollapsed = false }) => {
   const { logout } = useAuth();
@@ -21,7 +22,7 @@ const PrivilegedTopBar = ({ sidebarWidthClass = 'lg:left-72 lg:w-[calc(100%-18re
   };
 
   return (
-    <header className={`fixed inset-x-0 top-0 z-40 h-16 border-b backdrop-blur-md transition-[width,margin] duration-300 ease-in-out motion-reduce:transition-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'} ${resolvedSidebarWidthClass}`}>
+    <header className={`fixed inset-x-0 top-0 z-40 ${HEADER_HEIGHT} border-b backdrop-blur-md transition-[width,margin] duration-300 ease-in-out motion-reduce:transition-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'} ${resolvedSidebarWidthClass}`}>
       <div className="flex h-full items-center justify-end gap-2 px-4 sm:gap-3">
         <NotificationBell onOpen={() => {}} />
 

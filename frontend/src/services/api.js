@@ -9,7 +9,7 @@ const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
 
 const isAuthRoute = (url = '') => {
-  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/2fa/') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
+  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/2fa/') || url.includes('/auth/biometric/login-') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
 };
 
 const clearStoredSession = () => {
@@ -93,6 +93,12 @@ export const authApi = {
     : {}),
   verifyTwoFactorLogin: (tempToken, code) => api.post('/auth/2fa/verify', { tempToken, code }),
   resendTwoFactorLoginCode: (tempToken) => api.post('/auth/2fa/resend', { tempToken }),
+  getBiometricDevices: () => api.get('/auth/biometric/devices'),
+  registerBiometricChallenge: () => api.post('/auth/biometric/register-challenge'),
+  verifyBiometricRegistration: (credential, deviceLabel) => api.post('/auth/biometric/register-verify', { credential, deviceLabel }),
+  removeBiometricCredential: (credentialId) => api.post('/auth/biometric/remove', { credentialId }),
+  biometricLoginChallenge: (email, tempToken) => api.post('/auth/biometric/login-challenge', { email, tempToken }),
+  verifyBiometricLogin: (email, tempToken, credential) => api.post('/auth/biometric/login-verify', { email, tempToken, credential }),
 };
 
 export const systemSettingsApi = {

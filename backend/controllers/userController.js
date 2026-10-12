@@ -191,6 +191,7 @@ export const updateUser = async (req, res, next) => {
     }
     const permissionError = managedTargetError(req.user, targetUser, 'edit');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
+    if (targetUser.status === 'banned') return res.status(403).json({ success: false, message: 'This account is permanently banned and cannot be modified.' });
 
     const payload = { ...req.body };
     delete payload.role;
@@ -237,6 +238,7 @@ export const deleteUser = async (req, res, next) => {
     if (!userToDelete) return res.status(404).json({ success: false, message: 'User not found.' });
     const permissionError = managementError(req.user, userToDelete, 'delete');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
+    if (userToDelete.status === 'banned') return res.status(403).json({ success: false, message: 'This account is permanently banned and cannot be modified.' });
     if (await isLastSuperadmin(userToDelete)) return res.status(403).json({ success: false, message: 'The last superadmin account cannot be deleted.' });
     userToDelete.status = 'deleted';
     userToDelete.isActive = false;
@@ -259,7 +261,7 @@ export const suspendUser = async (req, res, next) => {
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     const permissionError = managedTargetError(req.user, target, 'suspend');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
-    if (target.status === 'banned') return res.status(409).json({ success: false, message: 'This user is already permanently banned.' });
+    if (target.status === 'banned') return res.status(403).json({ success: false, message: 'This account is permanently banned and cannot be modified.' });
 
     const requestedDuration = req.body.durationInDays ?? req.body.duration;
     const durationMs = getDurationMs(requestedDuration);
@@ -395,7 +397,7 @@ export const banUser = async (req, res, next) => {
     if (!target) return res.status(404).json({ success: false, message: 'User not found.' });
     const permissionError = managedTargetError(req.user, target, 'ban');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
-    if (target.status === 'banned') return res.status(409).json({ success: false, message: 'This user is already permanently banned.' });
+    if (target.status === 'banned') return res.status(403).json({ success: false, message: 'This account is permanently banned and cannot be modified.' });
     const banReason = String(req.body.reason || '').trim() || 'Banned by administrator';
     target.status = 'banned';
     target.isActive = false;

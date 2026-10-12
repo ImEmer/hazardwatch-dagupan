@@ -3,18 +3,57 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
+import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
 import { sendAccountVerifiedEmail, sendEmailChangeCodeNew, sendEmailChangeCodeOld, sendEmailChangeConfirmationNew, sendEmailChangeConfirmationOld, sendEmailChangeNoticeOld, sendNewDeviceAlertEmail, sendPasswordChangeCode, sendPasswordChangedConfirmation, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
-export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled, preferences: user.preferences });
+export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled, biometricEnabled: user.biometricEnabled, preferences: user.preferences });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role, authVersion: user.authVersion || 0 }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
+const requiresTwoFactor = (user) => Boolean(user.biometricEnabled || (privilegedRoles.includes(user.role) && user.twoFactorEnabled));
+const resolveWebAuthnContext = (req) => {
+  const origin = req.get('origin');
+  if (!origin) return null;
+
+  const allowedOrigins = [
+    ...(process.env.CLIENT_URL || '').split(','),
+    process.env.FRONTEND_URL || '',
+    'http://localhost:5173',
+    'http://localhost:4173',
+    'https://hazardwatch-dagupan.vercel.app',
+  ].map((value) => value.trim()).filter(Boolean).map((value) => {
+    try { return new URL(value).origin; } catch { return null; }
+  }).filter(Boolean);
+
+  if (!allowedOrigins.includes(origin)) return null;
+  const hostname = new URL(origin).hostname;
+  const rpID = (process.env.WEBAUTHN_RP_ID || hostname).toLowerCase();
+  if (hostname !== rpID && !hostname.endsWith(`.${rpID}`)) return null;
+  return { origin, rpID, rpName: process.env.WEBAUTHN_RP_NAME || 'HazardWatch Dagupan' };
+};
+const loginChallengeUser = async (tempToken, email) => {
+  let decoded;
+  try {
+    decoded = jwt.verify(String(tempToken || ''), process.env.JWT_SECRET);
+  } catch {
+    return { error: { status: 401, message: 'Verification session expired. Log in again.' } };
+  }
+  if (decoded.purpose !== 'login-2fa') return { error: { status: 401, message: 'Invalid verification session.' } };
+  const user = await User.findById(decoded.id).select('+biometricAuthenticationChallenge +biometricAuthenticationChallengeExpires +biometricAuthenticationChallengeOrigin +biometricAuthenticationChallengeRpId +biometricCredentials');
+  if (!user || !user.isActive || user.status !== 'active' || !requiresTwoFactor(user)) {
+    return { error: { status: 403, message: 'This verification session is no longer valid.' } };
+  }
+  if (email && String(email).trim().toLowerCase() !== user.email) {
+    return { error: { status: 403, message: 'This verification session is no longer valid.' } };
+  }
+  return { user };
+};
 const EMAIL_CHANGE_CLEAR_FIELDS = [
   'pendingEmail',
   'emailChangeCodeOld',
@@ -221,7 +260,7 @@ export const login = async (req, res, next) => {
       || (user.verificationRequired !== false && (!user.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF));
     if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first. Check your inbox for the 6-digit code.', needsVerification: true, email: user.email });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
-    if (privilegedRoles.includes(user.role) && user.twoFactorEnabled) {
+    if (requiresTwoFactor(user)) {
       const now = new Date();
       if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
         const retryAfter = Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000);
@@ -238,7 +277,7 @@ export const login = async (req, res, next) => {
       user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save({ validateBeforeSave: false });
       clearFailedLogins(req, normalizedEmail);
-      return res.json({ success: true, requiresOTP: true, tempToken: createLoginChallenge(user), message: 'A security code was sent to your email.' });
+      return res.json({ success: true, requiresOTP: true, biometricEnabled: Boolean(user.biometricEnabled), tempToken: createLoginChallenge(user), message: 'A security code was sent to your email.' });
     }
     clearFailedLogins(req, normalizedEmail);
     const userAgent = String(req.headers['user-agent'] || '');
@@ -282,7 +321,7 @@ export const verifyTwoFactorLogin = async (req, res, next) => {
     const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
     if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
     const user = await User.findById(decoded.id).select('+otpCode +otpExpires +otpAttempts +otpBlockedUntil');
-    if (!user || !user.isActive || !privilegedRoles.includes(user.role) || !user.twoFactorEnabled) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
+    if (!user || !user.isActive || !requiresTwoFactor(user)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
     const now = new Date();
     if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
       res.set('Retry-After', String(Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000)));
@@ -360,7 +399,7 @@ export const resendTwoFactorLoginCode = async (req, res, next) => {
     const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
     if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
     const user = await User.findById(decoded.id).select('+notificationEmail +otpAttempts +otpBlockedUntil');
-    if (!user || !user.isActive || !user.twoFactorEnabled || !privilegedRoles.includes(user.role)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
+    if (!user || !user.isActive || !requiresTwoFactor(user)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
     if (user.otpBlockedUntil && user.otpBlockedUntil > new Date()) return res.status(429).json({ success: false, message: 'Two-factor verification is temporarily locked.' });
     const code = createOtp();
     await deliverTwoFactorCode(user, code);
@@ -372,6 +411,238 @@ export const resendTwoFactorLoginCode = async (req, res, next) => {
     if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') return res.status(401).json({ success: false, message: 'Verification session expired. Log in again.' });
     next(error);
   }
+};
+
+export const registerBiometricChallenge = async (req, res, next) => {
+  try {
+    const webAuthn = resolveWebAuthnContext(req);
+    if (!webAuthn) return res.status(400).json({ success: false, message: 'WebAuthn is not configured for this site origin.' });
+
+    const user = await User.findById(req.user._id).select('+biometricCredentials');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    const options = await generateRegistrationOptions({
+      rpName: webAuthn.rpName,
+      rpID: webAuthn.rpID,
+      userID: new Uint8Array(Buffer.from(String(user._id))),
+      userName: user.email,
+      userDisplayName: user.name,
+      attestationType: 'none',
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        residentKey: 'preferred',
+        userVerification: 'required',
+      },
+      excludeCredentials: (user.biometricCredentials || []).map(({ credentialId }) => ({ id: credentialId })),
+    });
+    user.biometricRegistrationChallenge = options.challenge;
+    user.biometricRegistrationChallengeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    user.biometricRegistrationChallengeOrigin = webAuthn.origin;
+    user.biometricRegistrationChallengeRpId = webAuthn.rpID;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, ...options, options });
+  } catch (error) { next(error); }
+};
+
+export const registerBiometricVerify = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('+biometricRegistrationChallenge +biometricRegistrationChallengeExpires +biometricRegistrationChallengeOrigin +biometricRegistrationChallengeRpId +biometricCredentials');
+    const challenge = user?.biometricRegistrationChallenge;
+    const now = new Date();
+    if (!user || !challenge || !user.biometricRegistrationChallengeExpires || user.biometricRegistrationChallengeExpires <= now) {
+      return res.status(400).json({ success: false, message: 'Registration challenge is missing or expired. Please try again.' });
+    }
+
+    const consumed = await User.updateOne(
+      { _id: user._id, biometricRegistrationChallenge: challenge, biometricRegistrationChallengeExpires: { $gt: now } },
+      { $unset: { biometricRegistrationChallenge: 1, biometricRegistrationChallengeExpires: 1, biometricRegistrationChallengeOrigin: 1, biometricRegistrationChallengeRpId: 1 } },
+    );
+    if (consumed.modifiedCount !== 1) return res.status(400).json({ success: false, message: 'Registration challenge is no longer valid. Please try again.' });
+
+    let verification;
+    try {
+      verification = await verifyRegistrationResponse({
+        response: req.body.credential,
+        expectedChallenge: challenge,
+        expectedOrigin: user.biometricRegistrationChallengeOrigin,
+        expectedRPID: user.biometricRegistrationChallengeRpId,
+        requireUserVerification: true,
+      });
+    } catch {
+      return res.status(400).json({ success: false, message: 'Biometric registration could not be verified.' });
+    }
+    if (!verification.verified) return res.status(400).json({ success: false, message: 'Biometric registration could not be verified.' });
+
+    const { credential } = verification.registrationInfo;
+    if ((user.biometricCredentials || []).some((entry) => entry.credentialId === credential.id)) {
+      return res.status(409).json({ success: false, message: 'This biometric device is already registered.' });
+    }
+    const deviceLabel = String(req.body.deviceLabel || '').trim().slice(0, 80) || 'This device';
+    user.biometricCredentials.push({
+      credentialId: credential.id,
+      publicKey: Buffer.from(credential.publicKey).toString('base64url'),
+      counter: credential.counter,
+      createdAt: now,
+      lastUsedAt: now,
+      deviceLabel,
+    });
+    user.biometricEnabled = true;
+    await user.save({ validateBeforeSave: false });
+    await logActivity({
+      actor: user,
+      action: 'BIOMETRIC_ENABLED',
+      message: `${user.name} registered a biometric device`,
+      details: { credentialId: `${credential.id.slice(0, 12)}...`, deviceLabel, timestamp: now.toISOString() },
+      scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+      entityType: 'auth',
+      entityId: user._id,
+    });
+    res.json({ success: true, biometricEnabled: true });
+  } catch (error) { next(error); }
+};
+
+export const getBiometricDevices = (req, res) => res.json({
+  success: true,
+  biometricEnabled: Boolean(req.user.biometricEnabled),
+  credentials: (req.user.biometricCredentials || []).map(({ credentialId, deviceLabel, createdAt, lastUsedAt }) => ({
+    credentialId,
+    deviceLabel,
+    createdAt,
+    lastUsedAt,
+  })),
+});
+
+export const loginBiometricChallenge = async (req, res, next) => {
+  try {
+    const { user, error } = await loginChallengeUser(req.body.tempToken, req.body.email);
+    if (error) return res.status(error.status).json({ success: false, message: error.message });
+    if (!user.biometricEnabled || !user.biometricCredentials?.length) {
+      return res.status(400).json({ success: false, message: 'Biometric login is not available for this account.' });
+    }
+    const webAuthn = resolveWebAuthnContext(req);
+    if (!webAuthn) return res.status(400).json({ success: false, message: 'WebAuthn is not configured for this site origin.' });
+
+    const options = await generateAuthenticationOptions({
+      rpID: webAuthn.rpID,
+      allowCredentials: user.biometricCredentials.map(({ credentialId }) => ({ id: credentialId })),
+      userVerification: 'required',
+    });
+    user.biometricAuthenticationChallenge = options.challenge;
+    user.biometricAuthenticationChallengeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    user.biometricAuthenticationChallengeOrigin = webAuthn.origin;
+    user.biometricAuthenticationChallengeRpId = webAuthn.rpID;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, ...options, options });
+  } catch (error) { next(error); }
+};
+
+export const loginBiometricVerify = async (req, res, next) => {
+  try {
+    const { user, error } = await loginChallengeUser(req.body.tempToken, req.body.email);
+    if (error) return res.status(error.status).json({ success: false, message: error.message });
+    const challenge = user.biometricAuthenticationChallenge;
+    const now = new Date();
+    if (!user.biometricEnabled || !challenge || !user.biometricAuthenticationChallengeExpires || user.biometricAuthenticationChallengeExpires <= now) {
+      return res.status(400).json({ success: false, message: 'Authentication challenge is missing or expired. Please try again.' });
+    }
+
+    const credentialId = String(req.body.credential?.id || '');
+    const credential = user.biometricCredentials.find((entry) => entry.credentialId === credentialId);
+    if (!credential) return res.status(400).json({ success: false, message: 'Biometric credential is not registered for this account.' });
+
+    const consumed = await User.updateOne(
+      { _id: user._id, biometricAuthenticationChallenge: challenge, biometricAuthenticationChallengeExpires: { $gt: now } },
+      { $unset: { biometricAuthenticationChallenge: 1, biometricAuthenticationChallengeExpires: 1, biometricAuthenticationChallengeOrigin: 1, biometricAuthenticationChallengeRpId: 1 } },
+    );
+    if (consumed.modifiedCount !== 1) return res.status(400).json({ success: false, message: 'Authentication challenge is no longer valid. Please try again.' });
+
+    let verification;
+    try {
+      verification = await verifyAuthenticationResponse({
+        response: req.body.credential,
+        expectedChallenge: challenge,
+        expectedOrigin: user.biometricAuthenticationChallengeOrigin,
+        expectedRPID: user.biometricAuthenticationChallengeRpId,
+        credential: {
+          id: credential.credentialId,
+          publicKey: Buffer.from(credential.publicKey, 'base64url'),
+          counter: credential.counter,
+        },
+        requireUserVerification: true,
+      });
+    } catch {
+      return res.status(401).json({ success: false, message: 'Biometric verification failed. Use your email security code.' });
+    }
+    if (!verification.verified) return res.status(401).json({ success: false, message: 'Biometric verification failed. Use your email security code.' });
+
+    const loginTime = new Date();
+    credential.counter = verification.authenticationInfo.newCounter;
+    credential.lastUsedAt = loginTime;
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    user.otpAttempts = 0;
+    user.otpBlockedUntil = undefined;
+    user.lastLogin = loginTime;
+    const userAgent = String(req.headers['user-agent'] || '');
+    const acceptLanguage = String(req.headers['accept-language'] || '');
+    const deviceId = createDeviceFingerprint({ userAgent, acceptLanguage, deviceId: String(req.headers['x-device-id'] || '') });
+    user.knownDevices = syncKnownDevice(user.knownDevices, {
+      deviceId,
+      userAgent,
+      ip: req.ip || req.socket?.remoteAddress || 'unknown-ip',
+      now: loginTime,
+    });
+    await user.save({ validateBeforeSave: false });
+    await logActivity({
+      actor: user,
+      action: 'BIOMETRIC_LOGIN',
+      message: `${user.name} signed in with a biometric device`,
+      details: { credentialId: `${credential.credentialId.slice(0, 12)}...`, deviceLabel: credential.deviceLabel, timestamp: loginTime.toISOString() },
+      scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+      entityType: 'auth',
+      entityId: user._id,
+    });
+    res.json({ success: true, token: issueToken(user), user: publicUser(user) });
+  } catch (error) { next(error); }
+};
+
+export const removeBiometricCredential = async (req, res, next) => {
+  try {
+    const credentialId = String(req.body.credentialId || '');
+    if (!credentialId) return res.status(400).json({ success: false, message: 'A biometric credential ID is required.' });
+    const user = await User.findById(req.user._id).select('+biometricCredentials');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    const removedCredential = user.biometricCredentials.find((entry) => entry.credentialId === credentialId);
+    if (!removedCredential) return res.status(404).json({ success: false, message: 'Biometric device not found.' });
+
+    const now = new Date();
+    const deviceLabel = removedCredential.deviceLabel;
+    user.biometricCredentials = user.biometricCredentials.filter((entry) => entry.credentialId !== credentialId);
+    user.biometricEnabled = user.biometricCredentials.length > 0;
+    await user.save({ validateBeforeSave: false });
+    const activityDetails = { credentialId: `${credentialId.slice(0, 12)}...`, deviceLabel, timestamp: now.toISOString() };
+    const activityScope = user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin';
+    await logActivity({
+      actor: user,
+      action: 'BIOMETRIC_REMOVED',
+      message: `${user.name} removed a biometric device`,
+      details: activityDetails,
+      scope: activityScope,
+      entityType: 'auth',
+      entityId: user._id,
+    });
+    if (!user.biometricEnabled) {
+      await logActivity({
+        actor: user,
+        action: 'BIOMETRIC_DISABLED',
+        message: `${user.name} disabled biometric login`,
+        details: activityDetails,
+        scope: activityScope,
+        entityType: 'auth',
+        entityId: user._id,
+      });
+    }
+    res.json({ success: true, biometricEnabled: user.biometricEnabled });
+  } catch (error) { next(error); }
 };
 
 export const refresh = async (req, res, next) => {

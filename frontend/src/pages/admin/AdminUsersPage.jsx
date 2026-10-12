@@ -313,7 +313,9 @@ const AdminUsersPage = () => {
                   </td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.lastLogin}</td>
                   <td className="px-4 py-4">
-                    {canManageTarget(user) ? <div className="flex items-center gap-1">
+                    {user.status === 'banned' ? (
+                      <span className="text-xs text-gray-400">Banned — no actions available</span>
+                    ) : canManageTarget(user) && user.status !== 'banned' ? <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => openEditor(user)}

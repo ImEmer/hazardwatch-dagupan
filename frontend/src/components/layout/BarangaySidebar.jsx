@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { confirmAction } from '../../services/alerts';
+import { HEADER_HEIGHT } from './layoutConstants';
 
 const items = [
   { to: '/barangay/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -58,14 +59,14 @@ const BarangaySidebar = () => {
   const linkClass = ({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${collapsed ? 'justify-center px-2' : ''} ${isActive ? isDark ? 'bg-[#3b82f6]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-700' : isDark ? 'text-gray-300 hover:bg-[#14151d] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
 
   const sidebar = <aside className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:z-40 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-20' : 'w-64'} ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'}`}>
-    <div className={`flex items-center border-b px-3 py-3 ${collapsed ? 'justify-center px-2' : 'justify-between'} ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
+    <div className={`flex ${HEADER_HEIGHT} items-center border-b px-3 ${collapsed ? 'justify-center px-2' : 'justify-between'} ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
       {!collapsed && (
         <NavLink to={`${barangayPath}/dashboard`} onClick={() => setIsOpen(false)} className="text-lg font-bold tracking-tight text-[#3b82f6]">HazardWatch</NavLink>
       )}
       <button
         type="button"
         onClick={() => setCollapsed((value) => !value)}
-        className={`inline-flex rounded-lg p-2 text-gray-400 hover:bg-white/10 ${collapsed ? 'mx-auto' : ''} ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg p-0 text-gray-400 hover:bg-white/10 ${collapsed ? 'mx-auto' : ''} ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >

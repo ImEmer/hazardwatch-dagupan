@@ -7,6 +7,7 @@ import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
 import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
 import AccountChangeDialogs from './AccountChangeDialogs';
+import BiometricSettingsSection from './BiometricSettingsSection';
 
 const DEFAULT_PREFERENCES = {
   theme: 'dark',
@@ -97,6 +98,7 @@ const SettingsDashboard = () => {
         <AccountChangeDialogs mode="password" inputClass={inputClass} primaryButtonClass={saveButton} secondaryButtonClass={secondaryButton} isDark={isDark} />
       </SettingsSection>
 
+      <BiometricSettingsSection />
 
       <SettingsSection title="Appearance" description="Choose the theme for this account. System follows your device appearance." actions={preferenceSaveActions('appearance', () => savePreferences('appearance', { theme: appearanceDraft }, 'Appearance saved.'), () => changeAppearance(savedAppearance))}>
         <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Theme preference">

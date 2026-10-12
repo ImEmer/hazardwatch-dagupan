@@ -20,6 +20,7 @@ const createLimiter = ({ windowMs, limit, keyGenerator }) => rateLimit({
 });
 
 export const authLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 100 });
+export const biometricLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 20 });
 export const contactLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });
 export const forgotPasswordLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 3 });
 export const resetPasswordLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });

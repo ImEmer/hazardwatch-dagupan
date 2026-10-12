@@ -5,6 +5,7 @@ import CodeInput from '../../components/common/CodeInput';
 import useAuth from '../../hooks/useAuth';
 import { authApi } from '../../services/api';
 import { showSuccess } from '../../services/alerts';
+import { authenticateBiometricLogin, isPlatformAuthenticatorAvailable } from '../../services/biometric';
 
 const TwoFactorPage = () => {
   const { state } = useLocation();
@@ -12,11 +13,25 @@ const TwoFactorPage = () => {
   const { completeLogin } = useAuth();
   const tempToken = state?.tempToken;
   const email = state?.email || 'your email';
+  const biometricEnabled = Boolean(state?.biometricEnabled);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricFallbackMessage, setBiometricFallbackMessage] = useState(state?.biometricFallbackMessage || '');
   const [resendSeconds, setResendSeconds] = useState(60);
   const requestInFlightRef = useRef(false);
+  const biometricStartedRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    if (biometricEnabled) {
+      isPlatformAuthenticatorAvailable().then((available) => {
+        if (active) setBiometricAvailable(available);
+      });
+    }
+    return () => { active = false; };
+  }, [biometricEnabled]);
 
   useEffect(() => {
     if (!resendSeconds) return undefined;
@@ -46,6 +61,30 @@ const TwoFactorPage = () => {
     }
   };
 
+  const finishBiometric = async () => {
+    if (!biometricEnabled || !biometricAvailable || biometricStartedRef.current || requestInFlightRef.current || verifying) return;
+    biometricStartedRef.current = true;
+    requestInFlightRef.current = true;
+    setVerifying(true);
+    setError('');
+    setBiometricFallbackMessage('');
+    try {
+      const session = await authenticateBiometricLogin(email, tempToken);
+      const user = completeLogin(session);
+      await showSuccess(`Welcome back, ${user?.name || email}!`);
+      const role = user?.role?.toLowerCase();
+      const destination = role === 'barangay' ? '/barangay/dashboard' : role === 'superadmin' ? '/superadmin/dashboard' : role === 'admin' ? '/admin/dashboard' : '/';
+      navigate(destination, { replace: true });
+    } catch (requestError) {
+      biometricStartedRef.current = false;
+      setBiometricFallbackMessage('Biometric sign-in was unsuccessful. Continue with your email code or try again.');
+      setError(requestError.response?.data?.message || requestError.message || 'Unable to sign in with biometrics.');
+    } finally {
+      requestInFlightRef.current = false;
+      setVerifying(false);
+    }
+  };
+
   const resendCode = async () => {
     if (resendSeconds || verifying) return;
     setError('');
@@ -60,7 +99,9 @@ const TwoFactorPage = () => {
   return (
     <AuthCard title="Two-factor verification" description={`Enter the security code sent to ${email}.`}>
       <form onSubmit={(event) => { event.preventDefault(); finishVerification(); }} className="space-y-4">
+        {biometricFallbackMessage && <p role="status" className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-300">{biometricFallbackMessage}</p>}
         {error && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+        {biometricEnabled && biometricAvailable && <button type="button" onClick={finishBiometric} disabled={verifying} className="auth-button disabled:cursor-not-allowed disabled:opacity-50">{verifying ? 'Waiting for biometrics...' : 'Sign in with biometrics'}</button>}
         <label className="block text-sm text-gray-300">6-digit security code
           <CodeInput value={code} onChange={setCode} onComplete={finishVerification} disabled={verifying} className="auth-input mt-2 text-center font-mono text-2xl tracking-[0.5em]" inputProps={{ required: true, 'aria-label': '6-digit security code' }} />
         </label>

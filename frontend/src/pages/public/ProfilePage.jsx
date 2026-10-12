@@ -6,6 +6,7 @@ import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import MapPreferencesSection, { normalizeMapPreferences } from '../../components/settings/MapPreferencesSection';
 import AccountChangeDialogs from '../../components/settings/AccountChangeDialogs';
 import { preferencesApi } from '../../services/api';
+import BiometricSettingsSection from '../../components/settings/BiometricSettingsSection';
 
 const ProfilePage = () => {
   const { user, updateProfile, updatePreferences, deleteAccount, logout, loading: authLoading } = useAuth();
@@ -146,6 +147,7 @@ const ProfilePage = () => {
           <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>Update your password with email verification.</p>
           <div className="mt-5"><AccountChangeDialogs mode="password" inputClass={inputClass} isDark={theme === 'dark'} primaryButtonClass="auth-button px-5 py-2" /></div>
         </section>
+        <BiometricSettingsSection />
         <MapPreferencesSection
           value={mapPreferences}
           onChange={(key, value) => setMapPreferences((current) => ({ ...current, [key]: value }))}
