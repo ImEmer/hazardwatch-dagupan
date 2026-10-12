@@ -10,6 +10,8 @@ export const isPlatformAuthenticatorAvailable = async () => {
   }
 };
 
+export const isBiometricPromptCancelled = (error) => ['AbortError', 'NotAllowedError'].includes(error?.name);
+
 export const authenticateBiometricLogin = async (email, tempToken) => {
   const { data: challenge } = await authApi.biometricLoginChallenge(email, tempToken);
   const credential = await startAuthentication({ optionsJSON: challenge.options });

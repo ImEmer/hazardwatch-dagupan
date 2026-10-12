@@ -5,7 +5,7 @@ import CodeInput from '../../components/common/CodeInput';
 import useAuth from '../../hooks/useAuth';
 import { authApi } from '../../services/api';
 import { showSuccess } from '../../services/alerts';
-import { authenticateBiometricLogin, isPlatformAuthenticatorAvailable } from '../../services/biometric';
+import { authenticateBiometricLogin, isBiometricPromptCancelled, isPlatformAuthenticatorAvailable } from '../../services/biometric';
 
 const TwoFactorPage = () => {
   const { state } = useLocation();
@@ -77,8 +77,13 @@ const TwoFactorPage = () => {
       navigate(destination, { replace: true });
     } catch (requestError) {
       biometricStartedRef.current = false;
-      setBiometricFallbackMessage('Biometric sign-in was unsuccessful. Continue with your email code or try again.');
-      setError(requestError.response?.data?.message || requestError.message || 'Unable to sign in with biometrics.');
+      if (isBiometricPromptCancelled(requestError)) {
+        setBiometricFallbackMessage('Biometric sign-in was cancelled. You can continue with your email code.');
+        setError('');
+      } else {
+        setBiometricFallbackMessage('Biometric sign-in was unavailable. You can continue with your email code.');
+        setError(requestError.response?.data?.message || requestError.message || 'Unable to sign in with biometrics.');
+      }
     } finally {
       requestInFlightRef.current = false;
       setVerifying(false);

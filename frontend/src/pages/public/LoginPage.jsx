@@ -5,7 +5,7 @@ import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
 import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
-import { authenticateBiometricLogin, isPlatformAuthenticatorAvailable } from '../../services/biometric';
+import { authenticateBiometricLogin, isBiometricPromptCancelled, isPlatformAuthenticatorAvailable } from '../../services/biometric';
 
 const LoginPage = () => {
   const { login, completeLogin, user, isAuthenticated } = useAuth();
@@ -50,7 +50,7 @@ const LoginPage = () => {
       ? '/barangay/dashboard'
       : role === 'superadmin'
         ? '/superadmin/dashboard'
-        : role === 'admin'
+        : role === 'admin' || role === 'staff'
           ? '/admin/dashboard'
           : '/';
     return <Navigate to={targetRoute} replace />;
@@ -94,9 +94,11 @@ const LoginPage = () => {
             await showSuccess(`Welcome back, ${biometricUser?.name || email}!`);
             navigate(targetRoute, { replace: true });
             return;
-          } catch {
+          } catch (biometricError) {
             biometricStartedRef.current = false;
-            twoFactorState.biometricFallbackMessage = 'Biometric sign-in was unsuccessful. Continue with your email code or retry biometrics.';
+            twoFactorState.biometricFallbackMessage = isBiometricPromptCancelled(biometricError)
+              ? 'Biometric sign-in was cancelled. You can continue with your email code.'
+              : 'Biometric sign-in was unavailable. You can continue with your email code.';
           }
         }
         navigate('/verify-2fa', { replace: true, state: twoFactorState });
@@ -110,7 +112,7 @@ const LoginPage = () => {
         ? '/barangay/dashboard'
         : role === 'superadmin'
           ? '/superadmin/dashboard'
-          : role === 'admin'
+          : role === 'admin' || role === 'staff'
             ? '/admin/dashboard'
             : '/';
       navigate(targetRoute, { replace: true });

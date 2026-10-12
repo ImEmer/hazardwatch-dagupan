@@ -327,13 +327,13 @@
             <div className={`absolute inset-0 backdrop-blur-[2px] ${isDark ? 'bg-[#0a0b0f]/60' : 'bg-white/80'}`}></div>
             </div>
 
-            <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-8 py-24 md:px-12 md:py-32">
+            <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-4 py-16 sm:px-6 sm:py-24 md:px-12 md:py-32">
             <div className="max-w-3xl" data-aos="fade-up" data-aos-duration="1000">
-                <div className="mb-6 inline-block rounded-full border border-[#3b82f6]/30 bg-[#3b82f6]/10 px-4 py-1.5 text-sm font-medium tracking-wide text-[#60a5fa]">
+                <div className="mb-3 inline-block rounded-full border border-[#3b82f6]/30 bg-[#3b82f6]/10 px-4 py-1.5 text-xs font-medium tracking-wide text-[#60a5fa] sm:mb-6 sm:text-sm">
                 Dagupan City - Community Safety
                 </div>
 
-                <h1 className={`mb-6 text-5xl font-bold leading-[1.1] md:text-7xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h1 className={`mb-3 text-3xl font-bold leading-[1.08] sm:mb-6 sm:text-4xl md:text-7xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Report Hazards.
                 <br />
                 Track Incidents.
@@ -341,17 +341,17 @@
                 <span className="text-[#3b82f6]">Keep Your Community Safe.</span>
                 </h1>
 
-                <p className={`mb-8 max-w-2xl text-lg leading-relaxed md:text-xl ${isDark ? 'text-white' : 'text-gray-600'}`}>
+                <p className={`mb-4 max-w-2xl text-base leading-snug sm:mb-8 sm:text-lg sm:leading-relaxed md:text-xl ${isDark ? 'text-white' : 'text-gray-600'}`}>
                 Report hazards, track incidents, and keep your community informed in real time.
                 HazardWatch connects citizens and local staff in one platform for faster reporting,
                 monitoring, and response.
                 </p>
 
-                <div className="flex flex-wrap gap-4">
-                <Link to="/submit" className="rounded-xl bg-[#3b82f6] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#3b82f6]/30 transition hover:bg-[#2563eb] hover:shadow-[#3b82f6]/50">
+                <div className="flex flex-wrap gap-3 sm:gap-4">
+                <Link to="/submit" className="rounded-xl bg-[#3b82f6] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#3b82f6]/30 transition hover:bg-[#2563eb] hover:shadow-[#3b82f6]/50 sm:px-8 sm:py-3.5 sm:text-base">
                     Report a Hazard
                 </Link>
-                <Link to="/map" className={`rounded-xl border px-8 py-3.5 text-base font-semibold transition ${isDark ? 'border-[#2e303a] bg-[#14151d] text-white hover:bg-[#1f2028]' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'}`}>
+                <Link to="/map" className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition sm:px-8 sm:py-3.5 sm:text-base ${isDark ? 'border-[#2e303a] bg-[#14151d] text-white hover:bg-[#1f2028]' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'}`}>
                     View Hazard Map
                 </Link>
                 </div>

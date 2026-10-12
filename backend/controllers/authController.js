@@ -16,7 +16,7 @@ export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role, au
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
-const requiresTwoFactor = (user) => Boolean(user.biometricEnabled || (privilegedRoles.includes(user.role) && user.twoFactorEnabled));
+const requiresTwoFactor = (user) => privilegedRoles.includes(user.role);
 const resolveWebAuthnContext = (req) => {
   const origin = req.get('origin');
   if (!origin) return null;
