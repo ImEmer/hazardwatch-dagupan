@@ -26,7 +26,7 @@ const SuspendUserModal = ({ isOpen, isDark, targetUser, currentUser, userName, o
       return;
     }
     setError('');
-    await onConfirm({ durationInDays: form.duration === 'custom' ? 'custom' : Number(form.duration), suspendedUntil: form.customDate, reason: form.reason.trim() });
+    await onConfirm({ durationInDays: form.duration === 'custom' || form.duration === '20s' ? form.duration : Number(form.duration), suspendedUntil: form.customDate, reason: form.reason.trim() });
   };
 
   return (
