@@ -284,15 +284,32 @@ export const suspendUser = async (req, res, next) => {
     await target.save({ validateBeforeSave: false });
 
     try {
-      await sendAccountSuspendedEmail({
-        email: target.email,
-        name: target.name,
+      await sendAccountSuspendedEmail(target, {
         reason,
         suspendedUntil: until,
+        suspendedBy: req.user._id,
       });
     } catch (emailError) {
-      console.error('[users] Suspension email failed:', emailError.message);
+      console.error('[suspend] email failed:', emailError.message);
     }
+
+    await logActivity({
+      actor: req.user,
+      action: 'user_suspended',
+      message: `${req.user.name} suspended ${target.name} until ${until.toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT`,
+      details: {
+        reason,
+        suspensionReason: reason,
+        suspendedUntil: until.toISOString(),
+        suspendedBy: req.user.name,
+        duration: requestedDuration,
+      },
+      scope: 'admin',
+      entityType: 'user',
+      entityId: target._id,
+    }).catch((logError) => {
+      console.error('[users] Suspension activity log failed:', logError.message);
+    });
 
     if (isAutoBan) {
       target.status = 'banned';
@@ -306,13 +323,13 @@ export const suspendUser = async (req, res, next) => {
       await target.save({ validateBeforeSave: false });
 
       try {
-        await sendAutoBanEmail({
-          email: target.email,
-          name: target.name,
-          suspensionDates: suspensionDates.slice(-3),
+        await sendAutoBanEmail(target, {
+          reason: target.banReason,
+          bannedAt: target.bannedAt,
+          priorSuspensionCount: suspensionCount - 1,
         });
       } catch (emailError) {
-        console.error('[users] Auto-ban email failed:', emailError.message);
+        console.error('[suspend] auto-ban email failed:', emailError.message);
       }
 
       const adminNotificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.EMAIL_FROM || 'emersonisla06@gmail.com';
@@ -374,21 +391,6 @@ export const suspendUser = async (req, res, next) => {
         referenceModel: 'User',
       });
     }
-    await logActivity({
-      actor: req.user,
-      action: 'user_suspended',
-      message: `${req.user.name} suspended ${target.name} until ${until.toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT`,
-      details: {
-        reason,
-        suspensionReason: reason,
-        suspendedUntil: until.toISOString(),
-        suspendedBy: req.user.name,
-        duration: requestedDuration,
-      },
-      scope: 'admin',
-      entityType: 'user',
-      entityId: target._id,
-    }).catch(() => {});
     return res.json({ success: true, user: target.toJSON() });
   } catch (error) { next(error); }
 };
