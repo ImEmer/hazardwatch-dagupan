@@ -824,9 +824,15 @@ export const forgotPassword = async (req, res) => {
   const response = { success: true, message: 'If an account exists for this email, a reset code has been sent.' };
 
   try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const user = await User.findOne({ email }).select('+passwordResetLastSentAt');
-    if (!user) return res.json(response);
+    const authenticatedUser = req.user || null;
+    const requestedEmail = String(req.body.email || '').trim().toLowerCase();
+    const targetEmail = authenticatedUser?.email ? authenticatedUser.email.trim().toLowerCase() : requestedEmail;
+    const user = await User.findOne({ email: targetEmail }).select('+passwordResetLastSentAt +emailVerified');
+    if (!user || !user.emailVerified || user.status === 'deleted') return res.json(response);
+
+    if (authenticatedUser && String(authenticatedUser.email || '').trim().toLowerCase() !== String(user.email || '').trim().toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'You can only request a reset for your own account.' });
+    }
 
     if (user.passwordResetLastSentAt && Date.now() - user.passwordResetLastSentAt.getTime() < 60 * 1000) {
       return res.status(429).json({ success: false, message: 'Please wait 60 seconds before requesting another code.' });
@@ -847,9 +853,9 @@ export const forgotPassword = async (req, res) => {
     }
 
     try {
-      console.log('[forgot-password] Sending email to:', email);
+      console.log('[forgot-password] Sending email to:', user.email);
       const info = await sendPasswordResetCode(user.email, resetCode, user.name);
-      console.log('[forgot-password] Email sent:', { to: email, messageId: info.messageId });
+      console.log('[forgot-password] Email sent:', { to: user.email, messageId: info.messageId });
     } catch (error) {
       console.error('[forgot-password] Email failed:', { message: error.message, code: error.code, command: error.command, response: error.response, stack: error.stack });
     }

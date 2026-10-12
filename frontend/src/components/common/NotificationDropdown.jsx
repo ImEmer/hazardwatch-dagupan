@@ -73,7 +73,7 @@ const NotificationDropdown = ({ open, setOpen, bellRef, notifications, onMarkAsR
           <CheckCheck size={15} aria-hidden="true" /> Mark all read
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
         {notifications.length === 0 ? (
           <p className={`px-5 py-10 text-center text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>You’re all caught up.</p>
         ) : notifications.map((notification) => (

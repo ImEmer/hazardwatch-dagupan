@@ -248,7 +248,7 @@ export const deleteUser = async (req, res, next) => {
 };
 
 const getDurationMs = (duration) => {
-  if (duration === 'custom') return null;
+  if (duration === 'custom' || duration === '20s') return duration === '20s' ? 20 * 1000 : null;
   const days = Number(duration);
   return [1, 3, 7, 30].includes(days) ? days * 24 * 60 * 60 * 1000 : null;
 };
@@ -269,6 +269,7 @@ export const suspendUser = async (req, res, next) => {
     const reason = String(req.body.reason || 'Temporarily suspended by administrator').trim();
     const suspensionCount = Number(target.suspensionCount || 0) + 1;
     const suspensionDates = [...(Array.isArray(target.suspensionHistory) ? target.suspensionHistory : []), new Date()];
+    const isAutoBan = suspensionCount >= 3;
 
     target.status = 'suspended';
     target.isActive = false;
@@ -291,7 +292,7 @@ export const suspendUser = async (req, res, next) => {
       console.error('[users] Suspension email failed:', emailError.message);
     }
 
-    if (suspensionCount >= 3) {
+    if (isAutoBan) {
       target.status = 'banned';
       target.isActive = false;
       target.bannedAt = new Date();
@@ -328,8 +329,15 @@ export const suspendUser = async (req, res, next) => {
       try {
         await logActivity({
           actor: req.user,
-          action: 'user_auto_banned',
+          action: 'AUTO_BANNED',
           message: `${req.user.name} auto-banned ${target.name} after ${suspensionCount} suspensions`,
+          details: {
+            banReason: 'Auto-banned after 3 suspensions',
+            bannedAt: new Date().toISOString(),
+            bannedBy: req.user.name,
+            priorSuspensionCount: suspensionCount - 1,
+            isAutoBan: true,
+          },
           scope: 'admin',
           entityType: 'user',
           entityId: target._id,
@@ -368,6 +376,11 @@ export const suspendUser = async (req, res, next) => {
       actor: req.user,
       action: 'user_suspended',
       message: `${req.user.name} suspended ${target.name} until ${until.toISOString()}`,
+      details: {
+        suspensionReason: reason,
+        suspendedUntil: until.toISOString(),
+        suspendedBy: req.user.name,
+      },
       scope: 'admin',
       entityType: 'user',
       entityId: target._id,
@@ -383,15 +396,31 @@ export const banUser = async (req, res, next) => {
     const permissionError = managedTargetError(req.user, target, 'ban');
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
     if (target.status === 'banned') return res.status(409).json({ success: false, message: 'This user is already permanently banned.' });
+    const banReason = String(req.body.reason || '').trim() || 'Banned by administrator';
     target.status = 'banned';
     target.isActive = false;
     target.bannedAt = new Date();
     target.bannedBy = req.user._id;
-    target.banReason = String(req.body.reason || '').trim() || undefined;
+    target.banReason = banReason;
     target.suspendedUntil = undefined;
     target.suspensionReason = undefined;
     target.suspendedBy = undefined;
     await target.save({ validateBeforeSave: false });
+    await logActivity({
+      actor: req.user,
+      action: 'BANNED',
+      message: `${req.user.name} banned ${target.name}'s account`,
+      details: {
+        banReason,
+        bannedAt: target.bannedAt.toISOString(),
+        bannedBy: req.user.name,
+        priorSuspensionCount: Number(target.suspensionCount || 0),
+        isAutoBan: false,
+      },
+      scope: 'admin',
+      entityType: 'user',
+      entityId: target._id,
+    }).catch(() => {});
     if (['superadmin', 'admin', 'barangay'].includes(target.role)) {
       await createNotification({
         recipientId: target._id,
@@ -416,6 +445,15 @@ export const unsuspendUser = async (req, res, next) => {
     if (permissionError) return res.status(403).json({ success: false, message: permissionError });
     target.status = 'active'; target.isActive = true; target.suspendedUntil = undefined; target.suspensionReason = undefined; target.suspendedBy = undefined;
     await target.save({ validateBeforeSave: false });
+    await logActivity({
+      actor: req.user,
+      action: 'UNSUSPENDED',
+      message: `${req.user.name} unsuspended ${target.name}'s account`,
+      details: { unsuspendedAt: new Date().toISOString() },
+      scope: 'admin',
+      entityType: 'user',
+      entityId: target._id,
+    }).catch(() => {});
     res.json({ success: true, user: target.toJSON() });
   } catch (error) { next(error); }
 };

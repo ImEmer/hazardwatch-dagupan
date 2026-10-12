@@ -10,7 +10,7 @@ const createLimiter = ({ windowMs, limit, keyGenerator }) => rateLimit({
   windowMs,
   limit,
   keyGenerator,
-  standardHeaders: 'draft-7',
+  standardHeaders: 'draft-7', 
   legacyHeaders: false,
   handler: (req, res) => {
     const retryAfter = retryAfterSeconds(req);
