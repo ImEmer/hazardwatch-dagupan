@@ -38,6 +38,49 @@ const hazardTypes = [
   'Public Safety Hazard',
 ];
 
+const hazardDetails = {
+  Pothole: {
+    title: 'Pothole',
+    description: 'Road surface damage that can create sudden vehicle hazards and unsafe pedestrian walking conditions.',
+    accent: 'from-sky-500/20 to-cyan-500/10',
+  },
+  Flooding: {
+    title: 'Flooding',
+    description: 'Standing water or rising flood conditions that threaten streets, homes, and access routes during heavy rain.',
+    accent: 'from-cyan-500/20 to-blue-500/10',
+  },
+  'Broken Streetlight': {
+    title: 'Broken Streetlight',
+    description: 'Dark or unsafe street areas where lighting failures increase risk for residents and drivers at night.',
+    accent: 'from-indigo-500/20 to-sky-500/10',
+  },
+  'Waste Disposal': {
+    title: 'Waste Disposal',
+    description: 'Improper dumping, overflowing bins, and unsanitary waste buildup affecting drainage and neighborhood health.',
+    accent: 'from-emerald-500/20 to-cyan-500/10',
+  },
+  'Damaged Road': {
+    title: 'Damaged Road',
+    description: 'Severely worn or cracked roads that affect traffic flow, vehicle safety, and public access.',
+    accent: 'from-amber-500/20 to-orange-500/10',
+  },
+  'Fire Hazard': {
+    title: 'Fire Hazard',
+    description: 'Unsafe conditions such as open flames, blocked access, or combustible materials that need rapid attention.',
+    accent: 'from-red-500/20 to-orange-500/10',
+  },
+  'Gas Leak': {
+    title: 'Gas Leak',
+    description: 'Possible gas line or fuel leak risks that require immediate reporting and careful response.',
+    accent: 'from-yellow-500/20 to-amber-500/10',
+  },
+  'Public Safety Hazard': {
+    title: 'Public Safety Hazard',
+    description: 'Other urgent risks that affect community safety, visibility, or hazardous public access conditions.',
+    accent: 'from-violet-500/20 to-sky-500/10',
+  },
+};
+
 const problemItems = [
   {
     title: 'Too many channels',
@@ -107,10 +150,12 @@ const HomePage = () => {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.4]);
-  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -8]);
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, -60]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.45]);
+  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -10]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, -72]);
+  const heroTextX = useTransform(scrollYProgress, [0, 0.4], [0, 18]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0.7]);
+  const globeY = useTransform(scrollYProgress, [0, 0.8], [0, -18]);
 
   const [publicStats, setPublicStats] = useState({
     totalReports: 0,
@@ -127,7 +172,35 @@ const HomePage = () => {
     resolvedCases: 0,
     areasCovered: 0,
   });
+  const [activeHazard, setActiveHazard] = useState(hazardTypes[0]);
+  const [typedHazardTitle, setTypedHazardTitle] = useState('');
   const statsRef = useRef(null);
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      setTypedHazardTitle(hazardDetails[activeHazard]?.title || activeHazard);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timeoutId;
+    const text = hazardDetails[activeHazard]?.title || activeHazard;
+    setTypedHazardTitle('');
+
+    const tick = (index) => {
+      if (cancelled) return;
+      setTypedHazardTitle(text.slice(0, index));
+      if (index < text.length) {
+        timeoutId = setTimeout(() => tick(index + 1), 28);
+      }
+    };
+
+    tick(0);
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [activeHazard, shouldReduceMotion]);
 
   useEffect(() => {
     if (loading || !token || !user) return;
@@ -261,7 +334,7 @@ const HomePage = () => {
 
           <motion.div
             className="relative z-10 mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-12 pt-20 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8"
-            style={shouldReduceMotion ? undefined : { y: heroY, opacity: heroOpacity }}
+            style={shouldReduceMotion ? undefined : { x: heroTextX, y: heroY, opacity: heroOpacity }}
           >
             <div className="relative z-10 max-w-xl">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-sky-200/90 backdrop-blur-sm">
@@ -328,7 +401,10 @@ const HomePage = () => {
 
         <section className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <div className="flex items-center justify-center lg:justify-start">
+            <motion.div
+              style={shouldReduceMotion ? undefined : { y: globeY }}
+              className="flex items-center justify-center lg:justify-start"
+            >
               <div className="relative w-full max-w-md aspect-square mx-auto">
                 <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-3xl" />
                 <div className="relative h-full w-full overflow-hidden rounded-full border border-cyan-400/20 bg-gradient-to-br from-blue-900 via-blue-950 to-slate-950 shadow-2xl shadow-cyan-500/30">
@@ -341,7 +417,7 @@ const HomePage = () => {
                       `,
                     }}
                   />
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400/40 via-transparent to-transparent" />
+                  <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(103,232,249,0.45),transparent_28%),linear-gradient(135deg,rgba(34,211,238,0.28),transparent_50%,rgba(15,23,42,0.7))]" />
                   {[
                     { top: '30%', left: '40%', delay: 0 },
                     { top: '55%', left: '65%', delay: 0.3 },
@@ -361,7 +437,7 @@ const HomePage = () => {
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             <div>
               <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">Why fragmented reporting fails</p>
@@ -444,25 +520,92 @@ const HomePage = () => {
             <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">From street issues to urgent hazards.</h2>
           </div>
 
-          <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/40 py-4">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#0a0b0f] to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#0a0b0f] to-transparent" />
-            <div className="marquee-track flex gap-5 px-3">
-              {[...hazardTypes, ...hazardTypes].map((hazard, index) => (
-                <motion.article
-                  key={`${hazard}-${index}`}
-                  whileHover={shouldReduceMotion ? undefined : { y: -4, scale: 1.02 }}
-                  className="group flex h-[120px] w-[240px] shrink-0 flex-col justify-between rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(15,23,42,0.7))] p-5 shadow-[0_10px_30px_rgba(37,99,235,0.08)] transition-all duration-300 hover:border-sky-400/40 hover:shadow-[0_20px_40px_rgba(34,211,238,0.18)]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-500/10 text-sm font-semibold text-sky-300">{String(index + 1).padStart(2, '0')}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-white">{hazard}</h3>
-                  </div>
-                </motion.article>
-              ))}
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch">
+            <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/40 p-4">
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#0a0b0f] to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#0a0b0f] to-transparent" />
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {hazardTypes.map((hazard, index) => {
+                  const isActive = activeHazard === hazard;
+                  return (
+                    <motion.button
+                      key={`${hazard}-${index}`}
+                      type="button"
+                      onMouseEnter={() => setActiveHazard(hazard)}
+                      onFocus={() => setActiveHazard(hazard)}
+                      onClick={() => setActiveHazard(hazard)}
+                      aria-pressed={isActive}
+                      whileHover={shouldReduceMotion ? undefined : { y: -6, scale: 1.01 }}
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+                      className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
+                        isActive
+                          ? 'border-sky-400/60 bg-slate-900/90 shadow-[0_20px_50px_rgba(34,211,238,0.15)]'
+                          : 'border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(15,23,42,0.7))] hover:border-sky-400/40'
+                      }`}
+                    >
+                      <div className={`absolute inset-0 bg-gradient-to-br ${hazardDetails[hazard]?.accent || 'from-sky-500/10 to-cyan-500/10'} opacity-80`} />
+                      <div className="relative flex min-h-[110px] flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10 text-sm font-semibold text-sky-200">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.9)]' : 'bg-slate-600'}`} />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-white">{hazard}</h3>
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
+
+            <motion.div
+              layout
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="overflow-hidden rounded-[28px] border border-sky-400/20 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),transparent_40%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-6 shadow-[0_30px_80px_rgba(14,116,144,0.18)]"
+            >
+              <div className="mb-3 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.2em] text-cyan-200/80">
+                <span>Selected category</span>
+                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-[9px] text-cyan-200">Live focus</span>
+              </div>
+
+              <motion.h3
+                key={activeHazard}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+                animate={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="min-h-[64px] text-2xl font-bold tracking-tight text-white"
+              >
+                {typedHazardTitle}
+              </motion.h3>
+
+              <motion.p
+                key={`${activeHazard}-description`}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+                animate={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.05, ease: 'easeOut' }}
+                className="mt-4 text-sm leading-6 text-slate-300"
+              >
+                {hazardDetails[activeHazard]?.description || 'Report issues impacting public safety and daily access across Dagupan City.'}
+              </motion.p>
+
+              <div className="mt-6 space-y-3">
+                {['Residents can report this issue through the public reporting flow.', 'Staff can review and route the case to the appropriate response path.'].map((line, index) => (
+                  <motion.div
+                    key={`${activeHazard}-${line}`}
+                    initial={shouldReduceMotion ? false : { opacity: 0, x: -12 }}
+                    animate={shouldReduceMotion ? { opacity: 1, x: 0 } : { opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.08 + index * 0.06, ease: 'easeOut' }}
+                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3"
+                  >
+                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
+                    <span className="text-sm text-slate-200">{line}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </section>
 
