@@ -6,7 +6,7 @@ const Footer = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const muted = isDark ? 'text-gray-400' : 'text-slate-600';
-  return <footer className={`border-t px-8 pb-8 pt-12 md:px-12 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'}`}>
+  return <footer className={`relative z-20 border-t px-8 pb-8 pt-12 md:px-12 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]' : 'border-slate-200 bg-white'}`}>
     <div className="mx-auto max-w-7xl">
       <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-4">
         <div>

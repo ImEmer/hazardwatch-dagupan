@@ -1,15 +1,26 @@
 import { body, param, query, validationResult } from 'express-validator';
 import { resolveBarangayFromCoords } from '../utils/dagupanBarangays.js';
 
+const firstValidationError = (errors) => {
+  const first = errors.array()[0];
+  return first?.msg || 'Validation failed';
+};
+
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(422).json({ success: false, message: errors.array()[0]?.msg || 'Validation failed', errors: errors.array() });
+  if (!errors.isEmpty()) {
+    const serialized = errors.array();
+    return res.status(422).json({ success: false, message: firstValidationError(errors), errors: serialized });
+  }
   next();
 };
 
 export const validateBadRequest = (req, res, next) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg, errors: errors.array() });
+  if (!errors.isEmpty()) {
+    const serialized = errors.array();
+    return res.status(400).json({ success: false, message: firstValidationError(errors), errors: serialized });
+  }
   next();
 };
 
@@ -44,7 +55,11 @@ export const validateRegister = [
   }),
   validateBadRequest,
 ];
-export const validateLogin = [body('email').trim().isEmail().normalizeEmail(), body('password').notEmpty(), validate];
+export const validateLogin = [
+  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  body('password').notEmpty().withMessage('Password is required.'),
+  validateBadRequest,
+];
 export const validateEmailVerification = [
   body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
   body('code').isString().matches(/^\d{6}$/).withMessage('Enter the 6-digit verification code.'),
@@ -144,8 +159,14 @@ export const validateReportComment = [
   body('text').trim().escape().isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters.'),
   validateBadRequest,
 ];
-export const validateReportStatus = [body('status').trim().isIn(['Pending', 'In Progress', 'Resolved', 'Closed']).withMessage('Invalid report status.'), validateBadRequest];
-export const validateReportPriority = [body('priority').trim().isIn(['Low', 'Medium', 'High', 'Urgent']).withMessage('Invalid report priority.'), validateBadRequest];
+export const validateReportStatus = [
+  body('status').trim().isIn(['Pending', 'In Progress', 'Resolved', 'Closed']).withMessage('Invalid report status.'),
+  validateBadRequest,
+];
+export const validateReportPriority = [
+  body('priority').trim().isIn(['Low', 'Medium', 'High', 'Urgent']).withMessage('Invalid report priority.'),
+  validateBadRequest,
+];
 export const validateReportAssignment = [
   body('assignedTo').optional({ nullable: true }).isMongoId().withMessage('Invalid assignee id.'),
   body('assignedBarangay').optional().trim().isLength({ max: 100 }).escape(),
@@ -182,19 +203,19 @@ export const validateUserUpdate = [
 ];
 export const validateEmail = [body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'), validateBadRequest];
 export const validateResetCode = [
-  body('email').trim().isEmail().normalizeEmail(),
-  body('code').trim().isLength({ min: 6, max: 6 }).isNumeric(),
+  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Reset code must be a 6-digit number.'),
   validateBadRequest,
 ];
 export const validateResetPassword = [
-  body('token').trim().isLength({ min: 20, max: 200 }),
+  body('token').trim().isLength({ min: 20, max: 200 }).withMessage('Reset token is invalid.'),
   passwordPolicy(),
   validateBadRequest,
 ];
 export const validateProfile = [
   mutationFieldAllowlist(['name', 'email']),
-  body('name').trim().escape().isLength({ min: 2, max: 50 }),
-  body('email').trim().isEmail().normalizeEmail(),
+  body('name').trim().escape().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
+  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
   validateBadRequest,
 ];
 export const validateEmailChangeRequest = [
@@ -204,14 +225,17 @@ export const validateEmailChangeRequest = [
 ];
 export const validateChangeCode = [
   mutationFieldAllowlist(['code', 'currentPassword']),
-  body('code').trim().isLength({ min: 6, max: 6 }).isNumeric(),
-  body('currentPassword').optional().isString().isLength({ min: 1, max: 128 }),
+  body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Verification code must be 6 digits.'),
+  body('currentPassword').optional().isString().isLength({ min: 1, max: 128 }).withMessage('Current password is required.'),
   validateBadRequest,
 ];
 export const validatePasswordChangeRequest = [
   mutationFieldAllowlist(['currentPassword', 'newPassword']),
-  body('currentPassword').isString().isLength({ min: 1, max: 128 }),
+  body('currentPassword').isString().isLength({ min: 1, max: 128 }).withMessage('Current password is required.'),
   passwordPolicy('newPassword'),
   validateBadRequest,
 ];
-export const validateStatusAction = [body('status').optional().isIn(['active', 'suspended', 'banned', 'deleted', 'pending']), validateBadRequest];
+export const validateStatusAction = [
+  body('status').optional().isIn(['active', 'suspended', 'banned', 'deleted', 'pending']).withMessage('Invalid user status.'),
+  validateBadRequest,
+];

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin } from 'lucide-react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
+import { ArrowUpRight, Droplets, Flame, Shield, Wrench } from 'lucide-react';
 import StaticMap from '../../components/StaticMap';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
@@ -27,119 +27,291 @@ const CATEGORY_DESCRIPTIONS = {
   'Broken Streetlight': 'Streetlight outages and nighttime visibility concerns.',
 };
 
-const hazardTypes = [
-  'Pothole',
-  'Flooding',
-  'Broken Streetlight',
-  'Waste Disposal',
-  'Damaged Road',
-  'Fire Hazard',
-  'Gas Leak',
-  'Public Safety Hazard',
+const hazardCategories = [
+  {
+    id: 'flood-water',
+    label: 'Flood & Water',
+    icon: Droplets,
+    color: 'cyan',
+    description: 'Flooding, drainage blockages, and water-related hazards affecting streets and neighborhoods.',
+    subCategories: [
+      'Flooding',
+      'Clogged Drainage',
+      'Broken Water Pipe',
+      'Clogged Canal (Waste)',
+      'Contaminated Water',
+      'Oil Spill',
+      'Water Leak',
+    ],
+  },
+  {
+    id: 'fire-emergency',
+    label: 'Fire & Emergency',
+    icon: Flame,
+    color: 'red',
+    description: 'Fire risks, gas leaks, blocked fire exits, and smoke incidents that need urgent attention.',
+    subCategories: ['Fire Hazard', 'Gas Leak', 'Blocked Fire Exit', 'Smoke Report'],
+  },
+  {
+    id: 'infrastructure',
+    label: 'Infrastructure',
+    icon: Wrench,
+    color: 'amber',
+    description: 'Road, streetlight, facility, and transport infrastructure issues affecting public access.',
+    subCategories: [
+      'Pothole',
+      'Broken Streetlight',
+      'Damaged Public Facility',
+      'Fallen Electrical Wire',
+      'Damaged Road',
+      'Broken Traffic Light',
+      'Damaged Bridge',
+      'Damaged Sidewalk',
+      'Missing Road Sign',
+      'Traffic Obstruction',
+    ],
+  },
+  {
+    id: 'public-safety-environment',
+    label: 'Public Safety & Environment',
+    icon: Shield,
+    color: 'green',
+    description: 'Waste, environmental hazards, and other public safety concerns in the community.',
+    subCategories: [
+      'Waste Disposal',
+      'Illegal Dumping',
+      'Air Pollution',
+      'Animal Related',
+      'Deforestation',
+      'Fallen Tree',
+      'Noise Pollution',
+      'Other',
+      'Overflowing Trash Bin',
+      'Public Safety Hazard',
+      'Public Toilet Issue',
+      'Vandalism',
+    ],
+  },
 ];
 
-const hazardDetails = {
-  Pothole: {
-    title: 'Pothole',
-    description: 'Road surface damage that can create sudden vehicle hazards and unsafe pedestrian walking conditions.',
-    accent: 'from-sky-500/20 to-cyan-500/10',
+const totalReportTypes = hazardCategories.reduce(
+  (total, category) => total + category.subCategories.length,
+  0,
+);
+
+const hazardCategoryStyles = {
+  cyan: {
+    active: 'border-cyan-400/60 bg-cyan-500/10',
+    icon: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200',
+    count: 'text-cyan-200',
   },
-  Flooding: {
-    title: 'Flooding',
-    description: 'Standing water or rising flood conditions that threaten streets, homes, and access routes during heavy rain.',
-    accent: 'from-cyan-500/20 to-blue-500/10',
+  red: {
+    active: 'border-red-400/60 bg-red-500/10',
+    icon: 'border-red-400/30 bg-red-500/10 text-red-200',
+    count: 'text-red-200',
   },
-  'Broken Streetlight': {
-    title: 'Broken Streetlight',
-    description: 'Dark or unsafe street areas where lighting failures increase risk for residents and drivers at night.',
-    accent: 'from-indigo-500/20 to-sky-500/10',
+  amber: {
+    active: 'border-amber-400/60 bg-amber-500/10',
+    icon: 'border-amber-400/30 bg-amber-500/10 text-amber-200',
+    count: 'text-amber-200',
   },
-  'Waste Disposal': {
-    title: 'Waste Disposal',
-    description: 'Improper dumping, overflowing bins, and unsanitary waste buildup affecting drainage and neighborhood health.',
-    accent: 'from-emerald-500/20 to-cyan-500/10',
-  },
-  'Damaged Road': {
-    title: 'Damaged Road',
-    description: 'Severely worn or cracked roads that affect traffic flow, vehicle safety, and public access.',
-    accent: 'from-amber-500/20 to-orange-500/10',
-  },
-  'Fire Hazard': {
-    title: 'Fire Hazard',
-    description: 'Unsafe conditions such as open flames, blocked access, or combustible materials that need rapid attention.',
-    accent: 'from-red-500/20 to-orange-500/10',
-  },
-  'Gas Leak': {
-    title: 'Gas Leak',
-    description: 'Possible gas line or fuel leak risks that require immediate reporting and careful response.',
-    accent: 'from-yellow-500/20 to-amber-500/10',
-  },
-  'Public Safety Hazard': {
-    title: 'Public Safety Hazard',
-    description: 'Other urgent risks that affect community safety, visibility, or hazardous public access conditions.',
-    accent: 'from-violet-500/20 to-sky-500/10',
+  green: {
+    active: 'border-green-400/60 bg-green-500/10',
+    icon: 'border-green-400/30 bg-green-500/10 text-green-200',
+    count: 'text-green-200',
   },
 };
 
-const problemItems = [
+const fragmentedReports = [
   {
+    label: 'CHANNEL CHAOS',
     title: 'Too many channels',
     description: 'Reports get scattered across email, phone, and paper forms.',
-    icon: (
-      <svg className="h-5 w-5 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
+    images: ['channel1.jpg', 'channel2.jpg', 'channel3.jpg'],
+    imageAlts: ['Scattered communication channels', 'Disconnected reporting devices', 'A tangled network of reports'],
   },
   {
+    label: 'VISIBILITY',
     title: 'No status updates',
-    description: 'Residents don\'t know whether a report was seen or fixed.',
-    icon: (
-      <svg className="h-5 w-5 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-      </svg>
-    ),
+    description: "Residents don't know whether a report was seen or fixed.",
+    images: ['status1.jpg', 'status2.jpg', 'status3.jpg'],
+    imageAlts: ['No status updates', 'Unanswered report notification', 'A report lost in the system'],
   },
   {
+    label: 'PROCESS',
     title: 'Manual triage',
     description: 'Every case has to be read, checked, and forwarded by hand.',
-    icon: (
-      <svg className="h-5 w-5 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
+    images: ['manual1.jpg', 'manual2.jpg', 'manual3.jpg'],
+    imageAlts: ['Manual document triage', 'Staff sorting paper reports', 'A queue of reports awaiting review'],
   },
   {
+    label: 'DATA',
     title: 'No trends',
     description: 'Without structured data, planners are guessing where to act first.',
-    icon: (
-      <svg className="h-5 w-5 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
+    images: ['trend1.jpg', 'trend2.jpg', 'trend3.jpg'],
+    imageAlts: ['No data trends', 'Unorganized hazard records', 'A city planner reviewing scattered data'],
   },
 ];
+
+const FragmentedImage = ({ src, alt, className }) => {
+  const [hasError, setHasError] = useState(false);
+  const [source, setSource] = useState(`/images/fragmented/${src}`);
+
+  return (
+    <div className={`overflow-hidden rounded-[28px] border border-slate-700 sm:rounded-[40px] ${className}`}>
+      {!src || hasError ? (
+        <div
+          role="img"
+          aria-label={alt}
+          className="h-full w-full bg-gradient-to-br from-slate-700 to-slate-800"
+        />
+      ) : (
+        <img
+          src={source}
+          alt={alt}
+          loading="lazy"
+          onError={() => {
+            if (source !== `/${src}`) setSource(`/${src}`);
+            else setHasError(true);
+          }}
+          className="h-full w-full object-cover"
+        />
+      )}
+    </div>
+  );
+};
+
+const GlobeBackground = ({ y, rotateY, scale, opacity, reduceMotion }) => (
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute left-1/2 top-[55vh] z-0 -translate-x-1/2"
+  >
+    <motion.img
+      src="/globe.png"
+      alt=""
+      aria-hidden="true"
+      style={reduceMotion ? undefined : { y, rotateY, scale, opacity, transformPerspective: 1200 }}
+      className="block w-[120vmax] max-w-none h-auto opacity-70 brightness-125 saturate-125"
+    />
+  </div>
+);
+
+const StackedReportCard = ({ item, index, total, reduceMotion }) => {
+  const cardRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: cardRef,
+    offset: ['start end', 'start 96px'],
+  });
+  const targetScale = 1 - (total - 1 - index) * 0.03;
+  const scale = useSpring(
+    useTransform(scrollYProgress, [0, 1], [1, targetScale], { clamp: true }),
+    { stiffness: 120, damping: 24, mass: 0.3 },
+  );
+  const topOffset = `calc(6rem + ${index * 28}px)`;
+
+  return (
+    <motion.article
+      ref={cardRef}
+      aria-labelledby={`fragmented-card-${index + 1}`}
+      className={`relative mb-8 flex min-h-[580px] flex-col overflow-hidden rounded-[40px] border border-slate-700 bg-slate-950 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:min-h-[640px] sm:p-8 lg:h-[calc(100vh-8rem)] lg:max-h-[780px] ${reduceMotion ? '' : 'md:sticky md:top-24'}`}
+      style={reduceMotion ? undefined : { scale, top: topOffset, zIndex: index + 1 }}
+    >
+      <div className="flex items-start justify-between gap-3 sm:gap-6">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-6">
+          <span aria-hidden="true" className="shrink-0 text-[72px] font-black leading-[0.85] text-slate-800 sm:text-[120px]">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <div className="pt-1 sm:pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-widest">
+              {item.label}
+            </p>
+            <h3 id={`fragmented-card-${index + 1}`} className="mt-2 text-xl font-semibold text-white sm:text-2xl">
+              {item.title}
+            </h3>
+            <p className="mt-2 max-w-xl text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">
+              {item.description}
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/submit"
+          className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-600 px-3 py-2 text-[10px] font-semibold text-slate-100 transition-colors hover:border-cyan-300 hover:text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300 sm:gap-2 sm:px-4 sm:text-xs"
+        >
+          Report issue <ArrowUpRight size={14} aria-hidden="true" />
+        </Link>
+      </div>
+
+      <div className="mt-6 grid min-h-0 flex-1 grid-cols-[0.4fr_0.6fr] gap-3 sm:mt-8 sm:gap-5">
+        <div className="grid min-h-0 grid-rows-2 gap-3 sm:gap-5">
+          {[0, 1].map((imageIndex) => (
+            <FragmentedImage
+              key={imageIndex}
+              src={item.images[imageIndex]}
+              alt={item.imageAlts[imageIndex]}
+              className="min-h-0"
+            />
+          ))}
+        </div>
+        <FragmentedImage
+          src={item.images[2]}
+          alt={item.imageAlts[2]}
+          className="min-h-0"
+        />
+      </div>
+    </motion.article>
+  );
+};
+
+const FragmentedCatalog = ({ reduceMotion }) => (
+  <section aria-labelledby="fragmented-heading" className="relative z-20 py-20 sm:py-24">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <header className="mb-10 max-w-2xl sm:mb-12">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">
+          Why fragmented reporting fails
+        </p>
+        <h2 id="fragmented-heading" className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+          One clear channel makes the difference.
+        </h2>
+        <p className="mt-4 text-sm leading-6 text-slate-300">
+          Four familiar breakdowns show why reports need a clearer path from submission to action.
+        </p>
+      </header>
+
+      <div className="relative">
+        {fragmentedReports.map((item, index) => (
+          <StackedReportCard
+            key={item.title}
+            item={item}
+            index={index}
+            total={fragmentedReports.length}
+            reduceMotion={reduceMotion}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+);
 
 const steps = [
   {
     number: '01',
     title: 'Report',
-    description: 'Residents submit hazards with location and photo evidence.',
+    description: 'Citizens submit a hazard report with its location, category, description, and photo.',
   },
   {
     number: '02',
     title: 'Verify',
-    description: 'Staff review and validate reports for accuracy and urgency.',
+    description: 'Authorized staff reviews and verifies submitted reports.',
   },
   {
     number: '03',
     title: 'Monitor',
-    description: 'Verified hazards appear on the live map for the public.',
+    description: 'Verified hazards appear on the map and can be monitored in real time.',
   },
   {
     number: '04',
     title: 'Resolve',
-    description: 'Teams update status once the issue is addressed.',
+    description: 'Staff updates the report once the hazard has been addressed.',
   },
 ];
 
@@ -149,13 +321,35 @@ const HomePage = () => {
   const isDark = theme === 'dark';
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.45]);
-  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -10]);
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, -72]);
-  const heroTextX = useTransform(scrollYProgress, [0, 0.4], [0, 18]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0.7]);
-  const globeY = useTransform(scrollYProgress, [0, 0.8], [0, -18]);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
+  );
+  const heroRef = useRef(null);
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
+  const heroTextOpacity = useTransform(heroProgress, [0.08, 0.68], [1, 0], { clamp: true });
+  const globeY = useTransform(heroProgress, [0, 1], [0, -100], { clamp: true });
+  const globeRotateY = useTransform(heroProgress, [0, 1], [0, 30], { clamp: true });
+  const desktopGlobeScale = useTransform(heroProgress, [0, 1], [1.15, 0.5], { clamp: true });
+  const mobileGlobeScale = useTransform(heroProgress, [0, 1], [1, 0.6], { clamp: true });
+  const globeScale = isMobileViewport ? mobileGlobeScale : desktopGlobeScale;
+  const globeOpacity = useTransform(heroProgress, [0, 1], [1, 0], { clamp: true });
+  const section2Y = useTransform(heroProgress, [0, 1], ['24vh', '0vh'], { clamp: true });
+  const howItWorksRef = useRef(null);
+  const { scrollYProgress: howItWorksProgress } = useScroll({
+    target: howItWorksRef,
+    offset: ['start start', 'end end'],
+  });
+  const howItWorksLineProgress = useTransform(howItWorksProgress, [0, 0.9], [0, 1], { clamp: true });
+  const [activeStep, setActiveStep] = useState(0);
+
+  useMotionValueEvent(howItWorksProgress, 'change', (progress) => {
+    if (!shouldReduceMotion) {
+      setActiveStep(Math.min(steps.length - 1, Math.floor(progress * steps.length)));
+    }
+  });
 
   const [publicStats, setPublicStats] = useState({
     totalReports: 0,
@@ -172,35 +366,18 @@ const HomePage = () => {
     resolvedCases: 0,
     areasCovered: 0,
   });
-  const [activeHazard, setActiveHazard] = useState(hazardTypes[0]);
-  const [typedHazardTitle, setTypedHazardTitle] = useState('');
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
   const statsRef = useRef(null);
+  const categorySectionRef = useRef(null);
+  const activeCategory = hazardCategories.find((category) => category.id === activeCategoryId);
 
   useEffect(() => {
-    if (shouldReduceMotion) {
-      setTypedHazardTitle(hazardDetails[activeHazard]?.title || activeHazard);
-      return undefined;
-    }
+    const mobileViewport = window.matchMedia('(max-width: 767px)');
+    const updateMobileViewport = (event) => setIsMobileViewport(event.matches);
 
-    let cancelled = false;
-    let timeoutId;
-    const text = hazardDetails[activeHazard]?.title || activeHazard;
-    setTypedHazardTitle('');
-
-    const tick = (index) => {
-      if (cancelled) return;
-      setTypedHazardTitle(text.slice(0, index));
-      if (index < text.length) {
-        timeoutId = setTimeout(() => tick(index + 1), 28);
-      }
-    };
-
-    tick(0);
-    return () => {
-      cancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [activeHazard, shouldReduceMotion]);
+    mobileViewport.addEventListener('change', updateMobileViewport);
+    return () => mobileViewport.removeEventListener('change', updateMobileViewport);
+  }, []);
 
   useEffect(() => {
     if (loading || !token || !user) return;
@@ -305,308 +482,278 @@ const HomePage = () => {
     description: CATEGORY_DESCRIPTIONS[category] || `${count} reports recorded across Dagupan City.`,
   }));
 
-  const marqueeHazards = [...hazardTypes, ...hazardTypes];
-
   return (
-    <div className="homepage-container relative overflow-x-hidden bg-[#0a0b0f] text-white">
-      <main className="relative isolate overflow-hidden">
+    <div className="homepage-container relative overflow-x-clip bg-transparent text-white">
+      <main className="relative z-10 isolate overflow-x-clip">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.28),transparent_35%),radial-gradient(circle_at_right,_rgba(6,182,212,0.22),transparent_28%),radial-gradient(circle_at_bottom,_rgba(14,116,144,0.18),transparent_30%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(10,11,15,0.2),rgba(10,11,15,0.9))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(10,11,15,0.05),rgba(10,11,15,0.3))]" />
         </div>
 
-        <section className="relative min-h-screen overflow-hidden">
-          <motion.div style={shouldReduceMotion ? undefined : { perspective: 1200 }} className="absolute inset-0">
-            <motion.div
-              style={
-                shouldReduceMotion
-                  ? { scale: 1, rotateX: 0, y: 0, transformStyle: 'preserve-3d' }
-                  : { scale: heroScale, rotateX: heroRotateX, y: heroY, transformStyle: 'preserve-3d' }
-              }
-              className="absolute inset-0"
-            >
-              <div className="absolute inset-0 opacity-90">
-                <StaticMap animated={false} showMarkers={false} />
-              </div>
-              <div className="absolute inset-0 bg-black/70 dark:bg-black/80" />
-            </motion.div>
-          </motion.div>
+        <div className="page-bg" aria-hidden="true">
+          <div className="star-layer star-layer-1" />
+          <div className="star-layer star-layer-2" />
+          <div className="star-layer star-layer-3" />
+        </div>
+        <GlobeBackground
+          y={shouldReduceMotion ? 0 : globeY}
+          rotateY={shouldReduceMotion ? 0 : globeRotateY}
+          scale={shouldReduceMotion ? 1 : globeScale}
+          opacity={shouldReduceMotion ? 1 : globeOpacity}
+          reduceMotion={shouldReduceMotion}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[160vh] bg-[linear-gradient(to_bottom,rgba(8,13,23,0.3)_0%,rgba(8,13,23,0.2)_40%,rgba(8,13,23,0.1)_60%,transparent_100%)]"
+        />
 
+        <section ref={heroRef} className="relative z-10 isolate min-h-screen overflow-visible bg-transparent">
           <motion.div
-            className="relative z-10 mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-12 pt-20 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8"
-            style={shouldReduceMotion ? undefined : { x: heroTextX, y: heroY, opacity: heroOpacity }}
+            className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center px-4 pb-20 pt-28 text-center sm:justify-center sm:px-6 sm:pt-20 lg:px-8"
+            style={shouldReduceMotion ? undefined : { opacity: heroTextOpacity }}
           >
-            <div className="relative z-10 max-w-xl">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-sky-200/90 backdrop-blur-sm">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
-                Community hazard reporting
-              </div>
-
-              <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Report Hazards. Track Incidents. {' '}
-                <span className="bg-brand-gradient-text bg-clip-text text-transparent">
-                  Keep Your Community Safe.
-                </span>
-              </h1>
-
-              <p className="mt-5 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">
-                A simple, transparent way to report issues, monitor hazards, and keep Dagupan City informed.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                <Link
-                  to="/submit"
-                  className="group inline-flex items-center justify-center rounded-full bg-brand-gradient px-6 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(37,99,235,0.35)] transition-all duration-300 hover:bg-brand-gradient-hover hover:shadow-[0_0_40px_rgba(34,211,238,0.45)] focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-[#0a0b0f]"
-                >
-                  Report a Hazard
-                </Link>
-
-                <Link
-                  to="/map"
-                  className="inline-flex items-center justify-center rounded-full border border-sky-400/40 bg-transparent px-6 py-3 text-sm font-semibold text-sky-200 transition-all duration-300 hover:border-sky-300 hover:bg-sky-500/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-[#0a0b0f]"
-                >
-                  View Live Map
-                </Link>
-              </div>
-
-              <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-slate-300">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">✓</span>
-                  Real-time tracking
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300">⚡</span>
-                  Faster response
-                </div>
-              </div>
-            </div>
-
-            <div className="hidden lg:block" />
-          </motion.div>
-
-          <motion.div
-            className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.5, y: 40 }}
-            animate={shouldReduceMotion ? { opacity: 1, scale: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-          >
-            <div className="relative">
-              <div className="absolute -inset-6 rounded-full bg-cyan-400/30 blur-3xl animate-pulse" />
-              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 shadow-2xl shadow-cyan-500/50">
-                <MapPin className="h-10 w-10 text-white" />
-              </div>
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-slate-950/35 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-100/85 backdrop-blur-sm sm:text-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.9)]" />
+              Dagupan City · Community hazard reporting
+            </p>
+            <h1 className="max-w-5xl text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+              Report Hazards. Track Incidents.{' '}
+              <span className="bg-brand-gradient-text bg-clip-text text-transparent">Keep Your Community Safe.</span>
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
+              A simple, transparent way to report issues and keep Dagupan informed.
+            </p>
+            <div className="mt-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row sm:gap-4">
+              <Link
+                to="/submit"
+                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-cyan-500/30 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-[#080d17]"
+              >
+                Report a Hazard
+              </Link>
+              <Link
+                to="/map"
+                className="inline-flex items-center justify-center rounded-full border border-cyan-300/35 bg-slate-950/30 px-6 py-3 text-sm font-semibold text-cyan-100 backdrop-blur-sm transition-colors hover:bg-cyan-400/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              >
+                View Live Map
+              </Link>
             </div>
           </motion.div>
         </section>
 
-        <section className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <motion.div
-              style={shouldReduceMotion ? undefined : { y: globeY }}
-              className="flex items-center justify-center lg:justify-start"
-            >
-              <div className="relative w-full max-w-md aspect-square mx-auto">
-                <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-3xl" />
-                <div className="relative h-full w-full overflow-hidden rounded-full border border-cyan-400/20 bg-gradient-to-br from-blue-900 via-blue-950 to-slate-950 shadow-2xl shadow-cyan-500/30">
-                  <div
-                    className={`absolute inset-0 opacity-20 ${shouldReduceMotion ? '' : 'animate-[globe-spin_60s_linear_infinite]'}`}
-                    style={{
-                      backgroundImage: `
-                        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(6,182,212,0.4) 20px),
-                        repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(6,182,212,0.4) 20px)
-                      `,
-                    }}
-                  />
-                  <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(103,232,249,0.45),transparent_28%),linear-gradient(135deg,rgba(34,211,238,0.28),transparent_50%,rgba(15,23,42,0.7))]" />
-                  {[
-                    { top: '30%', left: '40%', delay: 0 },
-                    { top: '55%', left: '65%', delay: 0.3 },
-                    { top: '40%', left: '70%', delay: 0.6 },
-                    { top: '65%', left: '35%', delay: 0.9 },
-                    { top: '45%', left: '50%', delay: 1.2 },
-                  ].map((m, i) => (
-                    <span
-                      key={i}
-                      className="absolute h-2 w-2 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/80 animate-pulse"
-                      style={{
-                        top: m.top,
-                        left: m.left,
-                        animationDelay: `${m.delay}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+        <motion.div className="relative z-20" style={shouldReduceMotion ? undefined : { y: section2Y }}>
+          <FragmentedCatalog reduceMotion={shouldReduceMotion} />
+        </motion.div>
+        <section
+          ref={howItWorksRef}
+          className={`relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${shouldReduceMotion ? '' : 'md:min-h-[260vh]'}`}
+        >
+          <div className={`${shouldReduceMotion ? 'py-20' : 'md:sticky md:top-0 md:flex md:min-h-screen md:flex-col md:justify-center'} py-20`}>
+            <header className="mb-12 text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">How HazardWatch works</p>
+              <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">Simple steps, faster action.</h2>
+            </header>
 
-            <div>
-              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">Why fragmented reporting fails</p>
-              <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-                One clear channel makes the difference.
-              </h2>
+            <div className="relative hidden md:block">
+              <svg
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-6 h-2 w-full"
+                viewBox="0 0 1000 12"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="how-it-works-timeline" x1="0" x2="1">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#22d3ee" />
+                  </linearGradient>
+                </defs>
+                <path d="M 125 6 H 875" fill="none" stroke="rgba(148,163,184,0.25)" strokeWidth="2" />
+                <motion.path
+                  d="M 125 6 H 875"
+                  fill="none"
+                  stroke="url(#how-it-works-timeline)"
+                  strokeLinecap="round"
+                  strokeWidth="3"
+                  style={{ pathLength: shouldReduceMotion ? 1 : howItWorksLineProgress }}
+                />
+              </svg>
 
-              <div className="mt-8 space-y-6">
-                {problemItems.map((item, index) => (
-                  <motion.div
-                    key={item.title}
-                    initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
-                    whileInView={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.45, delay: index * 0.1, ease: 'easeOut' }}
-                    className="flex gap-4"
-                  >
-                    <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/10 ring-1 ring-sky-400/25">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-300">{item.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              <div className="grid grid-cols-4">
+                {steps.map((step, index) => {
+                  const isActive = index === activeStep;
+                  const opacity = shouldReduceMotion ? 1 : isActive ? 1 : index < activeStep ? 0.5 : 0.3;
 
-              <div className="mt-8 border-l-2 border-cyan-400/70 pl-4 text-sm text-slate-300">
-                A unified reporting flow helps residents understand what happened, what is being done, and how to act next.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">How HazardWatch works</p>
-            <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">Simple steps, faster action.</h2>
-          </div>
-
-          <div className="relative">
-            <motion.div
-              initial={shouldReduceMotion ? false : { scaleX: 0 }}
-              whileInView={shouldReduceMotion ? { scaleX: 1 } : { scaleX: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="absolute left-0 right-0 top-7 hidden h-0.5 origin-left bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500 md:block"
-            />
-
-            <div className="grid gap-6 md:grid-cols-4">
-              {steps.map((step, index) => (
-                <motion.div
-                  key={step.number}
-                  initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-                  whileInView={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.45, delay: index * 0.15, ease: 'easeOut' }}
-                  whileHover={shouldReduceMotion ? undefined : { scale: 1.02, y: -4 }}
-                  className="group relative rounded-2xl border border-white/5 bg-white/[0.02] p-5 transition-all duration-300"
-                >
-                  <div className="relative z-10 flex items-center gap-4 md:block">
-                    <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/60 bg-slate-950/70 text-sm font-bold tabular-nums text-sky-300 shadow-[0_0_16px_rgba(56,189,248,0.25)] md:mx-auto">
-                      {step.number}
-                    </div>
-                    <div className="md:mt-4 md:text-center">
-                      <h3 className="text-lg font-semibold text-white">{step.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-300 md:max-w-[18ch] md:mx-auto">{step.description}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mb-10">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">What can you report?</p>
-            <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">From street issues to urgent hazards.</h2>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch">
-            <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/40 p-4">
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#0a0b0f] to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#0a0b0f] to-transparent" />
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {hazardTypes.map((hazard, index) => {
-                  const isActive = activeHazard === hazard;
                   return (
-                    <motion.button
-                      key={`${hazard}-${index}`}
-                      type="button"
-                      onMouseEnter={() => setActiveHazard(hazard)}
-                      onFocus={() => setActiveHazard(hazard)}
-                      onClick={() => setActiveHazard(hazard)}
-                      aria-pressed={isActive}
-                      whileHover={shouldReduceMotion ? undefined : { y: -6, scale: 1.01 }}
-                      whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
-                      className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                        isActive
-                          ? 'border-sky-400/60 bg-slate-900/90 shadow-[0_20px_50px_rgba(34,211,238,0.15)]'
-                          : 'border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(15,23,42,0.7))] hover:border-sky-400/40'
-                      }`}
+                    <div
+                      key={step.number}
+                      aria-current={isActive ? 'step' : undefined}
+                      className="flex flex-col items-center text-center"
                     >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${hazardDetails[hazard]?.accent || 'from-sky-500/10 to-cyan-500/10'} opacity-80`} />
-                      <div className="relative flex min-h-[110px] flex-col justify-between">
-                        <div className="flex items-center justify-between">
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10 text-sm font-semibold text-sky-200">
-                            {String(index + 1).padStart(2, '0')}
-                          </span>
-                          <span className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.9)]' : 'bg-slate-600'}`} />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-semibold text-white">{hazard}</h3>
-                        </div>
-                      </div>
-                    </motion.button>
+                      <motion.span
+                        animate={{ opacity, scale: shouldReduceMotion ? 1 : isActive ? 1.12 : 0.92 }}
+                        transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: 'easeOut' }}
+                        className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full border bg-slate-950 text-sm font-bold tabular-nums ${
+                          isActive
+                            ? 'border-cyan-300 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.5)]'
+                            : 'border-slate-600 text-slate-400'
+                        }`}
+                      >
+                        {step.number}
+                      </motion.span>
+                      <motion.span
+                        animate={{ opacity }}
+                        transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
+                        className={`mt-4 text-sm font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}
+                      >
+                        {step.title}
+                      </motion.span>
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-            <motion.div
-              layout
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="overflow-hidden rounded-[28px] border border-sky-400/20 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),transparent_40%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-6 shadow-[0_30px_80px_rgba(14,116,144,0.18)]"
-            >
-              <div className="mb-3 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.2em] text-cyan-200/80">
-                <span>Selected category</span>
-                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-[9px] text-cyan-200">Live focus</span>
-              </div>
-
-              <motion.h3
-                key={activeHazard}
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="min-h-[64px] text-2xl font-bold tracking-tight text-white"
-              >
-                {typedHazardTitle}
-              </motion.h3>
-
-              <motion.p
-                key={`${activeHazard}-description`}
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.05, ease: 'easeOut' }}
-                className="mt-4 text-sm leading-6 text-slate-300"
-              >
-                {hazardDetails[activeHazard]?.description || 'Report issues impacting public safety and daily access across Dagupan City.'}
-              </motion.p>
-
-              <div className="mt-6 space-y-3">
-                {['Residents can report this issue through the public reporting flow.', 'Staff can review and route the case to the appropriate response path.'].map((line, index) => (
-                  <motion.div
-                    key={`${activeHazard}-${line}`}
-                    initial={shouldReduceMotion ? false : { opacity: 0, x: -12 }}
-                    animate={shouldReduceMotion ? { opacity: 1, x: 0 } : { opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.08 + index * 0.06, ease: 'easeOut' }}
-                    className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3"
-                  >
-                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
-                    <span className="text-sm text-slate-200">{line}</span>
-                  </motion.div>
+            {shouldReduceMotion ? (
+              <div className="mt-10 hidden gap-5 md:grid md:grid-cols-2">
+                {steps.map((step) => (
+                  <div key={step.number} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-cyan-200">{step.number} · {step.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">{step.description}</p>
+                  </div>
                 ))}
               </div>
-            </motion.div>
+            ) : (
+              <div aria-live="polite" className="mx-auto mt-12 hidden min-h-28 max-w-2xl text-center md:block">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={steps[activeStep].number}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">
+                      {steps[activeStep].number} · {steps[activeStep].title}
+                    </p>
+                    <p className="mt-3 text-base leading-7 text-slate-200">{steps[activeStep].description}</p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )}
+
+            <div className="grid gap-4 md:hidden">
+              {steps.map((step) => (
+                <motion.article
+                  key={step.number}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.35 }}
+                  className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-widest text-cyan-200">{step.number} · {step.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{step.description}</p>
+                </motion.article>
+              ))}
+            </div>
           </div>
+        </section>
+
+        <section ref={categorySectionRef} className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mb-10">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">What can you report?</p>
+            <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">From street issues to urgent hazards.</h2>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {hazardCategories.map((category) => {
+              const Icon = category.icon;
+              const isActive = activeCategoryId === category.id;
+              const styles = hazardCategoryStyles[category.color];
+
+              return (
+                <motion.button
+                  key={category.id}
+                  type="button"
+                  onMouseEnter={() => {
+                    if (window.matchMedia('(hover: hover)').matches) setActiveCategoryId(category.id);
+                  }}
+                  onMouseLeave={() => {
+                    if (activeCategoryId === category.id) setActiveCategoryId(null);
+                  }}
+                  onFocus={() => setActiveCategoryId(category.id)}
+                  onBlur={() => {
+                    if (activeCategoryId === category.id) setActiveCategoryId(null);
+                  }}
+                  onTouchStart={() => {
+                    setActiveCategoryId((currentCategoryId) => (
+                      currentCategoryId === category.id ? null : category.id
+                    ));
+                  }}
+                  aria-expanded={isActive}
+                  aria-controls="live-focus-panel"
+                  whileHover={shouldReduceMotion ? undefined : { y: -4 }}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+                  className={`rounded-2xl border p-5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
+                    isActive
+                      ? styles.active
+                      : 'border-white/10 bg-slate-950/60 hover:border-white/20'
+                  }`}
+                >
+                  <span className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border ${styles.icon}`}>
+                    <Icon size={22} aria-hidden="true" />
+                  </span>
+                  <span className="mt-5 block text-base font-semibold text-white">{category.label}</span>
+                  <span className={`mt-2 block text-xs ${styles.count}`}>
+                    {category.subCategories.length} report types
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <motion.div
+            id="live-focus-panel"
+            initial={{ y: '20%', opacity: 0 }}
+            animate={{
+              y: activeCategory ? 0 : '20%',
+              opacity: activeCategory ? 1 : 0,
+            }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.4,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+            className="mt-6 overflow-hidden rounded-[28px] border border-sky-400/20 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),transparent_40%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-5 shadow-[0_30px_80px_rgba(14,116,144,0.18)] sm:p-7"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-cyan-200/80">
+                Live focus
+              </p>
+              <span className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
+                activeCategory ? hazardCategoryStyles[activeCategory.color].icon : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
+              }`}>
+                {activeCategory ? activeCategory.subCategories.length : totalReportTypes} report types
+              </span>
+            </div>
+
+            <h3 aria-live="polite" className="mt-3 min-h-9 text-2xl font-bold tracking-tight text-white">
+              {activeCategory?.label || 'What Can You Report?'}
+            </h3>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+              {activeCategory?.description
+                || 'Explore four categories of hazards you can report in Dagupan City, covering water, fire, infrastructure, public safety, and environmental concerns.'}
+            </p>
+
+            {activeCategory && (
+              <ul className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {activeCategory.subCategories.map((category) => (
+                  <li key={category} className="flex items-center gap-2 text-sm text-slate-200">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+                    {category}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
         </section>
 
         <section ref={statsRef} className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
