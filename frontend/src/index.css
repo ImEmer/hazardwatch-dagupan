@@ -91,7 +91,6 @@ body,
   background: #ffffff;
 }
 
-/* Dark mode support */
 [data-theme='dark'] body {
   background-color: #16171d;
 }
@@ -203,4 +202,24 @@ body,
 
 [data-theme='dark'] .toast-close:hover {
   color: #ffffff;
+}
+
+@keyframes marquee-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  width: max-content;
+  animation: marquee-left 40s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
 }
