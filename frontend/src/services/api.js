@@ -9,7 +9,7 @@ const TOKEN_KEY = 'hazardwatch_token';
 const USER_KEY = 'hazardwatch_user';
 
 const isAuthRoute = (url = '') => {
-  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/2fa/') || url.includes('/auth/biometric/login-') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password') || url.includes('/auth/refresh');
+  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/2fa/') || url.includes('/auth/biometric/login-') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-reset-code') || url.includes('/auth/reset-password');
 };
 
 const clearStoredSession = () => {
@@ -19,6 +19,31 @@ const clearStoredSession = () => {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
   sessionStorage.removeItem('token');
+};
+
+let sessionValidationPromise = null;
+
+const validateStoredSession = () => {
+  if (!sessionValidationPromise) {
+    const token = localStorage.getItem(TOKEN_KEY)
+      || localStorage.getItem('token')
+      || sessionStorage.getItem(TOKEN_KEY)
+      || sessionStorage.getItem('token');
+
+    if (!token) return Promise.resolve(false);
+
+    sessionValidationPromise = axios.get(`${api.defaults.baseURL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: api.defaults.timeout,
+    }).then(() => true, (error) => {
+      if (error.response?.status === 401) return false;
+      throw error;
+    }).finally(() => {
+      sessionValidationPromise = null;
+    });
+  }
+
+  return sessionValidationPromise;
 };
 
 api.interceptors.request.use(
@@ -41,13 +66,26 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
 
-    if (status === 401) {
-      clearStoredSession();
-      if (!isAuthRoute(requestUrl) && !window.__hw_redirecting) {
+    if (status === 401 && !isAuthRoute(requestUrl)) {
+      let sessionIsValid = false;
+      if (requestUrl.includes('/auth/me')) {
+        sessionIsValid = false;
+      } else {
+        try {
+          sessionIsValid = await validateStoredSession();
+        } catch {
+          return Promise.reject(error);
+        }
+      }
+
+      if (!sessionIsValid) {
+        clearStoredSession();
+      }
+      if (!sessionIsValid && !window.__hw_redirecting) {
         window.__hw_redirecting = true;
         window.dispatchEvent(new Event('hw:session-expired'));
       }
