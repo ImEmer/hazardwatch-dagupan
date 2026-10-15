@@ -1,9 +1,49 @@
 import { Router } from 'express';
-import { checkEmail, deleteAccount, forgotPassword, getBiometricDevices, getMe, login, loginBiometricChallenge, loginBiometricVerify, logout, refresh, register, registerBiometricChallenge, registerBiometricVerify, removeBiometricCredential, requestEmailChange, requestPasswordChange, resendTwoFactorLoginCode, resetPassword, toggleBiometric, updateProfile, verifyEmail, verifyEmailChangeNew, verifyEmailChangeOld, verifyPasswordChange, verifyResetCode, verifyTwoFactorLogin } from '../controllers/authController.js';
+import {
+  checkEmail,
+  deleteAccount,
+  forgotPassword,
+  getBiometricDevices,
+  getMe,
+  login,
+  loginBiometricChallenge,
+  loginBiometricVerify,
+  logout,
+  refresh,
+  register,
+  registerBiometricChallenge,
+  registerBiometricVerify,
+  removeBiometricCredential,
+  requestEmailChange,
+  requestPasswordChange,
+  requestReactivation,
+  resendTwoFactorLoginCode,
+  resetPassword,
+  toggleBiometric,
+  updateProfile,
+  verifyEmail,
+  verifyEmailChangeNew,
+  verifyEmailChangeOld,
+  verifyPasswordChange,
+  verifyReactivation,
+  verifyResetCode,
+  verifyTwoFactorLogin,
+} from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import { validateChangeCode, validateEmail, validateEmailChangeRequest, validateEmailVerification, validateLogin, validatePasswordChangeRequest, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
-import { authLimiter, biometricLimiter, emailChangeRequestLimiter, emailChangeVerifyLimiter, forgotPasswordLimiter, passwordChangeRequestLimiter, passwordChangeVerifyLimiter, resetPasswordLimiter } from '../middleware/rateLimit.js';
+import {
+  authLimiter,
+  biometricLimiter,
+  emailChangeRequestLimiter,
+  emailChangeVerifyLimiter,
+  forgotPasswordLimiter,
+  passwordChangeRequestLimiter,
+  passwordChangeVerifyLimiter,
+  reactivationRequestLimiter,
+  reactivationVerifyLimiter,
+  resetPasswordLimiter,
+} from '../middleware/rateLimit.js';
 
 const router = Router();
 router.use(authLimiter);
@@ -31,6 +71,8 @@ router.post('/verify-password-change', protect, passwordChangeVerifyLimiter, val
 router.put('/profile', protect, validateProfile, updateProfile);
 router.delete('/account', protect, deleteAccount);
 router.post('/forgot-password', forgotPasswordLimiter, validateEmail, forgotPassword);
+router.post('/request-reactivation', reactivationRequestLimiter, validateEmail, requestReactivation);
+router.post('/verify-reactivation', reactivationVerifyLimiter, validateResetCode, verifyReactivation);
 router.post('/verify-reset-code', validateResetCode, verifyResetCode);
 router.post('/reset-password', resetPasswordLimiter, validateResetPassword, resetPassword);
 export default router;

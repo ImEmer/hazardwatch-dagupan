@@ -6,7 +6,7 @@ import TokenBlacklist from '../models/TokenBlacklist.js';
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import { clearFailedLogins, getLoginLockout, recordFailedLogin } from '../middleware/loginLockout.js';
 import { logActivity } from '../utils/logActivity.js';
-import { sendAccountVerifiedEmail, sendEmailChangeCodeNew, sendEmailChangeCodeOld, sendEmailChangeConfirmationNew, sendEmailChangeConfirmationOld, sendEmailChangeNoticeOld, sendNewDeviceAlertEmail, sendPasswordChangeCode, sendPasswordChangedConfirmation, sendPasswordResetCode, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
+import { sendAccountVerifiedEmail, sendEmailChangeCodeNew, sendEmailChangeCodeOld, sendEmailChangeConfirmationNew, sendEmailChangeConfirmationOld, sendEmailChangeNoticeOld, sendNewDeviceAlertEmail, sendPasswordChangeCode, sendPasswordChangedConfirmation, sendPasswordResetCode, sendReactivationCodeEmail, sendTwoFactorCode, sendVerificationEmail } from '../utils/sendEmail.js';
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
@@ -138,39 +138,21 @@ export const register = async (req, res, next) => {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const safeRole = ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
     const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser && existingUser.status !== 'deleted') {
-      return res.status(400).json({ success: false, message: 'Email already registered. Please log in instead.' });
+    if (existingUser?.isActive) {
+      return res.status(409).json({ success: false, message: 'Email already registered. Please log in instead.' });
     }
+    if (existingUser && !existingUser.isActive && existingUser.status === 'deleted') {
+      return res.status(409).json({
+        success: false,
+        code: 'ACCOUNT_EXISTS_DELETED',
+        message: 'An account with this email was previously deleted. You can reactivate it.',
+      });
+    }
+    if (existingUser) return res.status(409).json({ success: false, message: 'Email already registered. Please log in instead.' });
 
     const verificationCode = crypto.randomInt(100000, 1000000).toString();
     const hashedVerificationCode = await bcrypt.hash(verificationCode, 12);
     const verificationExpires = Date.now() + 15 * 60 * 1000;
-    if (existingUser) {
-      existingUser.name = name;
-      existingUser.email = normalizedEmail;
-      existingUser.password = password;
-      existingUser.role = safeRole;
-      existingUser.twoFactorEnabled = privilegedRoles.includes(safeRole);
-      existingUser.notificationEmail = privilegedRoles.includes(safeRole) ? PRIVILEGED_NOTIFICATION_EMAIL : null;
-      existingUser.barangay = barangay;
-      existingUser.phone = phone;
-      existingUser.status = 'pending';
-      existingUser.isActive = false;
-      existingUser.deletedAt = undefined;
-      existingUser.emailVerified = false;
-      existingUser.verificationRequired = true;
-      existingUser.emailVerificationCode = hashedVerificationCode;
-      existingUser.emailVerificationToken = undefined;
-      existingUser.emailVerificationExpires = verificationExpires;
-      await existingUser.save();
-      if (process.env.NODE_ENV === 'development') console.log(`🔐 Verification code for ${normalizedEmail}: ${verificationCode}`);
-      try {
-        await sendVerificationEmail({ email: existingUser.email, name: existingUser.name, code: verificationCode });
-      } catch (emailError) {
-        console.error('[register] Verification email failed:', emailError.message);
-      }
-      return res.status(201).json({ success: true, message: 'Account created. Check your email for the 6-digit code.', user: publicUser(existingUser) });
-    }
 
     const user = await User.create({
       name,
@@ -1181,6 +1163,96 @@ export const forgotPassword = async (req, res) => {
   }
 
   return res.json(response);
+};
+
+export const requestReactivation = async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const genericResponse = { success: true, message: 'If the account exists, a code has been sent.' };
+    const user = await User.findOne({ email }).select('+reactivationCode +reactivationExpires +reactivationAttempts');
+    if (!user) return res.json(genericResponse);
+    if (user.isActive) {
+      return res.status(409).json({ success: false, code: 'ACCOUNT_ACTIVE', message: 'This account is active. Please log in.' });
+    }
+    if (user.status !== 'deleted') return res.json(genericResponse);
+
+    const code = createOtp();
+    user.reactivationCode = await bcrypt.hash(code, 12);
+    user.reactivationExpires = Date.now() + 15 * 60 * 1000;
+    user.reactivationAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+
+    try {
+      await sendReactivationCodeEmail(user, code);
+    } catch (error) {
+      user.reactivationCode = undefined;
+      user.reactivationExpires = undefined;
+      user.reactivationAttempts = 0;
+      await user.save({ validateBeforeSave: false });
+      return next(error);
+    }
+
+    await logActivity({
+      actor: user,
+      action: 'REACTIVATION_CODE_SENT',
+      message: `${user.name} requested an account reactivation code`,
+      scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+      entityType: 'auth',
+      entityId: user._id,
+    }).catch((error) => console.error('[auth] Reactivation code activity log failed:', error.message));
+
+    return res.json(genericResponse);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const verifyReactivation = async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const code = String(req.body.code || '').trim();
+    const user = await User.findOne({ email, isActive: false, status: 'deleted' })
+      .select('+reactivationCode +reactivationExpires +reactivationAttempts');
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid reactivation request.' });
+
+    if ((user.reactivationAttempts || 0) >= 5) {
+      return res.status(429).json({ success: false, message: 'Too many attempts.' });
+    }
+    if (!user.reactivationCode || !user.reactivationExpires || user.reactivationExpires <= new Date()) {
+      return res.status(400).json({ success: false, message: 'Code expired.' });
+    }
+
+    if (!await bcrypt.compare(code, user.reactivationCode)) {
+      user.reactivationAttempts = (user.reactivationAttempts || 0) + 1;
+      await user.save({ validateBeforeSave: false });
+      if (user.reactivationAttempts >= 5) {
+        return res.status(429).json({ success: false, message: 'Too many attempts.' });
+      }
+      return res.status(400).json({ success: false, message: 'Invalid code.' });
+    }
+
+    user.isActive = true;
+    user.status = 'active';
+    user.deletedAt = null;
+    user.reactivationCode = undefined;
+    user.reactivationExpires = undefined;
+    user.reactivationAttempts = 0;
+    user.authVersion = (user.authVersion || 0) + 1;
+    await user.save({ validateBeforeSave: false });
+
+    await logActivity({
+      actor: user,
+      action: 'ACCOUNT_REACTIVATED',
+      message: `${user.name} reactivated their account`,
+      scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+      entityType: 'auth',
+      entityId: user._id,
+    }).catch((error) => console.error('[auth] Account reactivation activity log failed:', error.message));
+
+    return res.json({ success: true, message: 'Account reactivated. Please log in.' });
+  } catch (error) {
+    return next(error);
+  }
 };
 
 export const verifyResetCode = async (req, res, next) => {

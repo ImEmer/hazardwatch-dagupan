@@ -103,6 +103,9 @@ const userSchema = new mongoose.Schema({
   passwordResetCodeToken: { type: String, select: false },
   passwordResetCodeTokenExpires: { type: Date, select: false },
   passwordResetLastSentAt: { type: Date, select: false },
+  reactivationCode: { type: String, select: false },
+  reactivationExpires: { type: Date, select: false },
+  reactivationAttempts: { type: Number, default: 0, select: false },
 }, { timestamps: true, autoIndex: false });
 
 userSchema.index({ status: 1 });

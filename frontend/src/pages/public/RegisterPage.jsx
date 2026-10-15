@@ -4,6 +4,8 @@ import useAuth from '../../hooks/useAuth';
 import { showError, showSuccess, showWarning } from '../../services/alerts';
 import { passwordPattern, validateEmail, validatePassword } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
+import CodeInput from '../../components/common/CodeInput';
+import api from '../../services/api';
 
 const RegisterPage = () => {
   const { register } = useAuth();
@@ -14,6 +16,12 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [reactivationOpen, setReactivationOpen] = useState(false);
+  const [reactivationStarted, setReactivationStarted] = useState(false);
+  const [reactivationEmail, setReactivationEmail] = useState('');
+  const [reactivationCode, setReactivationCode] = useState('');
+  const [reactivationSubmitting, setReactivationSubmitting] = useState(false);
+  const [reactivationError, setReactivationError] = useState('');
   const passwordCriteria = [
     form.password.length >= 8,
     /[a-z]/.test(form.password) && /[A-Z]/.test(form.password),
@@ -56,6 +64,14 @@ const RegisterPage = () => {
       await showSuccess('Account created. Check your email for the 6-digit code.');
       navigate(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
     } catch (error) {
+      if (error.data?.code === 'ACCOUNT_EXISTS_DELETED') {
+        setReactivationEmail(trimmedEmail);
+        setReactivationOpen(true);
+        setReactivationStarted(false);
+        setReactivationCode('');
+        setReactivationError('');
+        return;
+      }
       const message = error.message && error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('exist')
         ? 'Email already registered. Please use a different email.'
         : error.message;
@@ -65,8 +81,52 @@ const RegisterPage = () => {
     }
   };
 
+  const sendReactivationCode = async () => {
+    setReactivationSubmitting(true);
+    setReactivationError('');
+    try {
+      const { data } = await api.post('/auth/request-reactivation', { email: reactivationEmail });
+      if (data.code === 'ACCOUNT_ACTIVE') {
+        setReactivationError(data.message);
+        return;
+      }
+      setReactivationStarted(true);
+      setReactivationCode('');
+      await showSuccess('Check your email', 'If the account exists, a code has been sent.');
+    } catch (error) {
+      setReactivationError(error.response?.data?.message || 'Unable to send a reactivation code. Please try again.');
+    } finally {
+      setReactivationSubmitting(false);
+    }
+  };
+
+  const verifyReactivationCode = async () => {
+    setReactivationSubmitting(true);
+    setReactivationError('');
+    try {
+      const { data } = await api.post('/auth/verify-reactivation', {
+        email: reactivationEmail,
+        code: reactivationCode,
+      });
+      await showSuccess(data.message || 'Account reactivated. Please log in.');
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setReactivationError(error.response?.data?.message || 'Unable to verify the code. Please try again.');
+    } finally {
+      setReactivationSubmitting(false);
+    }
+  };
+
+  const closeReactivation = () => {
+    setReactivationOpen(false);
+    setReactivationStarted(false);
+    setReactivationCode('');
+    setReactivationError('');
+  };
+
   return (
     <AuthCard title="Create Account" description="Register for HazardWatch">
+      <>
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm text-gray-300">Full Name
           <input type="text" id="name" name="name" autoComplete="name" maxLength="50" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={`auth-input mt-2 ${errors.name ? 'border-red-500' : ''}`} />
@@ -110,6 +170,51 @@ const RegisterPage = () => {
         <button disabled={submitting || !agreedToTerms} className="auth-button disabled:cursor-not-allowed disabled:opacity-50">{submitting ? 'Creating account...' : 'Register'}</button>
         <p className="text-center text-sm text-gray-400">Already have an account? <Link className="auth-link" to="/login">Login</Link></p>
       </form>
+      {reactivationOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reactivation-title"
+            className="w-full max-w-md rounded-xl border border-[#2e303a] bg-[#14151d] p-6 text-white shadow-2xl motion-reduce:transition-none"
+          >
+            <h2 id="reactivation-title" className="text-xl font-bold">Account Previously Deleted</h2>
+            {!reactivationStarted ? (
+              <>
+                <p className="mt-3 text-sm leading-6 text-gray-300">
+                  An account with this email was previously deleted. Would you like to reactivate it?
+                </p>
+                {reactivationError && <p role="alert" className="mt-3 text-sm text-red-400">{reactivationError}</p>}
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={closeReactivation} disabled={reactivationSubmitting} className="rounded-lg border border-[#3a3d48] px-4 py-2 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50">Cancel</button>
+                  <button type="button" onClick={sendReactivationCode} disabled={reactivationSubmitting} className="auth-button disabled:opacity-50">{reactivationSubmitting ? 'Sending...' : 'Send Reactivation Code'}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-sm leading-6 text-gray-300">
+                  Enter the 6-digit code sent to <span className="font-medium text-white">{reactivationEmail}</span>.
+                </p>
+                <CodeInput
+                  value={reactivationCode}
+                  onChange={setReactivationCode}
+                  length={6}
+                  disabled={reactivationSubmitting}
+                  className="auth-input mt-4 text-center tracking-[0.5em]"
+                  inputProps={{ 'aria-label': '6-digit reactivation code', autoFocus: true }}
+                />
+                {reactivationError && <p role="alert" className="mt-3 text-sm text-red-400">{reactivationError}</p>}
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={closeReactivation} disabled={reactivationSubmitting} className="rounded-lg border border-[#3a3d48] px-4 py-2 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50">Cancel</button>
+                  <button type="button" onClick={sendReactivationCode} disabled={reactivationSubmitting} className="rounded-lg border border-[#3a3d48] px-4 py-2 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50">{reactivationSubmitting ? 'Sending...' : 'Resend code'}</button>
+                  <button type="button" onClick={verifyReactivationCode} disabled={reactivationSubmitting || reactivationCode.length !== 6} className="auth-button disabled:opacity-50">{reactivationSubmitting ? 'Verifying...' : 'Verify'}</button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+      </>
     </AuthCard>
   );
 };
