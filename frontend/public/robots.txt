@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and authenticated routes
+Disallow: /admin
+Disallow: /barangay
+Disallow: /superadmin
+Disallow: /profile
+Disallow: /my-reports
+
+Sitemap: https://hazardwatch-dagupan.vercel.app/sitemap.xml
