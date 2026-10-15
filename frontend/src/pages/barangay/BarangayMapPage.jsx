@@ -10,7 +10,7 @@ const statuses = ['all', 'Pending', 'In Progress'];
 
 const BarangayMapPage = () => {
   const { user, token } = useAuth();
-  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'danger', ...user?.preferences?.map };
+  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'pin', ...user?.preferences?.map };
   const { reports, loading, error, onBoundsChange, retry } = useViewportReports({
     endpoint: '/reports',
     token,

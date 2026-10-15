@@ -7,7 +7,7 @@ export const DEFAULT_MAP_PREFERENCES = {
   showResolved: false,
   defaultZoom: 13,
   mapStyle: 'streets',
-  markerStyle: 'danger',
+  markerStyle: 'pin',
 };
 
 const MAP_PREFERENCE_KEYS = Object.keys(DEFAULT_MAP_PREFERENCES);

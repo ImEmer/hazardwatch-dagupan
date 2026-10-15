@@ -22,7 +22,7 @@ const statusColorsLight = {
 
 const AdminMapPage = () => {
   const { token, user } = useAuth();
-  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'danger', ...user?.preferences?.map };
+  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'pin', ...user?.preferences?.map };
   const { reports, loading, error, onBoundsChange, retry } = useViewportReports({ endpoint: '/reports', token, includeResolved: mapPreferences.showResolved, enabled: Boolean(token) });
   const { theme } = useTheme();
   const isDark = theme === 'dark';

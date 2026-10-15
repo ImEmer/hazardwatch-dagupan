@@ -184,7 +184,7 @@ const FragmentedImage = ({ src, alt, className }) => {
 const GlobeBackground = ({ y, rotateY, scale, opacity, reduceMotion }) => (
   <div
     aria-hidden="true"
-    className="pointer-events-none absolute left-1/2 top-[90vh] z-0 -translate-x-1/2 sm:top-[92vh]"
+    className="pointer-events-none absolute left-1/2 top-[54vh] z-0 -translate-x-1/2 sm:top-[58vh]"
   >
     <motion.img
       src="/globe.png"

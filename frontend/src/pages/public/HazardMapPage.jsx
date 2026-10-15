@@ -10,7 +10,7 @@ import { DAGUPAN_BARANGAYS, DAGUPAN_BARANGAY_COORDINATES } from '../../services/
 
 const HazardMapPage = () => {
   const { token, user } = useAuth();
-  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'danger', ...user?.preferences?.map };
+  const mapPreferences = { showResolved: false, defaultZoom: 13, mapStyle: 'streets', markerStyle: 'pin', ...user?.preferences?.map };
   const { reports: mapReports, loading, error: fetchError, onBoundsChange, retry } = useViewportReports({ endpoint: '/reports/public', includeResolved: mapPreferences.showResolved });
   const visibleStatuses = mapPreferences.showResolved ? ['Pending', 'In Progress', 'Resolved'] : ['Pending', 'In Progress'];
   const visibleReports = mapReports.filter((report) => visibleStatuses.includes(report.status));
@@ -40,7 +40,7 @@ const HazardMapPage = () => {
         </div>
         <div data-aos="zoom-in" data-aos-delay="100" className="relative h-[calc(100vh-220px)] min-h-[480px] overflow-hidden rounded-2xl border border-[#2e303a] bg-[#14151d] p-2 shadow-xl">
           {!token ? (
-            <div className="absolute left-5 top-5 z-10 max-w-sm rounded-xl border border-[#2e303a] bg-[#14151d]/90 p-3 text-sm text-gray-200 shadow-lg">
+            <div className="absolute bottom-5 right-5 z-10 max-w-sm rounded-xl border border-[#2e303a] bg-[#14151d]/90 p-3 text-sm text-gray-200 shadow-lg">
               <p className="font-semibold text-white">See a hazard? Log in to report it.</p>
               <p className="mt-1 text-gray-400">Public map view shows live reports already submitted by the community.</p>
             </div>
@@ -59,7 +59,7 @@ const HazardMapPage = () => {
               {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
             </select>
           </div>
-          <div className={`absolute right-3 top-20 z-10 rounded-xl border p-3 shadow-lg sm:right-5 ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+          <div className={`absolute left-5 top-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#60a5fa]">Report status</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#eab308]" aria-hidden="true" /><span className="text-gray-200">Pending</span></div>
