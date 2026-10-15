@@ -59,7 +59,7 @@ const HazardMapPage = () => {
               {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
             </select>
           </div>
-          <div className={`absolute left-5 top-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+          <div className={`absolute right-3 top-20 z-10 rounded-xl border p-3 shadow-lg sm:right-5 ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#60a5fa]">Report status</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#eab308]" aria-hidden="true" /><span className="text-gray-200">Pending</span></div>

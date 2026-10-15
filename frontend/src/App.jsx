@@ -74,7 +74,7 @@ const pageTitles = [
   { match: (pathname) => pathname.startsWith('/reports/'), title: 'Report Detail | HazardWatch' },
   { match: (pathname) => pathname === '/profile', title: 'Profile & Settings | HazardWatch' },
   { match: (pathname) => pathname === '/submit', title: 'Submit Hazard Report | HazardWatch' },
-  { match: (pathname) => pathname === '/map', title: 'Hazard Map | HazardWatch' },
+  { match: (pathname) => pathname === '/map' || pathname === '/hazard-map', title: 'Hazard Map | HazardWatch' },
   { match: (pathname) => pathname === '/track', title: 'Track Report | HazardWatch' },
   { match: (pathname) => pathname === '/login', title: 'Login | HazardWatch' },
   { match: (pathname) => pathname === '/register', title: 'Register | HazardWatch' },
@@ -122,6 +122,7 @@ function App() {
             <Route path="/" element={<PublicPage><HomePage /></PublicPage>} />
             <Route path="/submit" element={<PublicPage><SubmitReport /></PublicPage>} />
             <Route path="/map" element={<PublicPage><HazardMapPage /></PublicPage>} />
+            <Route path="/hazard-map" element={<PublicPage><HazardMapPage /></PublicPage>} />
             <Route path="/track" element={<PublicPage><TrackReportPage /></PublicPage>} />
             <Route path="/about" element={<PublicPage><AboutPage /></PublicPage>} />
             <Route path="/privacy" element={<PublicPage><PrivacyPolicyPage /></PublicPage>} />
