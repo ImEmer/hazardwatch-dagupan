@@ -181,18 +181,23 @@ const FragmentedImage = ({ src, alt, className }) => {
   );
 };
 
-const GlobeBackground = ({ y, rotateY, scale, opacity, reduceMotion }) => (
+const GlobeBackground = ({ y, scale, opacity, reduceMotion }) => (
   <div
     aria-hidden="true"
-    className="pointer-events-none absolute left-1/2 top-[54vh] z-0 -translate-x-1/2 sm:top-[58vh]"
+    className="pointer-events-none absolute left-[50vw] top-[54vh] z-0 w-[120vmax] max-w-none -translate-x-1/2 sm:top-[58vh]"
   >
-    <motion.img
-      src="/globe.png"
-      alt=""
-      aria-hidden="true"
-      style={reduceMotion ? undefined : { y, rotateY, scale, opacity, transformPerspective: 1200 }}
-      className="block w-[115vmax] max-w-none h-auto opacity-70 brightness-125 saturate-125"
-    />
+    <motion.div
+      style={reduceMotion ? undefined : { y, scale, opacity }}
+    >
+      <div className="globe-spin">
+        <img
+          src="/globe.png"
+          alt=""
+          aria-hidden="true"
+          className="block h-auto w-full opacity-70 brightness-125 saturate-125"
+        />
+      </div>
+    </motion.div>
   </div>
 );
 
@@ -331,7 +336,6 @@ const HomePage = () => {
   });
   const heroTextOpacity = useTransform(heroProgress, [0.08, 0.68], [1, 0], { clamp: true });
   const globeY = useTransform(heroProgress, [0, 1], [0, -100], { clamp: true });
-  const globeRotateY = useTransform(heroProgress, [0, 1], [0, 30], { clamp: true });
   const desktopGlobeScale = useTransform(heroProgress, [0, 1], [1.15, 0.5], { clamp: true });
   const mobileGlobeScale = useTransform(heroProgress, [0, 1], [1, 0.6], { clamp: true });
   const globeScale = isMobileViewport ? mobileGlobeScale : desktopGlobeScale;
@@ -497,7 +501,6 @@ const HomePage = () => {
         </div>
         <GlobeBackground
           y={shouldReduceMotion ? 0 : globeY}
-          rotateY={shouldReduceMotion ? 0 : globeRotateY}
           scale={shouldReduceMotion ? 1 : globeScale}
           opacity={shouldReduceMotion ? 1 : globeOpacity}
           reduceMotion={shouldReduceMotion}

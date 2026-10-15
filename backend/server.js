@@ -67,7 +67,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('/*splat', cors(corsOptions));
 
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', globalLimiter);

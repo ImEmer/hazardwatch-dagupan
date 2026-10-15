@@ -1,6 +1,6 @@
 # System Reference — HazardWatch Dagupan
 
-> Last updated: 2026-09-28
+> Last updated: 2026-10-16
 >
 > Maintained by: HazardWatch project maintainers
 >
@@ -13,11 +13,11 @@
 - **Purpose:** A community hazard-reporting and monitoring platform for Dagupan City, Philippines.
 - **Problem it solves:** Gives residents and local responders a shared way to submit, locate, review, assign, and track community hazard reports.
 - **Target users:** Citizens (`user`), barangay operators (`barangay`), staff (`staff`), administrators (`admin`), and super administrators (`superadmin`).
-- **Core features:** Account registration and email verification; password reset; email OTP two-factor authentication for privileged roles; photo-backed hazard reports; interactive hazard maps; report status, priority, assignment, comments, archive and export workflows; user administration; barangay-scoped operations; statistics and audit activity; notifications; system settings; and Spark-based batch/window/stream analytics.
+- **Core features:** Account registration and email verification; password reset and verified account email/password changes; mandatory email OTP or WebAuthn second factor for privileged roles; photo-backed hazard reports; interactive hazard maps; report status, priority, assignment, comments, archive and export workflows; user administration; barangay-scoped operations; statistics and audit activity; notifications; system settings; and Spark-based batch/window/stream analytics.
 - **High-level architecture:** A modular monolith consisting of a React single-page application, an Express REST API, and MongoDB persistence. Separate PySpark jobs read reports and write derived analytics collections. The Node API can also schedule database backups in-process.
 - **Deployment target:** Frontend rewrite configuration targets Vercel. Backend/API and MongoDB Atlas are documented for Render and Atlas. Local frontend development proxies `/api` and `/uploads` to the backend on port 5000. No Docker or CI configuration is present in the tracked tree.
 - **Repository scope:** This reference inventories tracked project files. It excludes `.git/`, `node_modules/`, `.venv/`, ignored local credentials and secrets, and transient build output. Tracked Spark checkpoint and Python bytecode artifacts are listed and identified as generated state.
-- **Workspace note:** The inspected worktree contains uncommitted frontend changes, including a deleted `HelpPage.jsx`; descriptions and issue notes distinguish that local state from the tracked repository inventory.
+- **Workspace note:** The inspected worktree contains uncommitted application changes. This reference documents the inspected source; that does not imply those changes have been committed or deployed.
 
 Runtime flow:
 
@@ -27,6 +27,8 @@ Runtime flow:
 4. `backend/server.js` mounts the Express routers under `/api`, exposes `/api/health` and `/api-docs`, then connects to MongoDB before listening.
 5. Mongoose persists application data; Cloudinary stores image uploads; Brevo sends transactional email.
 6. Optional Python Spark jobs populate MongoDB analytics collections. Optional Node cron invokes `mongodump` and uploads archives to Backblaze B2.
+
+Production smoke check on 2026-10-16: the public Hazard Map loaded the Render `/api/reports/public` request with HTTP 200, displayed 500 reports, loaded the Vercel-hosted MapLibre worker with HTTP 200, and rendered 97 map marker elements. This verifies the map/worker deployment at that time; it does not verify private provider settings or Render logs.
 
 ## 2. Tech Stack
 
@@ -42,11 +44,12 @@ Versions below are lockfile-resolved versions where available. Node, Python, Jav
 | Backend | Express | 5.2.1 | Declared `^5.1.0`; REST API. |
 | Database | MongoDB / Mongoose | MongoDB driver 7.6.0; Mongoose 8.24.4 | MongoDB Atlas is the documented hosted target; local MongoDB can be used by Spark defaults. |
 | Authentication | JSON Web Token / bcryptjs | 9.0.3 / 3.0.3 | JWT bearer tokens; bcryptjs hashes passwords and short-lived codes. |
+| WebAuthn | `@simplewebauthn/server` / `@simplewebauthn/browser` | 14.0.3 / 14.0.0 | Biometric/passkey registration and login for privileged accounts. |
 | Styling | Tailwind CSS / PostCSS / Autoprefixer | 3.4.19 / 8.5.28 / 10.5.5 | Tailwind default palette plus application utility classes; dark mode uses the `class` strategy. |
 | Build tool | Vite / React plugin | 8.2.2 / 6.1.1 | Frontend build, dev server, and local API proxy. |
 | Maps | MapLibre GL | 6.8.0 | Raster map rendering. |
 | Charts | Recharts | 3.10.1 | Dashboard visualizations. |
-| Scroll animation | AOS | 2.3.4 | Used on pages that initialize it locally. |
+| Animation | Framer Motion / AOS | 14.2.0 / 2.3.4 | Framer Motion drives homepage scroll transforms; AOS is initialized by pages that use it. |
 | UI feedback | Sonner / Lucide React | 2.0.8 / 1.48.0 | Toasts and icon components. |
 | Validation / security | express-validator / Helmet / CORS / express-rate-limit | 7.3.2 / 8.3.0 / 2.8.6 / 7.5.1 | API validation, headers, origin checks, and request throttling. |
 | Uploads | Multer / Cloudinary storage | 2.3.0 / 4.0.0 | Multipart uploads streamed to Cloudinary. |
@@ -54,7 +57,7 @@ Versions below are lockfile-resolved versions where available. Node, Python, Jav
 | Email | `@getbrevo/brevo` | 6.0.3 | Brevo transactional email API; SMTP/Nodemailer is not used. |
 | Backup scheduling | node-cron | 4.6.0 | Optional in-process backup schedule. |
 | Analytics | PySpark / PyMongo / schedule | 4.2.0 / 4.18.1 / 1.2.2 observed | Locally installed in `.venv`; project requirements do not pin versions. Spark connector is `org.mongodb.spark:mongo-spark-connector_2.13:11.1.0`. |
-| Testing | Postman collection | — | Security collection exists; no automated unit/integration test framework or test script is present. |
+| Testing | Node.js `node:test` / Postman | — | Two direct Node test files and a Postman collection exist; no npm test script or CI workflow is configured. |
 | CI/CD | — | — | No tracked workflow, pipeline, Dockerfile, or compose file found. |
 | Hosting | Vercel / Render / MongoDB Atlas | — | Deployment targets are documented/configured, not fully declared by infrastructure-as-code. |
 | Cache / queue | None detected | — | Rate limit and login-lockout state are in process memory; no Redis or message broker. |
@@ -66,6 +69,7 @@ Versions below are lockfile-resolved versions where available. Node, Python, Jav
 | MongoDB / MongoDB Atlas | Primary persistence for users, reports, contacts, settings, logs, notifications, token blacklist, and analytics. | `backend/config/db.js`, Mongoose models, Spark jobs | `MONGO_URI`; Spark can also use `MONGO_DB_NAME`, `DB_NAME`, and `REPORTS_COLLECTION`. |
 | Cloudinary | Report image and system-logo storage, format restrictions, and width transformation. | `backend/middleware/upload.js`, report and system controllers | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`. |
 | Brevo | Transactional account verification, password reset, 2FA, and opted-in notification email. | `backend/utils/sendEmail.js`, auth and notification controllers | `BREVO_API_KEY`, `EMAIL_FROM`, optional `EMAIL_FROM_NAME`. |
+| WebAuthn | Browser/platform authenticator registration and authentication (passkeys/biometrics). | `backend/controllers/authController.js`, `frontend/src/pages/public/LoginPage.jsx` | `WEBAUTHN_RP_ID` defaults to the request origin hostname; `WEBAUTHN_RP_NAME` defaults to `HazardWatch Dagupan`. |
 | Backblaze B2 | Gzip database archive upload, version listing, and deletion of versions older than retention. | `backend/scripts/backup.js` | `B2_KEY_ID`, `B2_APP_KEY`, `B2_BUCKET_ID`; optional backup schedule/alert variables. |
 | OpenStreetMap | Default raster tiles and source attribution. | `frontend/src/components/InteractiveMap.jsx` | No application key configured. Respect provider use/attribution requirements. |
 | Esri ArcGIS | Satellite raster tiles. | `frontend/src/components/InteractiveMap.jsx` | No application key configured in the inspected code. |
@@ -194,10 +198,13 @@ This is the tracked source/configuration/data tree at the inspection date. `.git
 │   │   ├── archiveClosedReports.js
 │   │   ├── backfillVerified.js
 │   │   ├── backup.js
+│   │   ├── barangay-resolution.test.mjs
 │   │   ├── clearReports.js
 │   │   ├── clearSeededReports.js
 │   │   ├── clearSeededUsers.js
 │   │   ├── enable2FA.js
+│   │   ├── enforce2FAPrivileged.js
+│   │   ├── feature-regression.test.mjs
 │   │   ├── fixSuperAdminRole.js
 │   │   ├── removeBackupCodes.js
 │   │   ├── reset-db-state.mjs
@@ -264,9 +271,21 @@ This is the tracked source/configuration/data tree at the inspection date. `.git
 │   ├── vercel.json
 │   ├── vite.config.js
 │   ├── public/
-│   │   ├── dagupan-map-dark.png
+│   │   ├── channel1.jpg
+│   │   ├── channel2.jpg
+│   │   ├── channel3.jpg
+│   │   ├── globe.png
 │   │   ├── hazardwatch-logo.png
-│   │   └── mission-illustration.png
+│   │   ├── manual1.jpg
+│   │   ├── manual2.jpg
+│   │   ├── manual3.jpg
+│   │   ├── mission-illustration.png
+│   │   ├── status1.jpg
+│   │   ├── status2.jpg
+│   │   ├── status3.jpg
+│   │   ├── trend1.jpg
+│   │   ├── trend2.jpg
+│   │   └── trend3.jpg
 │   └── src/
 │       ├── App.css
 │       ├── App.jsx
@@ -310,10 +329,12 @@ This is the tracked source/configuration/data tree at the inspection date. `.git
 │       │   │   ├── BarangaySidebar.jsx
 │       │   │   ├── Footer.jsx
 │       │   │   ├── Navbar.jsx
-│       │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── PrivilegedTopBar.jsx
+│   │   │   ├── ProtectedRoute.jsx
 │       │   │   ├── PublicLayout.jsx
 │       │   │   ├── Sidebar.jsx
-│       │   │   └── ThemeToggle.jsx
+│   │   │   ├── ThemeToggle.jsx
+│   │   │   └── layoutConstants.js
 │       │   └── settings/
 │       │       ├── MapPreferencesSection.jsx
 │       │       ├── SettingsCard.jsx
@@ -370,7 +391,6 @@ This is the tracked source/configuration/data tree at the inspection date. `.git
 │       │   │   ├── EnterResetCodePage.jsx
 │       │   │   ├── ForgotPasswordPage.jsx
 │       │   │   ├── HazardMapPage.jsx
-│       │   │   ├── HelpPage.jsx (tracked at HEAD; deleted in inspected worktree)
 │       │   │   ├── HomePage.jsx
 │       │   │   ├── LoginPage.jsx
 │       │   │   ├── MyReportsPage.jsx
@@ -408,7 +428,7 @@ This is the tracked source/configuration/data tree at the inspection date. `.git
 
 Notes on the tree:
 
-- The source tree has no `components/ui/`, migrations, automated test directory, Dockerfile, GitHub workflow, root README, or backend README.
+- The source tree has no `components/ui/`, migrations directory, Dockerfile, GitHub workflow, root README, or backend README. The two Node tests are standalone files under `backend/scripts/`.
 - `backend/spark/stream_input/` is an ignored runtime directory created by the streaming fallback; it has no tracked files at inspection time.
 - Local `backend/.env` and `ACCOUNTS.md` are ignored and excluded; no values from either are reproduced. `.venv/`, `node_modules/`, and `.git/` are excluded as local/vendor data.
 
@@ -429,11 +449,11 @@ Every tracked file appears below. Binary image files are described by their use,
 
 | File | Purpose / implementation | Notes |
 |---|---|---|
-| `backend/.env.example` | Names-only environment template for MongoDB, JWT, Cloudinary, Brevo, CORS, B2, and backup schedule settings. | Contains no credential values. Optional code-only variables are listed in Section 7. |
+| `backend/.env.example` | Names-only environment template for MongoDB, JWT, Cloudinary, Brevo, CORS, WebAuthn, B2, and backup schedule settings. | Contains no credential values. Optional code-only variables are listed in Section 7. |
 | `backend/BACKUPS.md` | Backup configuration, manual operation, single-instance scheduling guidance, 30-day retention, and restore instructions. | Restore should be tested against a separate database. |
 | `backend/package.json` | Backend package metadata, ESM mode, `dev`, `start`, `seed`, `seed:barangays`, and `backup` scripts; direct dependencies. | Version 1.0.0; no engine or test script. |
 | `backend/package-lock.json` | Locked backend dependency graph and resolved versions. | npm lockfile version 3. |
-| `backend/server.js` | Express bootstrap, Helmet/CSP, CORS allowlist, JSON limit, global limiter, Swagger UI, route mounts, health route, DB startup, superadmin warning, optional node-cron backup, and listener. | API routers are mounted under `/api`; `/api-docs` is mounted outside that prefix. |
+| `backend/server.js` | Express bootstrap, Helmet/CSP, CORS allowlist, JSON limit, global limiter, Swagger UI, route mounts, health route, DB startup, superadmin warning, optional node-cron backup, and listener. | API routers are mounted under `/api`; `/api-docs` is mounted outside that prefix. The current worktree uses Express 5 named-splat syntax for the OPTIONS wildcard. |
 | `backend/swagger.js` | Hand-built OpenAPI 3.0.3 paths, common schemas, bearer scheme, and local/deployed server URLs. | Several current auth/user paths are absent; see Known Issues. |
 | `backend/config/db.js` | Requires `MONGO_URI`, connects Mongoose, synchronizes Report/User text indexes, and logs the connected host. | Index synchronization may drop a differing text index. |
 
@@ -443,13 +463,13 @@ Every tracked file appears below. Binary image files are described by their use,
 |---|---|---|
 | `backend/controllers/activityController.js` | Role-specific activity queries with pagination, role/date filters, escaped text search, sort, and barangay scoping. | Returns both `entries` and `activities` for compatibility. |
 | `backend/controllers/analyticsController.js` | Reads precomputed Spark collections and returns their rows to staff API callers. | Uses MongoDB native collection reads through the active Mongoose connection. |
-| `backend/controllers/authController.js` | Registration, email verification, login, email OTP 2FA, token issue/revoke, refresh/logout, account/profile/password actions, reset-code flow, and activity writes. | Public register currently accepts privileged roles; critical issue in Section 12. |
+| `backend/controllers/authController.js` | Registration, email verification, email OTP and WebAuthn login, two-step email/password changes, token issue/revoke, reset-code flow, and activity writes. | Public register currently accepts privileged roles; critical issue in Section 12. |
 | `backend/controllers/contactController.js` | Creates public contact messages, lists admin messages, changes status, and creates notifications for received contact. | Contact route is rate-limited. |
 | `backend/controllers/notificationController.js` | Lists caller-owned notifications and marks individual/all notifications read or unread. | Query ownership is by `recipientId`. |
 | `backend/controllers/reportController.js` | Public/staff report queries, bounds/search filters, pagination, CSV export, report creation, duplicate detection, updates, status/priority, assignment, comments, deletion, image cleanup, notifications, and activity. | Barangay scoping applies to supported report operations; delete handlers physically remove report records. |
 | `backend/controllers/statisticsController.js` | Public aggregates and staff/barangay-scoped overview, category, status, priority, area, and timeline aggregates. | Barangay users are restricted to their assigned barangay in parameterized views. |
 | `backend/controllers/systemController.js` | Loads/creates singleton settings, validates partial updates, and stores Cloudinary logo URL. | Superadmin-only routes. |
-| `backend/controllers/userController.js` | User statistics, search/list, self preferences, account creation/update/password, suspension/ban/unsuspend, status changes, deletion, role hierarchy, and notification creation. | Management hierarchy and last-superadmin protections are enforced in controller logic. |
+| `backend/controllers/userController.js` | User statistics, search/list, self preferences, account creation/update/password, suspension/ban/unsuspend, status changes, deletion, role hierarchy, and notification creation. | Every suspension increments the stored count; the third suspension auto-bans and triggers user/admin email notifications. |
 
 ### 6.4 Backend middleware
 
@@ -473,7 +493,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/models/Report.js` | Hazard description, category, GeoJSON location, evidence, reporter, assignment, status/priority, resolution/comments, archive/duplicate/activity fields and indexes. | Mongo 2dsphere, text, and compound status/category/priority indexes. |
 | `backend/models/SystemSettings.js` | Singleton system name/logo, categories, statuses, roles, maintenance/notification flags, hierarchy and permission matrix. | Key defaults to `global`. |
 | `backend/models/TokenBlacklist.js` | SHA-256 token hash, user ID, expiry, timestamps. | TTL index removes expired blacklist entries. |
-| `backend/models/User.js` | Identity, credentials, role/barangay, account lifecycle, preferences, email verification, login 2FA OTP, and reset fields. | Passwords are `select: false`; bcryptjs hashing cost 12; timestamps and search/status indexes. |
+| `backend/models/User.js` | Identity, credentials, role/barangay, account lifecycle, preferences, email verification and change, password change/reset, login OTP, WebAuthn credentials/challenges, known devices, and `authVersion`. | Includes `suspensionCount` and `suspensionHistory`; passwords are `select: false` and bcryptjs-hashed at cost 12. |
 
 ### 6.6 Backend routes
 
@@ -501,6 +521,8 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/scripts/clearSeededUsers.js` | Requires typed confirmation and refuses production; deletes users with role `user`. |
 | `backend/scripts/enable2FA.js` | Enables 2FA for privileged roles and disables it for other roles. No production guard; migration. |
 | `backend/scripts/enforce2FAPrivileged.js` | Dry-run by default; with `--confirm`, enables 2FA only for privileged users missing it and writes an activity log per update. Refuses production without `--confirm`. |
+| `backend/scripts/barangay-resolution.test.mjs` | Direct `node:test` coverage for polygon resolution and report-creation coordinates. | Includes mocked controller-level checks; no npm test script is declared. |
+| `backend/scripts/feature-regression.test.mjs` | Direct `node:test` checks for device fingerprints, known devices, email templates, and barangay resolution. | Run directly with Node's test runner; no npm test script is declared. |
 | `backend/scripts/fixSuperAdminRole.js` | Repairs one canonical superadmin record and prints remaining `user` accounts. | Contains source-coded account identifier; do not treat as general provisioning. |
 | `backend/scripts/removeBackupCodes.js` | Unsets legacy backup-code fields for all matching users. No production guard. |
 | `backend/scripts/reset-db-state.mjs` | Destructively clears reports and selected users, then inserts fixture accounts. No production guard; do not run against production. |
@@ -550,7 +572,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/utils/generateToken.js` | Legacy JWT helper with `JWT_EXPIRES_IN`/seven-day fallback. | No active import found; auth controller has its own role-based token issuer. |
 | `backend/utils/logActivity.js` | Normalizes actor metadata and inserts ActivityLog records. | Shared by auth/report/user controllers. |
 | `backend/utils/priorityCalculator.js` | Keyword-based category/description priority calculation. | New reports receive computed priority. |
-| `backend/utils/sendEmail.js` | Brevo transactional email sender and HTML templates for verification, reset, and 2FA codes. | Requires `BREVO_API_KEY` and `EMAIL_FROM`. |
+| `backend/utils/sendEmail.js` | Brevo transactional sender and templates for account verification, reset, 2FA, email/password changes, new-device alerts, suspensions, and auto-bans. | Requires `BREVO_API_KEY` and `EMAIL_FROM`. |
 
 ### 6.10 Documentation and security collection
 
@@ -569,17 +591,18 @@ Every tracked file appears below. Binary image files are described by their use,
 | `frontend/package.json` | Frontend package scripts, dependencies, and version 1.0.0. | Scripts: `dev`, `build`, `preview`; no test/lint script. |
 | `frontend/package-lock.json` | Locked frontend package graph. | Lockfile version 3. |
 | `frontend/index.html` | SPA document, metadata, root mount, public logo icon, and `src/main.jsx` entry. | Browser title is updated by React route logic. |
-| `frontend/vite.config.js` | React plugin, MapLibre optimization exclusion, polling watcher, and local API/upload proxy. | Proxy target is `http://localhost:5000`. |
+| `frontend/vite.config.js` | React plugin, ES-format worker plugin, worker/build configuration, polling watcher, and local API/upload proxy. | `optimizeDeps.exclude` is empty; the proxy target is `http://localhost:5000`. |
 | `frontend/tailwind.config.js` | Tailwind source globs and class-based dark mode; no custom theme extensions/plugins. | Existing palette remains Tailwind defaults plus inline app colors. |
 | `frontend/postcss.config.js` | Tailwind and Autoprefixer PostCSS plugins. | Build configuration. |
-| `frontend/vercel.json` | Vercel static asset passthrough and SPA `index.html` rewrite. | Hosting rewrite only; no backend deployment configuration. |
-| `frontend/public/dagupan-map-dark.png` | Public hero map image. | Served from `/dagupan-map-dark.png`. |
+| `frontend/vercel.json` | Vercel asset passthrough and SPA `index.html` rewrite that excludes `/assets/*` from the fallback. | Hosting rewrite only; no backend deployment configuration. |
+| `frontend/public/globe.png` | Homepage globe image. | Animated by the homepage's `.globe-spin` wrapper. |
 | `frontend/public/hazardwatch-logo.png` | Favicon/apple-touch icon referenced by `index.html`. | Public static image. |
+| `frontend/public/channel1.jpg`–`channel3.jpg`, `manual1.jpg`–`manual3.jpg`, `status1.jpg`–`status3.jpg`, `trend1.jpg`–`trend3.jpg` | Public channel, manual, status, and trend imagery. | Static assets referenced by public content. |
 | `frontend/public/mission-illustration.png` | Public About-page mission illustration. | Served from `/mission-illustration.png`. |
-| `frontend/src/main.jsx` | React StrictMode mount, global CSS import, and manual scroll-restoration setting. | No global AOS initialization. |
-| `frontend/src/App.jsx` | Provider composition, client routes, role layouts/guards, fallback redirects, and page-title mapping. | Current worktree differs from tracked HEAD; see workspace note and Section 12. |
+| `frontend/src/main.jsx` | React StrictMode mount, global CSS import, manual scroll-restoration setting, and explicit MapLibre worker URL registration. | The worker is imported through Vite's `?worker&url` handling. |
+| `frontend/src/App.jsx` | Provider composition, client routes, role layouts/guards, fallback redirects, and page-title mapping. | Public routes are composed under the shared public layout. |
 | `frontend/src/App.css` | App-specific CSS rules. | Review import/use; not the primary global theme file. |
-| `frontend/src/index.css` | Tailwind layers, global sizing/overflow, app utility classes, map controls, and theme overrides. | Contains light-mode compatibility selectors. |
+| `frontend/src/index.css` | Tailwind layers, global sizing/overflow, app utility classes, map controls, theme overrides, and homepage globe spin keyframes. | The 60-second spin is disabled for reduced-motion preferences. |
 | `frontend/src/assets/hazardwatch-logo.png` | Bundled logo asset. | No import found in current source; likely duplicate/unused. |
 | `frontend/src/assets/hero.png` | Bundled hero image. | No import found in current source; review whether legacy. |
 | `frontend/src/assets/react.svg` | Vite/React starter asset. | No import found; likely template leftover. |
@@ -589,14 +612,14 @@ Every tracked file appears below. Binary image files are described by their use,
 
 | File | Purpose / implementation | Notes |
 |---|---|---|
-| `frontend/src/components/ActivityPage.jsx` | Shared activity page/view implementation. | Used by role-specific activity page wrappers where imported. |
+| `frontend/src/components/ActivityPage.jsx` | Shared activity page with search, date filters, pagination, human-readable dates, and reason details. | Role-specific wrappers provide different role tabs. |
 | `frontend/src/components/BanUserModal.jsx` | User-ban confirmation/reason modal. | Administrative workflow. |
 | `frontend/src/components/CommunitySections.jsx` | Public community participation and safer-community content sections. | Legacy/optional public content. |
 | `frontend/src/components/InteractiveMap.jsx` | MapLibre map, raster styles, markers/clusters, report popups, location selection, bounds callbacks, and Nominatim reverse geocoding. | Uses OSM/Esri/OpenTopoMap raster tiles. |
 | `frontend/src/components/PasswordToggle.jsx` | Password visibility control. | Shared form component. |
 | `frontend/src/components/SessionExpiryModal.jsx` | Session-expiry warning with refresh/logout actions. | Driven by AuthContext. |
 | `frontend/src/components/StaticMap.jsx` | Static map/coordinate display. | Used by public home presentation. |
-| `frontend/src/components/SuspendUserModal.jsx` | Suspension duration/reason dialog. | Administrative workflow. |
+| `frontend/src/components/SuspendUserModal.jsx` | Suspension duration/reason dialog, including a five-second test duration and custom date. | Administrative workflow. |
 | `frontend/src/components/common/AnalyticsPanel.jsx` | Spark analytics API loading and chart presentation. | Route usage should be checked before assuming user-facing availability. |
 | `frontend/src/components/common/ArchivedReportsPage.jsx` | Shared archived-report listing. | Used with role-specific base paths. |
 | `frontend/src/components/common/CodeInput.jsx` | Multi-digit verification/reset code input. | Used by email/2FA flows. |
@@ -618,7 +641,9 @@ Every tracked file appears below. Binary image files are described by their use,
 | `frontend/src/components/layout/BarangayLayout.jsx` | Barangay shell with navigation and nested outlet. | Protected in App routes. |
 | `frontend/src/components/layout/BarangaySidebar.jsx` | Barangay navigation. | Barangay-specific route links. |
 | `frontend/src/components/layout/Footer.jsx` | Public footer/navigation/contact details. | Mounted by PublicLayout. |
-| `frontend/src/components/layout/Navbar.jsx` | Public navigation, mobile menu, account actions, login/logout controls. | Current worktree has uncommitted edits. |
+| `frontend/src/components/layout/Navbar.jsx` | Public navigation, mobile menu, account actions, and login/logout controls. | Shared by public pages. |
+| `frontend/src/components/layout/PrivilegedTopBar.jsx` | Shared fixed privileged-area top bar with notifications and logout. | Used with admin and barangay layouts. |
+| `frontend/src/components/layout/layoutConstants.js` | Shared privileged layout dimensions. | Imported by the top bar and layout components. |
 | `frontend/src/components/layout/ProtectedRoute.jsx` | Client-side authentication, role, and optional barangay guard. | Backend authorization remains authoritative. |
 | `frontend/src/components/layout/PublicLayout.jsx` | Public shell composing CursorGlow, Navbar, page content, and Footer. | Shared public route wrapper. |
 | `frontend/src/components/layout/Sidebar.jsx` | Older/general sidebar implementation. | Review usage; not selected by current App layout imports. |
@@ -633,7 +658,7 @@ Every tracked file appears below. Binary image files are described by their use,
 
 | File | Purpose / implementation | Notes |
 |---|---|---|
-| `frontend/src/context/AuthContext.jsx` | Login/register/verification/2FA/reset/profile/password/session API; persists bearer token and user; expiry warning and logout. | Tokens are persisted in localStorage. |
+| `frontend/src/context/AuthContext.jsx` | Login/register/verification, OTP/WebAuthn, email/password-change, reset/profile/preferences, and session API; persists bearer token and user. | Includes expiry warning and logout; tokens are persisted in localStorage. |
 | `frontend/src/context/ConfirmContext.jsx` | Promise-based confirmation state and modal provider. | Used by shared alerts/dialog workflows. |
 | `frontend/src/context/ReportContext.jsx` | Report fetch/submit/update/delete state, public bounds fetch, client bounds guard, and report update events. | Server validation is also implemented. |
 | `frontend/src/context/ThemeContext.jsx` | User/guest light/dark/system preference storage and document theme class/data attribute. | Theme defaults to dark. |
@@ -645,14 +670,13 @@ Every tracked file appears below. Binary image files are described by their use,
 | `frontend/src/services/api.js` | Axios base URL, bearer injection, FormData handling, 401 session clearing, and API helper objects for analytics, notifications, preferences, 2FA, and system settings. | Default API origin is the deployed Render API. |
 | `frontend/src/services/reportOptions.js` | Status/priority colors, Dagupan barangays/coordinates, hazard category groups, and chart styles. | UI category source; backend validation has a separate list. |
 | `frontend/src/services/validation.js` | Client email/password patterns and messages. | Server validation remains authoritative. |
-| `frontend/src/pages/public/AboutPage.jsx` | About/story content, full-screen map hero, animated tagline, mission, story timeline, core pillars, and report CTA. | Current worktree has an uncommitted literal `z` after the hero closing section. |
+| `frontend/src/pages/public/AboutPage.jsx` | About/story content, full-screen map hero, animated tagline, mission, four story milestones, six core pillars, and report CTA. | Uses AOS for local scroll reveals. |
 | `frontend/src/pages/public/ContactPage.jsx` | Public contact form. | Posts to `/contact`. |
 | `frontend/src/pages/public/EnterResetCodePage.jsx` | Password-reset email code verification. | Uses `/auth/verify-reset-code`. |
 | `frontend/src/pages/public/ForgotPasswordPage.jsx` | Password-reset request form. | Uses `/auth/forgot-password`. |
-| `frontend/src/pages/public/HazardMapPage.jsx` | Public hazard map. | Uses public report data and InteractiveMap. |
-| `frontend/src/pages/public/HelpPage.jsx` | Previously tracked public help/FAQ page. | Deleted from current worktree and not imported by current App; resolve repository deletion/route consistency. |
-| `frontend/src/pages/public/HomePage.jsx` | Public landing page, map, hazard categories, public report statistics, and report/map CTAs. | Initializes AOS locally. |
-| `frontend/src/pages/public/LoginPage.jsx` | Credential login and role-based post-login navigation. | Privileged accounts may require OTP. |
+| `frontend/src/pages/public/HazardMapPage.jsx` | Public hazard map with viewport-filtered report pins. | Status legend is top-left; barangay selector is bottom-left. |
+| `frontend/src/pages/public/HomePage.jsx` | Public landing page, hazard categories, public report statistics, report/map CTAs, and viewport-centered globe background. | Globe rotates continuously via CSS; Framer Motion scroll transforms use desktop scale 1.15 to 0.5 (mobile 1 to 0.6), opacity 1 to 0, and y 0 to -100. Reduced motion disables the globe animation/transforms. |
+| `frontend/src/pages/public/LoginPage.jsx` | Credential and biometric login with role-based post-login navigation. | Privileged accounts require a second factor; email OTP is available as an alternative to biometrics. |
 | `frontend/src/pages/public/MyReportsPage.jsx` | Authenticated user's report list/detail navigation. | Uses own-report API. |
 | `frontend/src/pages/public/PrivacyPolicyPage.jsx` | Static privacy policy content. | Public route. |
 | `frontend/src/pages/public/ProfilePage.jsx` | Profile, password, preferences, and account controls. | Authenticated route. |
@@ -664,7 +688,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `frontend/src/pages/public/TrackReportPage.jsx` | Report tracking screen. | Route `/track`. |
 | `frontend/src/pages/public/TwoFactorPage.jsx` | Login OTP verification/resend screen. | Uses temporary login challenge token. |
 | `frontend/src/pages/public/VerifyEmailPage.jsx` | Email verification code screen. | Uses `/auth/verify-email`. |
-| `frontend/src/pages/admin/AdminActivityPage.jsx` | Admin activity log page. | Role-specific wrapper. |
+| `frontend/src/pages/admin/AdminActivityPage.jsx` | Admin activity log page. | Tabs: All, Barangay, and User. |
 | `frontend/src/pages/admin/AdminArchivedPage.jsx` | Admin/superadmin archived report wrapper. | Uses shared archived page. |
 | `frontend/src/pages/admin/AdminDashboard.jsx` | Admin operations dashboard and report charts. | Uses Recharts and statistics APIs. |
 | `frontend/src/pages/admin/AdminLayout.jsx` | Alternate page-local admin shell. | No import found; likely legacy/dead implementation. |
@@ -692,7 +716,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `frontend/src/pages/barangay/tapuac/TapuacDashboard.jsx` | Tapuac-specific dashboard implementation. | No import found; likely legacy/unrouted. |
 | `frontend/src/pages/barangay/tapuac/TapuacReportDetail.jsx` | Tapuac-specific detail implementation. | No import found; likely legacy/unrouted. |
 | `frontend/src/pages/barangay/tapuac/TapuacReportsPage.jsx` | Tapuac-specific report list implementation. | No import found; likely legacy/unrouted. |
-| `frontend/src/pages/superadmin/SuperAdminActivityPage.jsx` | Superadmin activity log screen. | Protected route. |
+| `frontend/src/pages/superadmin/SuperAdminActivityPage.jsx` | Superadmin activity log screen. | Tabs: All, Admin, Barangay, User, and SuperAdmin. |
 | `frontend/src/pages/superadmin/SuperAdminDashboard.jsx` | Superadmin operations dashboard. | Protected route. |
 | `frontend/src/pages/superadmin/SuperAdminNotificationsPage.jsx` | Superadmin notification center wrapper. | Protected route. |
 | `frontend/src/pages/superadmin/SuperAdminReportDetailPage.jsx` | Superadmin report detail/actions. | Protected route. |
@@ -716,6 +740,9 @@ Only variable names are documented. Do not copy values from local `.env` files. 
 | `EMAIL_FROM` | Verified email sender. | Required for email delivery. | None. |
 | `EMAIL_FROM_NAME` | Sender display name. | No. | `HazardWatch`. |
 | `CLIENT_URL` | Comma-separated additional CORS origins. | No. | Built-in local and deployed origins remain allowed. |
+| `WEBAUTHN_RP_ID` | WebAuthn relying-party ID, normally the frontend hostname. | No. | Defaults to the request origin hostname; must match the frontend domain or its parent domain. |
+| `WEBAUTHN_RP_NAME` | WebAuthn relying-party display name. | No. | `HazardWatch Dagupan`. |
+| `ADMIN_NOTIFICATION_EMAIL` | Recipient for automatic-ban notifications. | No. | Falls back to `EMAIL_FROM`, then a source-coded legacy value; see Section 12. |
 | `NODE_ENV` | Production/development behavior and script guards. | Recommended. | No manifest default. |
 | `PORT` | Express listen port. | No. | `5000`. |
 | `B2_KEY_ID` | Backblaze B2 API authentication. | Required for backup. | None. |
@@ -736,11 +763,11 @@ Only variable names are documented. Do not copy values from local `.env` files. 
 | `MAX_REPORTS` | Report seed target. | No. | 45,000 in script. |
 | `EMAIL_TEST_TO` | Optional destination for manual email test. | No. | Falls back to `EMAIL_FROM`. |
 
-`backend/.env.example` specifically lists `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, Cloudinary values, Brevo/email values, `CLIENT_URL`, `NODE_ENV`, B2 values, and backup schedule settings. `MONGODUMP_PATH`, `PORT`, Spark overrides, and seed/test values are code/documentation-only optional variables.
+`backend/.env.example` specifically lists `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, Cloudinary values, Brevo/email values, WebAuthn relying-party settings, `CLIENT_URL`, `NODE_ENV`, B2 values, and backup schedule settings. `ADMIN_NOTIFICATION_EMAIL`, `MONGODUMP_PATH`, `PORT`, Spark overrides, and seed/test values are code/documentation-only optional variables.
 
 ## 8. Data Models / Schema
 
-- **User (`users`):** Name/email, hidden password hash, role (`superadmin`, `admin`, `staff`, `barangay`, `user`), barangay/phone, active/status and suspension/ban/deletion lifecycle, profile image, nested theme/map/notification preferences, email verification codes/expiry, login 2FA OTP state, reset code/token state, timestamps. Passwords hash through bcryptjs cost 12. Legacy Google identity fields remain in schema.
+- **User (`users`):** Name/email, hidden password hash, role (`superadmin`, `admin`, `staff`, `barangay`, `user`), barangay/phone, active/status and suspension/ban/deletion lifecycle, `suspensionCount` and `suspensionHistory`, profile image, nested theme/map/notification preferences, email verification/change state, login OTP and WebAuthn credentials/challenges, known devices, password-change/reset state, `authVersion`, and timestamps. Passwords hash through bcryptjs cost 12. Legacy Google identity fields remain in schema.
 - **Report (`reports`):** Title, category/custom category, description, GeoJSON Point `[longitude, latitude]`, address/barangay, photo/image URLs, status (`Pending`, `In Progress`, `Resolved`, `Closed`), priority (`Low`, `Medium`, `High`, `Urgent`), reporter snapshot, assignee/assigned barangay, resolution, comments, views, archive/duplicate/active/seeded/deleted fields, timestamps. Includes 2dsphere, text, and compound status/category/priority indexes. Although `deletedAt` exists in the schema, current report DELETE handlers physically delete documents and stored images.
 - **ActivityLog (`activitylogs`):** User/actor references, actor name/role/barangay, scope, action/message/details, entity/target type and IDs, timestamps.
 - **Notification (`notifications`):** Recipient ID/role, event type, title/message, optional referenced model/ID, read/readAt, creation date; indexes by recipient/read/time.
@@ -762,20 +789,31 @@ Base path: `/api`. Protected routes require `Authorization: Bearer <JWT>` plus t
 | GET | `/auth/check-email` | Public | Check normalized email existence. |
 | POST | `/auth/verify-email` | Public | Verify six-digit account code. |
 | POST | `/auth/register` | Public | Create pending account and send verification code. Current role escalation risk is documented in Section 12. |
-| POST | `/auth/login` | Public, auth limiter + lockout | Authenticate and either issue JWT or start privileged OTP challenge. |
+| POST | `/auth/login` | Public, auth limiter + lockout | Authenticate and either issue JWT or start privileged OTP/WebAuthn challenge. |
 | POST | `/auth/2fa/verify` | Public temporary challenge | Verify login OTP and issue access JWT. |
 | POST | `/auth/2fa/resend` | Public temporary challenge | Resend login OTP. |
+| POST | `/auth/biometric/register-challenge` | Authenticated | Start WebAuthn credential registration. |
+| POST | `/auth/biometric/register-verify` | Authenticated | Verify and store a WebAuthn credential. |
+| GET | `/auth/biometric/devices` | Authenticated | List registered biometric credentials/devices. |
+| PATCH | `/auth/biometric/toggle` | Authenticated | Toggle biometric login availability; does not disable mandatory privileged login 2FA. |
+| POST | `/auth/biometric/login-challenge` | Public temporary challenge | Start WebAuthn authentication for a privileged login. |
+| POST | `/auth/biometric/login-verify` | Public temporary challenge | Verify WebAuthn assertion and complete privileged login. |
+| POST | `/auth/biometric/remove` | Authenticated | Remove a registered credential. |
 | POST | `/auth/refresh` | Authenticated | Revoke current token and issue replacement. |
 | POST | `/auth/logout` | Authenticated | Revoke current token and log logout. |
 | GET | `/auth/me` | Authenticated | Return public current-user projection. |
-| POST | `/auth/change-password` | Authenticated | Verify current password and apply password policy. |
-| PUT | `/auth/profile` | Authenticated | Update name/email; changed email becomes unverified. |
+| POST | `/auth/request-email-change` | Authenticated | Request email update; send separate verification codes to the current and new addresses. |
+| POST | `/auth/verify-email-change-old` | Authenticated | Verify ownership of the current address before allowing the second step. |
+| POST | `/auth/verify-email-change-new` | Authenticated | Verify the new address, update the email, invalidate existing sessions, and send confirmations. |
+| POST | `/auth/request-password-change` | Authenticated | Verify current password, store a pending password hash, and send a verification code. |
+| POST | `/auth/verify-password-change` | Authenticated | Verify the code and update the password; privileged users must also re-enter the current password. |
+| PUT | `/auth/profile` | Authenticated | Update the user's name; email changes must use the verification flow above. |
 | DELETE | `/auth/account` | Authenticated | Soft-delete current account. |
 | POST | `/auth/forgot-password` | Public, dedicated limiter | Send reset code with generic account-existence response. |
 | POST | `/auth/verify-reset-code` | Public | Verify code and return short-lived reset token. |
 | POST | `/auth/reset-password` | Public, dedicated limiter | Consume reset token and update password. |
 
-Privileged roles (`superadmin`, `admin`, and `barangay`) require email OTP at login. Registration and managed-user creation enable 2FA automatically; `backend/scripts/enforce2FAPrivileged.js` migrates existing privileged users. Only the login `/auth/2fa/verify` and `/auth/2fa/resend` endpoints remain; manual enrollment and disabling are not available.
+Privileged roles (`superadmin`, `admin`, and `barangay`) require a second factor at login; `staff` and `user` do not. The second factor is email OTP or a registered biometric credential, with email OTP available as the alternative. Registration and managed-user creation set the 2FA flag for privileged roles; `backend/scripts/enforce2FAPrivileged.js` migrates existing privileged users. The API has no 2FA enable/disable routes; `/auth/biometric/toggle` controls biometric availability only.
 
 ### Reports
 
@@ -811,7 +849,7 @@ Privileged roles (`superadmin`, `admin`, and `barangay`) require email OTP at lo
 | PUT or PATCH | `/users/:id` | Admin/superadmin | Update allowed user fields; role changes are denied. |
 | PATCH | `/users/:id/status` | Admin/superadmin | Toggle active/suspended state. |
 | PATCH | `/users/:id/password` | Admin/superadmin | Set managed user's password after policy/target checks. |
-| POST or PATCH | `/users/:id/suspend` | Admin/superadmin | Suspend for supported duration/custom date. |
+| POST or PATCH | `/users/:id/suspend` | Admin/superadmin | Suspend for supported duration/custom date; the third recorded suspension auto-bans the account and sends notifications. |
 | PATCH | `/users/:id/ban` | Admin/superadmin | Permanently ban eligible user. |
 | POST | `/users/:id/unsuspend` | Admin/superadmin | Restore eligible suspended account. |
 | DELETE | `/users/bulk` | Admin/superadmin | Soft-delete eligible users with hierarchy checks. |
@@ -872,10 +910,12 @@ No `/users/:id/preferences` route is currently declared; older API documentation
 
 ## 11. Auth & Security
 
-- **Access tokens:** JWT bearer tokens signed with `JWT_SECRET`; privileged admin/superadmin/barangay roles receive one-day tokens, other roles seven-day tokens. Protected middleware validates signature, denies temporary 2FA challenge tokens, checks blacklist, loads the active user, then applies role guards.
+- **Access tokens:** JWT bearer tokens signed with `JWT_SECRET`; privileged admin/superadmin/barangay roles receive one-day tokens, other roles seven-day tokens. Protected middleware validates signature, denies temporary 2FA challenge tokens, checks blacklist and `authVersion`, loads the active user, then applies role guards.
 - **Refresh/logout revocation:** Refresh and logout store the SHA-256 of the current token in `TokenBlacklist`; MongoDB TTL removes expired entries. These paths do revoke the presented token (contrary to older documentation).
 - **Passwords and one-time codes:** Passwords and email OTP/reset codes are bcrypt-hashed; reset completion tokens are SHA-256 hashed and short-lived. Password policy requires at least eight characters with upper/lower/digit/special and no spaces.
-- **Email verification and 2FA:** New/pending accounts require email verification. Citizens (`user`) and staff sign in with email and password only. Privileged roles (`superadmin`, `admin`, `barangay`) have mandatory login 2FA using email OTP or a registered biometric credential; email codes expire, failed attempts are bounded, and temporary blocking is applied. Biometric credentials are per-device and an account may register multiple devices. New privileged accounts enable 2FA automatically; manual enable/disable endpoints have been removed.
+- **Email verification and 2FA:** New/pending accounts require email verification. Citizens (`user`) and staff sign in with email and password only. Privileged roles (`superadmin`, `admin`, `barangay`) have mandatory login 2FA using email OTP or a registered biometric credential; email codes expire, failed attempts are bounded, and temporary blocking is applied. Biometric credentials are per-device and an account may register multiple devices. There is no 2FA enable/disable UI or HTTP route; the biometric toggle does not turn off mandatory 2FA.
+- **Email and password changes:** Email updates require verification codes sent separately to the old and new addresses, in that order; the old address is notified of the request and both addresses receive completion notices. Password updates require the current password and a code; privileged users re-enter the current password at verification. Both changes increment `authVersion`, invalidating previously issued sessions.
+- **Suspension and auto-ban:** Each suspension increments `suspensionCount` and appends a date to `suspensionHistory`; the third suspension results in a permanent ban, with user/admin email and activity notifications. The UI's five-second option is a test duration, not a 20-second option.
 - **Authorization:** Backend route guards are authoritative. Report, statistics, and activity operations include barangay scope checks. User-management handlers apply target role hierarchy and protect the last superadmin in covered operations.
 - **Rate limits:** Global 200 requests/15 min; auth 100/15 min; contact 5/hour; forgot-password 3/hour; reset-password 5/hour; report submissions 10/hour. Login lockout is three failures for five minutes per IP/email. Default limiter and lockout stores are process-local.
 - **Request and transport controls:** Helmet CSP/HSTS/frame/referrer/MIME options, explicit CORS origins, 2 MB JSON body cap, Express validators, maximum three 5 MB image uploads, and controlled common error responses. TLS termination is delegated to hosting infrastructure.
@@ -887,22 +927,22 @@ No `/users/:id/preferences` route is currently declared; older API documentation
 1. **Critical — public role escalation:** `validateRegister` permits the full role enum, and `authController.register` preserves a valid submitted role. A public caller can request privileged roles and, after email verification, obtain that role. Registration must force `user`; elevated accounts must be provisioned only through an authorized flow. This source-level issue needs immediate remediation and authorization tests.
 2. **Bearer tokens in localStorage:** An XSS can read persistent access tokens. Consider secure HttpOnly SameSite cookies with CSRF controls or another token-storage design.
 3. **Process-local throttling:** Express rate-limit defaults and login lockout maps do not coordinate across multiple Render instances or survive restarts. Use a shared store when horizontally scaled.
-4. **Hard-coded development credentials/notification target:** Demo/seed scripts contain source-coded initial credentials or fallback values, and privileged notification email assignment is hard-coded. Replace with safe provisioning/configuration; do not copy the literals into documentation.
+4. **Hard-coded development credentials/notification target:** Demo/seed scripts contain source-coded initial credentials or fallback values, and privileged notification email assignment includes a source-coded target/fallback. `ADMIN_NOTIFICATION_EMAIL` provides configuration but does not remove that fallback. Replace it with safe provisioning/configuration; do not copy literal values into documentation.
 5. **Sensitive logging:** Development paths log verification/reset codes; email/reset error logging includes addresses, responses, or stacks. Redact sensitive values and restrict production log access.
 6. **Upload signature validation:** The Cloudinary upload filter trusts multipart MIME type. Add content-signature/type verification and review upload abuse controls.
-7. **Maintenance scripts and report deletion:** `clearReports.js`, `reset-db-state.mjs`, `backfillVerified.js`, `enable2FA.js`, `removeBackupCodes.js`, and `setNotificationEmails.js` lack a consistent production guard. Report DELETE endpoints also physically remove records and images, unlike user soft deletion. Require explicit target checks, retention decisions, and safe operational runbooks.
-8. **Stale API documentation:** `docs/API-Reference.md` and `backend/swagger.js` do not fully describe current email verification, 2FA/reset-code paths, or all user-management routes. Postman filename references also differ from the tracked collection name.
+7. **Maintenance scripts and report deletion:** `clearReports.js`, `reset-db-state.mjs`, `backfillVerified.js`, `enable2FA.js`, `removeBackupCodes.js`, and `setNotificationEmails.js` lack a consistent production guard. `enforce2FAPrivileged.js` requires `--confirm` in production. No `backfillSuspensionCounts.js` exists, so legacy users' historical suspensions are not automatically reflected in the new counter. Report DELETE endpoints also physically remove records and images, unlike user soft deletion. Require explicit target checks, retention decisions, and safe operational runbooks.
+8. **Stale API documentation:** `docs/API-Reference.md` and `backend/swagger.js` do not fully describe current email verification, biometric login, email/password changes, 2FA/reset-code paths, or all user-management routes. Postman filename references also differ from the tracked collection name.
 9. **Security documents require refresh:** OWASP/VAPT dates/statuses predate current token blacklist, email/2FA changes, and server-side geographic validation. Runtime evidence is still marked pending; rerun authorized tests and reconcile findings.
-10. **No automated test or CI suite:** The project has a Postman collection but no tracked unit/integration test suite, package test scripts, or CI workflows. Add authorization, registration-role, validation, token-revocation, upload, and backup tests.
+10. **Limited automated tests and no CI:** Two standalone Node `node:test` files cover device/email helpers and barangay resolution/report creation, but there is no npm test script, broad authorization/security test suite, or CI workflow. Expand coverage for registration roles, token revocation, upload validation, and backup safety.
 11. **Unused/legacy modules:** No imports found for `backend/models/Category.js`, `backend/utils/generateToken.js`, `frontend/src/pages/admin/AdminLayout.jsx`, the Bonuan/Lucao/Tapuac page wrappers, or `frontend/src/assets/*`; verify and remove or reconnect. Additional standalone settings/activity pages appear unregistered and need route review.
 12. **Generated artifacts tracked:** Spark checkpoint metadata, checksum sidecars, and CPython 3.14 `.pyc` files are tracked despite ignore rules. Remove runtime-generated state from source control unless intentionally needed for recovery.
-13. **Current worktree artifacts:** `frontend/src/pages/public/HelpPage.jsx` is tracked at HEAD but deleted in the inspected worktree; the current `App.jsx` does not register it. `frontend/src/pages/public/AboutPage.jsx` currently contains a literal `z` after the hero section. Resolve these local changes separately from this reference update.
-14. **Frontend bundle advisory:** Production Vite builds report a minified JavaScript chunk over the default 500 kB warning threshold. Consider route-level code splitting if bundle load performance requires it.
-15. **Data provenance:** Seed CSV files are tracked although ignore rules exclude newly added CSVs. Confirm datasets contain no unintended personal data and that redistribution is permitted.
-16. **Documentation scope:** `README.md` files referenced by the previous reference are absent from the tracked tree; Spark and backup setup live in `backend/spark/README.md` and `backend/BACKUPS.md`.
+13. **Frontend bundle advisory:** Production Vite builds report a minified JavaScript chunk over the default 500 kB warning threshold. Consider route-level code splitting if bundle load performance requires it.
+14. **Data provenance:** Seed CSV files are tracked although ignore rules exclude newly added CSVs. Confirm datasets contain no unintended personal data and that redistribution is permitted.
+15. **Documentation scope:** `README.md` files referenced by the previous reference are absent from the tracked tree; Spark and backup setup live in `backend/spark/README.md` and `backend/BACKUPS.md`.
 
 ## 13. Change Log (of this reference)
 
 | Date | Change | Author |
 |---|---|---|
 | 2026-09-28 | Replaced stale inventory with a verified tracked-file breakdown, lockfile versions, current route/model/environment/job references, secret-handling notes, and reconciled security findings. | HazardWatch project maintainers |
+| 2026-10-16 | Updated the inventory, auth/WebAuthn/email-change/suspension behavior, environment variables, UI details, MapLibre worker configuration, direct Node test inventory, known issues, and production map smoke-check results. | HazardWatch project maintainers |

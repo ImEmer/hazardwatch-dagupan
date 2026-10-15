@@ -304,10 +304,22 @@ body,
   will-change: transform;
 }
 
+.globe-spin {
+  animation: globe-spin 60s linear infinite;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+@keyframes globe-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
   .pillar-marquee,
   .hero-map-animate,
+  .globe-spin,
   .star-layer-1,
   .star-layer-2,
   .star-layer-3 {
