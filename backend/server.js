@@ -29,6 +29,9 @@ const configuredOrigins = (process.env.CLIENT_URL || '')
   .filter(Boolean);
 const allowedOrigins = [...new Set([
   'http://localhost:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:4173',
   'https://hazardwatch-dagupan.vercel.app',
   ...configuredOrigins,
 ])];
@@ -53,15 +56,18 @@ app.use(helmet({
 }));
 
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS origin not allowed: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', globalLimiter);
