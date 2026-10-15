@@ -142,7 +142,7 @@ const fragmentedReports = [
     title: 'Manual triage',
     description: 'Every case has to be read, checked, and forwarded by hand.',
     images: ['manual1.jpg', 'manual2.jpg', 'manual3.jpg'],
-    imageAlts: ['Manual document triage', 'Staff sorting paper reports', 'A queue of reports awaiting review'],
+    imageAlts: ['Manual document triage', 'Municipal responders sorting paper reports', 'A queue of reports awaiting review'],
   },
   {
     label: 'DATA',
@@ -306,7 +306,7 @@ const steps = [
   {
     number: '02',
     title: 'Verify',
-    description: 'Authorized staff reviews and verifies submitted reports.',
+    description: 'Authorized responders review and verify submitted reports.',
   },
   {
     number: '03',
@@ -316,7 +316,7 @@ const steps = [
   {
     number: '04',
     title: 'Resolve',
-    description: 'Staff updates the report once the hazard has been addressed.',
+    description: 'The assigned responders update the report once the hazard has been addressed.',
   },
 ];
 

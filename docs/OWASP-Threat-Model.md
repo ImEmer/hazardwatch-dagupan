@@ -24,7 +24,7 @@ Assessment date: 2026-09-17. Evidence below is source-code evidence; screenshots
 - Threat: A user accesses another user's reports, administrative routes, or another barangay's data.
 - Application: API routes use `protect` and role guards. Report/statistics/activity queries scope barangay users. User-management hierarchy protects superadmins and prevents self-deletion.
 - Controls: `backend/middleware/auth.js`, `backend/routes/*.js`, `reportController.js`, `statisticsController.js`, and `activityController.js`.
-- Evidence: `allowRoles`, `isStaff`, `barangayScope`, `assertBarangayAccess`, and `managementError`.
+- Evidence: `allowRoles`, `isOperationsManager`, `barangayScope`, `assertBarangayAccess`, and `managementError`.
 - Gaps: Bulk report deletion, notification role-wide queries, and every mutation field need dedicated authorization tests.
 
 ### A02: Cryptographic Failures

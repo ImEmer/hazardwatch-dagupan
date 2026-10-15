@@ -17,7 +17,7 @@ REPORTS_COLLECTION = os.getenv("REPORTS_COLLECTION", "reports")
 EXPECTED_COLUMNS = [
     "_id", "title", "description", "category", "customCategory",
     "location", "barangay", "priority", "status", "images",
-    "reportedBy", "comments", "views",
+    "reportedBy", "views",
     "isActive", "archived", "createdAt", "updatedAt",
 ]
 

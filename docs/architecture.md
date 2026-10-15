@@ -19,9 +19,9 @@ The browser loads the React/Vite SPA from Vercel. Axios sends authenticated JSON
 ```mermaid
 flowchart LR
   Citizen[Citizen] -->|registration, login, report, contact| HW((HazardWatch))
-  Staff[Admin / Staff / Barangay] -->|review, assign, update, statistics| HW
+  Operators[Admin / Barangay] -->|review, assign, update, statistics| HW
   HW -->|status| Citizen
-  HW -->|notifications, activity, operational views| Staff
+  HW -->|notifications, activity, operational views| Operators
   HW <-->|data persistence| DB[(MongoDB Atlas)]
   HW -->|image storage| Media[Cloudinary]
   Citizen <-->|map tiles/geocoding| Maps[OpenStreetMap/Nominatim]
@@ -34,8 +34,8 @@ flowchart TB
   User[Users] --> Auth[1. Authentication]
   User --> Reports[2. Report processing]
   Admin[Administrators] --> Users[3. User administration]
-  Staff[Staff and barangay] --> Stats[4. Statistics]
-  Staff --> Activity[5. Activity and notifications]
+  Operators[Admin and barangay] --> Stats[4. Statistics]
+  Operators --> Activity[5. Activity and notifications]
   Auth --> DB[(MongoDB)]
   Reports --> DB
   Users --> DB
@@ -80,7 +80,7 @@ sequenceDiagram
   A->>C: Upload up to three images
   A->>R: Store report and reporter snapshot
   A-->>B: 201 report
-  B->>B: Refresh public/staff report state
+  B->>B: Refresh public/privileged report state
 ```
 
 ## Evidence and export notes

@@ -130,7 +130,7 @@ function App() {
             <Route path="/contact" element={<PublicPage><ContactPage /></PublicPage>} />
             <Route path="/my-reports" element={<PublicPage><MyReportsPage /></PublicPage>} />
             <Route path="/reports/:id" element={<PublicPage><ReportDetailPage /></PublicPage>} />
-            <Route path="/profile" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff', 'barangay', 'user']}><PublicPage><ProfilePage /></PublicPage></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute roles={['superadmin', 'admin', 'barangay', 'user']}><PublicPage><ProfilePage /></PublicPage></ProtectedRoute>} />
             <Route path="/login" element={<PublicPage><LoginPage /></PublicPage>} />
             <Route path="/verify-2fa" element={<PublicPage><TwoFactorPage /></PublicPage>} />
             <Route path="/register" element={<PublicPage><RegisterPage /></PublicPage>} />
@@ -176,7 +176,7 @@ function App() {
               <Route path="activity" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminActivityPage /></ProtectedRoute>} />
               <Route path="notifications" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminNotificationsPage /></ProtectedRoute>} />
               <Route path="users" element={<ProtectedRoute roles={['superadmin', 'admin']}><AdminUsersPage /></ProtectedRoute>} />
-              <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin', 'staff']}><SettingsDashboard /></ProtectedRoute>} />
+              <Route path="settings" element={<ProtectedRoute roles={['superadmin', 'admin']}><SettingsDashboard /></ProtectedRoute>} />
             </Route>
 
             <Route path="/logout" element={<Navigate to="/" replace />} />

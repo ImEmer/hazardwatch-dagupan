@@ -156,7 +156,7 @@ test('location updates re-resolve the barangay and preserve refreshed location m
         locationAccuracyMeters: 8,
         locationCapturedAt: new Date('2026-10-03T06:30:00.000Z'),
       },
-      user: { _id: 'test-staff-id', name: 'Test Staff', role: 'staff' },
+      user: { _id: 'test-user-id', name: 'Test User', role: 'user' },
     }, response, (error) => { throw error; });
 
     assert.equal(updatedPayload.barangay, 'Poblacion Oeste');

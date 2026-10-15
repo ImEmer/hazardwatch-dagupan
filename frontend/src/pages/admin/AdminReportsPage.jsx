@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useTheme from '../../hooks/useTheme';
 import { HAZARD_CATEGORIES, HAZARD_CATEGORY_COLORS, PRIORITY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
@@ -7,6 +7,7 @@ import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
 import useDebounce from '../../hooks/useDebounce';
+import useVisibleReportPolling from '../../hooks/useVisibleReportPolling';
 import Skeleton from '../../components/common/Skeleton';
 import Pagination from '../../components/common/Pagination';
 
@@ -16,16 +17,22 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const { deleteReport } = useReports();
   const { token } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : 'all');
+  const [statusFilter, setStatusFilter] = useState(resolvedOnly ? 'Resolved' : searchParams.get('status') || 'all');
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [barangayFilter, setBarangayFilter] = useState(searchParams.get('barangay') || 'all');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1));
+  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'createdAt');
+  const [sortOrder, setSortOrder] = useState(searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const filterChangeRef = useRef(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
@@ -47,6 +54,8 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
         priority: priorityFilter === 'all' ? undefined : priorityFilter,
         barangay: barangayFilter === 'all' ? undefined : barangayFilter,
         q: debouncedSearch || undefined,
+        sortBy,
+        sortOrder,
       },
       headers: { Authorization: `Bearer ${token}` },
     }).then((response) => {
@@ -59,7 +68,9 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
       if (!cancelled) setReportsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [barangayFilter, categoryFilter, debouncedSearch, page, priorityFilter, resolvedOnly, statusFilter, token]);
+  }, [barangayFilter, categoryFilter, debouncedSearch, page, priorityFilter, reloadKey, resolvedOnly, sortBy, sortOrder, statusFilter, token]);
+
+  useVisibleReportPolling(() => setReloadKey((current) => current + 1), searchFocused || search !== debouncedSearch);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -74,21 +85,27 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   }, [reports, resolvedOnly, search, statusFilter, priorityFilter, categoryFilter, barangayFilter]);
 
   useEffect(() => {
+    if (!filterChangeRef.current) {
+      filterChangeRef.current = true;
+      return;
+    }
     setPage(1);
-  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter]);
+  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     const next = {};
     [['search', search], ['status', statusFilter], ['priority', priorityFilter], ['category', categoryFilter], ['barangay', barangayFilter]].forEach(([key, value]) => { if (value && value !== 'all') next[key] = value; });
+    if (page > 1) next.page = String(page);
+    if (sortBy !== 'createdAt') next.sortBy = sortBy;
+    if (sortOrder !== 'desc') next.sortOrder = sortOrder;
     setSearchParams(next, { replace: true });
-  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, setSearchParams]);
+  }, [search, statusFilter, priorityFilter, categoryFilter, barangayFilter, page, sortBy, sortOrder, setSearchParams]);
 
   const pageCount = Math.max(1, pagination.pages);
-  const sortedReports = [...filteredReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const visibleReports = sortedReports;
+  const visibleReports = filteredReports;
   const barangays = [...new Set(reports.map((report) => report.assignedBarangay || report.barangay).filter(Boolean))].sort();
 
-  const resetFilters = () => { setSearch(''); setStatusFilter(resolvedOnly ? 'Resolved' : 'all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); };
+  const resetFilters = () => { setSearch(''); setStatusFilter(resolvedOnly ? 'Resolved' : 'all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); setSortBy('createdAt'); setSortOrder('desc'); setPage(1); };
   const exportCsv = async () => {
     try {
       const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, includeResolved: resolvedOnly };
@@ -170,8 +187,10 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
             name="reportSearch"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search report title, address, category..."
-            className={`rounded-xl border px-3 py-2.5 text-sm placeholder:text-gray-500 focus:border-[#3b82f6] focus:outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+          placeholder="Search report title, address, category..."
+          className={`rounded-xl border px-3 py-2.5 text-sm placeholder:text-gray-500 focus:border-[#3b82f6] focus:outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
           />
 
           <select
@@ -200,6 +219,23 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
           </select>
 
           <select value={barangayFilter} onChange={(event) => setBarangayFilter(event.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}><option value="all">All barangays</option>{barangays.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}</select>
+          <select
+            aria-label="Sort reports"
+            value={`${sortBy}:${sortOrder}`}
+            onChange={(event) => {
+              const [nextSortBy, nextSortOrder] = event.target.value.split(':');
+              setSortBy(nextSortBy);
+              setSortOrder(nextSortOrder);
+            }}
+            className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
+          >
+            <option value="createdAt:desc">Newest first</option>
+            <option value="createdAt:asc">Oldest first</option>
+            <option value="priority:desc">Priority high to low</option>
+            <option value="priority:asc">Priority low to high</option>
+            <option value="status:asc">Status A to Z</option>
+            <option value="status:desc">Status Z to A</option>
+          </select>
           <button type="button" onClick={resetFilters} title="Reset filters" aria-label="Reset filters" className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm xl:ml-auto ${isDark ? 'border-[#2e303a] text-gray-300 hover:text-white' : 'border-slate-300 text-gray-700 hover:text-gray-900'}`}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.9 2M18.5 9A7 7 0 006.6 7" /></svg>Reset Filters</button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2"><div className={`rounded-xl border px-3 py-2.5 text-sm ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-gray-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{pagination.total} results</div>{[[search, `Search: ${search}`, () => setSearch('')], [!resolvedOnly && statusFilter !== 'all' && statusFilter, statusFilter, () => setStatusFilter('all')], [categoryFilter !== 'all' && categoryFilter, categoryFilter, () => setCategoryFilter('all')], [priorityFilter !== 'all' && priorityFilter, priorityFilter, () => setPriorityFilter('all')], [barangayFilter !== 'all' && barangayFilter, barangayFilter, () => setBarangayFilter('all')]].filter(([value]) => value).map(([value, label, remove]) => <button type="button" key={label} onClick={remove} className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]">{label} ×</button>)}</div>
@@ -289,7 +325,7 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7V4h6v3m-9 0l1 13h10l1-13" />
                             </svg>
                           </button>
-                          <Link to={`${basePath}/reports/${report._id || report.id}`} state={{ from: resolvedOnly ? 'resolved' : 'reports' }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]" aria-label={`Open details for ${report.title}`} title="Open details">
+                          <Link to={`${basePath}/reports/${report._id || report.id}`} state={{ from: resolvedOnly ? 'resolved' : 'reports', returnTo: `${location.pathname}${location.search}` }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]" aria-label={`Open details for ${report.title}`} title="Open details">
                             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
                             </svg>

@@ -17,7 +17,6 @@ import BanUserModal from '../../components/BanUserModal';
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
   admin: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
-  staff: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   barangay: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
   user: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
 };
@@ -257,7 +256,7 @@ const AdminUsersPage = () => {
       <div className={`rounded-2xl border p-4 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Staff access</p>
+            <p className={`text-xs uppercase tracking-[0.25em] ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>User access</p>
             <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>User management</h2>
           </div>
           <button type="button" onClick={openCreator} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-[#3b82f6]/20 hover:bg-[#2563eb]">
@@ -301,7 +300,7 @@ const AdminUsersPage = () => {
                   <td className={`px-4 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{user.name}</td>
                   <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.email}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${roleBadge[user.role] || roleBadge.staff}`}>
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${roleBadge[user.role] || roleBadge.user}`}>
                       {user.role}
                     </span>
                   </td>

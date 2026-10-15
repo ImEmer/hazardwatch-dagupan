@@ -119,7 +119,7 @@ const AdminReportDetailPage = () => {
           <h2 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{report.title}</h2>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate(reportSource === 'archived' ? `${basePath}/archived` : reportSource === 'resolved' ? `${basePath}/reports/resolved` : `${basePath}/reports`)} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{reportSource === 'archived' ? 'Back to Archived' : reportSource === 'resolved' ? 'Back to Resolved Cases' : 'Back to Reports'}</button>
+          <button type="button" onClick={() => navigate(location.state?.returnTo || (reportSource === 'archived' ? `${basePath}/archived` : reportSource === 'resolved' ? `${basePath}/reports/resolved` : `${basePath}/reports`))} className="border border-blue-500 bg-transparent px-4 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">{reportSource === 'archived' ? 'Back to Archived' : reportSource === 'resolved' ? 'Back to Resolved Cases' : 'Back to Reports'}</button>
           <div className="flex gap-2">
           <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${(isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT)[report.status] || (isDark ? STATUS_BADGES : STATUS_BADGES_LIGHT).Pending}`}>
             {report.status}

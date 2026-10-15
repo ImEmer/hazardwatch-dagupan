@@ -7,7 +7,7 @@ import { confirmAction } from '../../services/alerts';
 import { HEADER_HEIGHT } from './layoutConstants';
 
 const items = [
-  { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin', 'staff'], icon: LayoutDashboard },
+  { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin'], icon: LayoutDashboard },
   { to: '/superadmin/dashboard', label: 'Dashboard', roles: ['superadmin'], icon: LayoutDashboard },
   { to: '/admin/reports', label: 'Reports', icon: FileText },
   { to: '/admin/archived', label: 'Archived', icon: Archive },
@@ -16,7 +16,7 @@ const items = [
   { to: '/superadmin/activity', label: 'Activity', roles: ['superadmin'], icon: Activity },
   { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'], icon: Users },
   { to: '/admin/notifications', label: 'Notifications', roles: ['superadmin', 'admin'], icon: Bell },
-  { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin', 'staff'], icon: Settings },
+  { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin'], icon: Settings },
 ];
 
 const AdminSidebar = () => {

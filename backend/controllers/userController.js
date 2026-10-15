@@ -5,7 +5,7 @@ import { sendAccountSuspendedEmail, sendAdminAutoBanNotificationEmail, sendAutoB
 
 const fields = 'name email role barangay phone status isActive suspendedUntil suspensionReason suspendedBy lastLogin profileImage createdAt';
 const listFields = 'name email role barangay status isActive suspendedUntil suspensionReason lastLogin createdAt';
-const ROLE_LEVELS = { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 };
+const ROLE_LEVELS = { user: 1, barangay: 2, admin: 3, superadmin: 4 };
 const manageableRoles = ['admin', 'barangay', 'user'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
@@ -125,7 +125,7 @@ export const getUsers = async (req, res, next) => {
     const search = String(req.query.q ?? req.query.search ?? '').trim();
     const filter = { status: { $ne: 'deleted' } };
     const requestedRole = String(req.query.role || '').trim();
-    if (['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(requestedRole)) filter.role = requestedRole;
+    if (['superadmin', 'admin', 'barangay', 'user'].includes(requestedRole)) filter.role = requestedRole;
     if (search) {
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const [textMatches, regexMatches] = await Promise.all([
@@ -159,8 +159,8 @@ export const createUser = async (req, res, next) => {
     if (req.user.role === 'admin' && !['user', 'barangay'].includes(role)) {
       return res.status(403).json({ success: false, message: 'Admins can only create citizen or barangay accounts.' });
     }
-    if (req.user.role === 'superadmin' && ['superadmin', 'staff'].includes(role)) {
-      return res.status(403).json({ success: false, message: 'SuperAdmin cannot create superadmin or staff accounts through the UI.' });
+    if (req.user.role === 'superadmin' && role === 'superadmin') {
+      return res.status(403).json({ success: false, message: 'SuperAdmin cannot create another superadmin account through the UI.' });
     }
     if (typeof req.body.email === 'string' && /\s/.test(req.body.email)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
     if (typeof req.body.password === 'string' && /\s/.test(req.body.password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });

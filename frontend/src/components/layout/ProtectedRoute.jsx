@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children, roles, allowedRoles, allowedBarangay }) => {
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#0a0b0f] text-gray-300">Loading session...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />;
 
-  const permittedRoles = allowedRoles || roles || ['superadmin', 'admin', 'staff'];
+  const permittedRoles = allowedRoles || roles || ['superadmin', 'admin'];
 
   if (!permittedRoles.includes(user?.role)) return <Navigate to="/" replace />;
 

@@ -16,7 +16,6 @@ import BanUserModal from '../../components/BanUserModal';
 const roleBadge = {
   superadmin: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
   admin: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
-  staff: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   barangay: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
   user: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
 };
@@ -245,7 +244,7 @@ const SuperAdminUsers = () => {
                       <td className={`px-4 py-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{user.name}</td>
                       <td className={`px-4 py-4 ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>{user.email}</td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${roleBadge[user.role] || roleBadge.staff}`}>
+                        <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${roleBadge[user.role] || roleBadge.user}`}>
                           {user.role}
                         </span>
                       </td>

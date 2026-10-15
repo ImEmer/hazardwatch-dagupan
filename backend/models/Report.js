@@ -21,7 +21,6 @@ const reportSchema = new mongoose.Schema({
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedBarangay: String,
   resolution: { notes: String, resolvedAt: Date, resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } },
-  comments: [{ text: { type: String, required: true }, author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, authorName: String, createdAt: { type: Date, default: Date.now } }],
   views: { type: Number, default: 0 },
   archived: { type: Boolean, default: false },
   archivedAt: { type: Date },

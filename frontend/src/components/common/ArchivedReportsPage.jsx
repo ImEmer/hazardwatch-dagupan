@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -8,16 +8,20 @@ import { confirmAction, showError, showSuccess } from '../../services/alerts';
 import Pagination from './Pagination';
 import Skeleton from './Skeleton';
 import useDebounce from '../../hooks/useDebounce';
+import useVisibleReportPolling from '../../hooks/useVisibleReportPolling';
 
 const PAGE_SIZE = 10;
 
 const ArchivedReportsPage = ({ basePath = '/admin' }) => {
   const { token, user } = useAuth();
   const { theme } = useTheme();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, total: 0, pages: 1 });
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1));
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -31,6 +35,15 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
   const reportIds = reports.map((report) => String(report._id));
   const allSelected = reportIds.length > 0 && reportIds.every((id) => selectedIds.includes(id));
   const columnCount = isBarangay ? 4 : 5;
+
+  useVisibleReportPolling(() => setReloadKey((current) => current + 1), searchFocused || search !== debouncedSearch);
+
+  useEffect(() => {
+    const next = {};
+    if (search) next.search = search;
+    if (page > 1) next.page = String(page);
+    setSearchParams(next, { replace: true });
+  }, [page, search, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +114,7 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
       <section className={`overflow-hidden rounded-2xl border shadow-xl ${panel}`}>
         <div className={`border-b p-4 ${rowBorder}`}>
           <label htmlFor="archived-report-search" className="sr-only">Search archived reports</label>
-          <input id="archived-report-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); setSelectedIds([]); }} placeholder="Search archived reports" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-blue-500 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+          <input id="archived-report-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); setSelectedIds([]); }} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} placeholder="Search archived reports" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-blue-500 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
         </div>
         <div className={`flex items-center justify-between gap-3 border-b p-4 ${rowBorder}`}>
           <label className={`inline-flex items-center gap-2 text-sm ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
@@ -128,7 +141,7 @@ const ArchivedReportsPage = ({ basePath = '/admin' }) => {
                         <td className="px-4 py-4 font-medium">{report.title || `${report.category} report`}</td>
                         {!isBarangay && <td className="px-4 py-4">{report.assignedBarangay || report.barangay || '-'}</td>}
                         <td className="px-4 py-4">{report.archivedAt ? new Date(report.archivedAt).toLocaleDateString() : '-'}</td>
-                        <td className="px-4 py-4"><Link to={`${basePath}/reports/${id}`} state={{ from: 'archived' }} className="text-[#3b82f6] hover:text-[#60a5fa]">View</Link></td>
+                        <td className="px-4 py-4"><Link to={`${basePath}/reports/${id}`} state={{ from: 'archived', returnTo: `${location.pathname}${location.search}` }} className="text-[#3b82f6] hover:text-[#60a5fa]">View</Link></td>
                       </tr>;
                     })}
             </tbody>

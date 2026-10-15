@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { getBarangayOverview, getBarangayPriorities, getBarangayStatuses, getBarangayTimeline, getBarangays, getCategories, getOverview, getPublicStats, getStatuses, getTimeline } from '../controllers/statisticsController.js';
-import { isStaff, protect } from '../middleware/auth.js';
+import { isOperationsManager, protect } from '../middleware/auth.js';
 
 const router = Router();
 router.get('/public', getPublicStats);
-router.use(protect, isStaff);
+router.use(protect, isOperationsManager);
 router.get('/overview', getOverview);
 router.get('/categories', getCategories);
 router.get('/status', getStatuses);

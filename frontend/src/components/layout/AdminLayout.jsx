@@ -28,7 +28,7 @@ const AdminLayout = () => {
   }, []);
 
   return (
-    <ProtectedRoute roles={['superadmin', 'admin', 'staff']}>
+    <ProtectedRoute roles={['superadmin', 'admin']}>
       <div className={`h-screen overflow-hidden ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
         <div className="h-full">
           <PrivilegedTopBar

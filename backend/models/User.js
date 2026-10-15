@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, unique: true, sparse: true },
   authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
   password: { type: String, required: function passwordRequired() { return this.authProvider !== 'google'; }, minlength: 8, select: false },
-  role: { type: String, enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'], default: 'user' },
+  role: { type: String, enum: ['superadmin', 'admin', 'barangay', 'user'], default: 'user' },
   barangay: { type: String, trim: true, default: null },
   phone: { type: String, trim: true },
   status: { type: String, enum: ['active', 'suspended', 'banned', 'deleted', 'pending'], default: 'active' },

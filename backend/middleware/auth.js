@@ -31,5 +31,5 @@ export const allowRoles = (...roles) => (req, res, next) => {
 };
 
 export const isAdmin = allowRoles('superadmin', 'admin');
-export const isStaff = allowRoles('superadmin', 'admin', 'staff', 'barangay');
+export const isOperationsManager = allowRoles('superadmin', 'admin', 'barangay');
   

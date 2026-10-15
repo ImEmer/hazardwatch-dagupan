@@ -7,11 +7,11 @@ const defaultSettings = {
   hazardCategories: ['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak'],
   reportStatuses: ['Pending', 'In Progress', 'Resolved', 'Closed'],
   priorityLevels: ['Low', 'Medium', 'High', 'Urgent'],
-  userRoles: ['user', 'barangay', 'staff', 'admin', 'superadmin'],
+  userRoles: ['user', 'barangay', 'admin', 'superadmin'],
   maintenanceMode: false,
   notificationsEnabled: true,
   defaultUserRole: 'user',
-  roleHierarchy: { user: 1, barangay: 2, staff: 2, admin: 3, superadmin: 4 },
+  roleHierarchy: { user: 1, barangay: 2, admin: 3, superadmin: 4 },
   permissionMatrix: {},
 };
 
@@ -48,7 +48,7 @@ export const updateSystemSettings = async (req, res, next) => {
     for (const field of ['maintenanceMode', 'notificationsEnabled']) {
       if (Object.hasOwn(body, field) && typeof body[field] !== 'boolean') return res.status(400).json({ success: false, message: `${field} must be a boolean.` });
     }
-    if (Object.hasOwn(body, 'defaultUserRole') && !['user', 'barangay', 'staff', 'admin'].includes(body.defaultUserRole)) {
+    if (Object.hasOwn(body, 'defaultUserRole') && !['user', 'barangay', 'admin'].includes(body.defaultUserRole)) {
       return res.status(400).json({ success: false, message: 'Default user role is invalid.' });
     }
     if (Object.hasOwn(body, 'roleHierarchy') && (!body.roleHierarchy || typeof body.roleHierarchy !== 'object' || Array.isArray(body.roleHierarchy))) {

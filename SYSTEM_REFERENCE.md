@@ -12,8 +12,8 @@
 
 - **Purpose:** A community hazard-reporting and monitoring platform for Dagupan City, Philippines.
 - **Problem it solves:** Gives residents and local responders a shared way to submit, locate, review, assign, and track community hazard reports.
-- **Target users:** Citizens (`user`), barangay operators (`barangay`), staff (`staff`), administrators (`admin`), and super administrators (`superadmin`).
-- **Core features:** Account registration and email verification; password reset and verified account email/password changes; mandatory email OTP or WebAuthn second factor for privileged roles; photo-backed hazard reports; interactive hazard maps; report status, priority, assignment, comments, archive and export workflows; user administration; barangay-scoped operations; statistics and audit activity; notifications; system settings; and Spark-based batch/window/stream analytics.
+- **Target users:** Citizens (`user`), barangay operators (`barangay`), administrators (`admin`), and super administrators (`superadmin`).
+- **Core features:** Account registration and email verification; password reset and verified account email/password changes; mandatory email OTP or WebAuthn second factor for privileged roles; photo-backed hazard reports; interactive hazard maps; report status, priority, assignment, archive and export workflows; user administration; barangay-scoped operations; statistics and audit activity; notifications; system settings; and Spark-based batch/window/stream analytics.
 - **High-level architecture:** A modular monolith consisting of a React single-page application, an Express REST API, and MongoDB persistence. Separate PySpark jobs read reports and write derived analytics collections. The Node API can also schedule database backups in-process.
 - **Deployment target:** Frontend rewrite configuration targets Vercel. Backend/API and MongoDB Atlas are documented for Render and Atlas. Local frontend development proxies `/api` and `/uploads` to the backend on port 5000. No Docker or CI configuration is present in the tracked tree.
 - **Repository scope:** This reference inventories tracked project files. It excludes `.git/`, `node_modules/`, `.venv/`, ignored local credentials and secrets, and transient build output. Tracked Spark checkpoint and Python bytecode artifacts are listed and identified as generated state.
@@ -79,7 +79,7 @@ Versions below are lockfile-resolved versions where available. Node, Python, Jav
 | Vercel | Static frontend hosting and SPA fallback rewrites. | `frontend/vercel.json` | Deployment provider configuration. |
 | Render | Documented backend hosting target and deployed API origin. | `backend/swagger.js`, frontend API default, architecture docs | `PORT`, `CLIENT_URL`, and provider-managed environment. |
 
-No payment provider, Redis, external queue, SMTP client, or Google Sign-In implementation is active. `User.js` retains legacy Google identity fields, but its comment identifies Google Sign-In as deprecated.
+No payment provider, Redis, external queue, SMTP client, or Google Sign-In implementation is active. `User.js` retains legacy Google identity fields, but its deprecation note identifies Google Sign-In as deprecated.
 
 ## 4. Dependencies (Direct)
 
@@ -462,12 +462,12 @@ Every tracked file appears below. Binary image files are described by their use,
 | File | Purpose / implementation | Notes |
 |---|---|---|
 | `backend/controllers/activityController.js` | Role-specific activity queries with pagination, role/date filters, escaped text search, sort, and barangay scoping. | Returns both `entries` and `activities` for compatibility. |
-| `backend/controllers/analyticsController.js` | Reads precomputed Spark collections and returns their rows to staff API callers. | Uses MongoDB native collection reads through the active Mongoose connection. |
+| `backend/controllers/analyticsController.js` | Reads precomputed Spark collections and returns their rows to authorized API callers. | Uses MongoDB native collection reads through the active Mongoose connection. |
 | `backend/controllers/authController.js` | Registration, email verification, email OTP and WebAuthn login, two-step email/password changes, token issue/revoke, reset-code flow, and activity writes. | Public register currently accepts privileged roles; critical issue in Section 12. |
 | `backend/controllers/contactController.js` | Creates public contact messages, lists admin messages, changes status, and creates notifications for received contact. | Contact route is rate-limited. |
 | `backend/controllers/notificationController.js` | Lists caller-owned notifications and marks individual/all notifications read or unread. | Query ownership is by `recipientId`. |
-| `backend/controllers/reportController.js` | Public/staff report queries, bounds/search filters, pagination, CSV export, report creation, duplicate detection, updates, status/priority, assignment, comments, deletion, image cleanup, notifications, and activity. | Barangay scoping applies to supported report operations; delete handlers physically remove report records. |
-| `backend/controllers/statisticsController.js` | Public aggregates and staff/barangay-scoped overview, category, status, priority, area, and timeline aggregates. | Barangay users are restricted to their assigned barangay in parameterized views. |
+| `backend/controllers/reportController.js` | Public/privileged report queries, bounds/search filters, pagination, CSV export, report creation, duplicate detection, updates, status/priority, assignment, deletion, image cleanup, notifications, and activity. | Barangay scoping applies to supported report operations; delete handlers physically remove report records. |
+| `backend/controllers/statisticsController.js` | Public aggregates and privileged/barangay-scoped overview, category, status, priority, area, and timeline aggregates. | Barangay users are restricted to their assigned barangay in parameterized views. |
 | `backend/controllers/systemController.js` | Loads/creates singleton settings, validates partial updates, and stores Cloudinary logo URL. | Superadmin-only routes. |
 | `backend/controllers/userController.js` | User statistics, search/list, self preferences, account creation/update/password, suspension/ban/unsuspend, status changes, deletion, role hierarchy, and notification creation. | Every suspension increments the stored count; the third suspension auto-bans and triggers user/admin email notifications. |
 
@@ -475,7 +475,7 @@ Every tracked file appears below. Binary image files are described by their use,
 
 | File | Purpose / implementation | Notes |
 |---|---|---|
-| `backend/middleware/auth.js` | Verifies JWT bearer tokens, rejects login-challenge tokens, checks SHA-256 token blacklist and active user, attaches `req.user`; exports role guards. | `isStaff` includes superadmin/admin/staff/barangay; `isAdmin` includes superadmin/admin. |
+| `backend/middleware/auth.js` | Verifies JWT bearer tokens, rejects login-challenge tokens, checks SHA-256 token blacklist and active user, attaches `req.user`; exports role guards. | `isOperationsManager` allows superadmin/admin/barangay; `isAdmin` allows superadmin/admin. |
 | `backend/middleware/errorHandler.js` | JSON 404 and centralized duplicate, validation, cast, JWT, and generic error responses. | Logs raw error objects server-side; review production redaction. |
 | `backend/middleware/loginLockout.js` | IP+normalized-email in-memory lockout after three failures for five minutes. | Process-local map; not shared between instances. |
 | `backend/middleware/rateLimit.js` | Global, auth, contact, forgot/reset password, and report-submission rate limiters with Retry-After responses. | Default store is process-local. |
@@ -490,7 +490,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/models/Category.js` | Name/icon/color/active category schema. | No route or active source import found; likely legacy/unused. |
 | `backend/models/ContactMessage.js` | Sender, email, subject, message, `new/read/resolved` status, timestamps. | Contact inbox persistence. |
 | `backend/models/Notification.js` | Recipient ID/role, event type, title/message, reference, read state, timestamps and recipient indexes. | Only superadmin/admin/barangay recipient roles. |
-| `backend/models/Report.js` | Hazard description, category, GeoJSON location, evidence, reporter, assignment, status/priority, resolution/comments, archive/duplicate/activity fields and indexes. | Mongo 2dsphere, text, and compound status/category/priority indexes. |
+| `backend/models/Report.js` | Hazard description, category, GeoJSON location, evidence, reporter, assignment, status/priority, resolution, archive/duplicate/activity fields and indexes. | Mongo 2dsphere, text, and compound status/category/priority indexes. |
 | `backend/models/SystemSettings.js` | Singleton system name/logo, categories, statuses, roles, maintenance/notification flags, hierarchy and permission matrix. | Key defaults to `global`. |
 | `backend/models/TokenBlacklist.js` | SHA-256 token hash, user ID, expiry, timestamps. | TTL index removes expired blacklist entries. |
 | `backend/models/User.js` | Identity, credentials, role/barangay, account lifecycle, preferences, email verification and change, password change/reset, login OTP, WebAuthn credentials/challenges, known devices, and `authVersion`. | Includes `suspensionCount` and `suspensionHistory`; passwords are `select: false` and bcryptjs-hashed at cost 12. |
@@ -500,12 +500,12 @@ Every tracked file appears below. Binary image files are described by their use,
 | File | Purpose / implementation |
 |---|---|
 | `backend/routes/activity.js` | Authenticated activity route declarations and role-specific handlers. |
-| `backend/routes/analytics.js` | Staff-only read routes for Spark batch/window collections. |
+| `backend/routes/analytics.js` | Privileged-role read routes for Spark batch/window collections. |
 | `backend/routes/auth.js` | Registration, verification, password, login, 2FA, refresh, logout, and profile routes with rate limits and validators. |
 | `backend/routes/contact.js` | Public rate-limited contact submission plus protected admin inbox/status routes. |
 | `backend/routes/notifications.js` | Protected notification list/read-state routes for privileged notification roles. |
-| `backend/routes/reports.js` | Public reduced report list plus protected report submission and staff/admin report workflows. |
-| `backend/routes/statistics.js` | Public statistics and protected staff/barangay report aggregates. |
+| `backend/routes/reports.js` | Public reduced report list plus protected report submission and privileged/admin report workflows. |
+| `backend/routes/statistics.js` | Public statistics and protected privileged/barangay report aggregates. |
 | `backend/routes/system.js` | Superadmin-only settings and logo upload routes. |
 | `backend/routes/users.js` | Authenticated self-preferences routes and admin/superadmin user-management routes. |
 
@@ -521,6 +521,7 @@ Every tracked file appears below. Binary image files are described by their use,
 | `backend/scripts/clearSeededUsers.js` | Requires typed confirmation and refuses production; deletes users with role `user`. |
 | `backend/scripts/enable2FA.js` | Enables 2FA for privileged roles and disables it for other roles. No production guard; migration. |
 | `backend/scripts/enforce2FAPrivileged.js` | Dry-run by default; with `--confirm`, enables 2FA only for privileged users missing it and writes an activity log per update. Refuses production without `--confirm`. |
+| `backend/scripts/removeStaffRole.js` | `--dry-run` lists legacy-role accounts; `--confirm` migrates each to `user`, writes an activity log per account, and removes the obsolete role from global settings. Production changes require `--confirm`. |
 | `backend/scripts/barangay-resolution.test.mjs` | Direct `node:test` coverage for polygon resolution and report-creation coordinates. | Includes mocked controller-level checks; no npm test script is declared. |
 | `backend/scripts/feature-regression.test.mjs` | Direct `node:test` checks for device fingerprints, known devices, email templates, and barangay resolution. | Run directly with Node's test runner; no npm test script is declared. |
 | `backend/scripts/fixSuperAdminRole.js` | Repairs one canonical superadmin record and prints remaining `user` accounts. | Contains source-coded account identifier; do not treat as general provisioning. |
@@ -767,8 +768,8 @@ Only variable names are documented. Do not copy values from local `.env` files. 
 
 ## 8. Data Models / Schema
 
-- **User (`users`):** Name/email, hidden password hash, role (`superadmin`, `admin`, `staff`, `barangay`, `user`), barangay/phone, active/status and suspension/ban/deletion lifecycle, `suspensionCount` and `suspensionHistory`, profile image, nested theme/map/notification preferences, email verification/change state, login OTP and WebAuthn credentials/challenges, known devices, password-change/reset state, `authVersion`, and timestamps. Passwords hash through bcryptjs cost 12. Legacy Google identity fields remain in schema.
-- **Report (`reports`):** Title, category/custom category, description, GeoJSON Point `[longitude, latitude]`, address/barangay, photo/image URLs, status (`Pending`, `In Progress`, `Resolved`, `Closed`), priority (`Low`, `Medium`, `High`, `Urgent`), reporter snapshot, assignee/assigned barangay, resolution, comments, views, archive/duplicate/active/seeded/deleted fields, timestamps. Includes 2dsphere, text, and compound status/category/priority indexes. Although `deletedAt` exists in the schema, current report DELETE handlers physically delete documents and stored images.
+- **User (`users`):** Name/email, hidden password hash, role (`superadmin`, `admin`, `barangay`, `user`), barangay/phone, active/status and suspension/ban/deletion lifecycle, `suspensionCount` and `suspensionHistory`, profile image, nested theme/map/notification preferences, email verification/change state, login OTP and WebAuthn credentials/challenges, known devices, password-change/reset state, `authVersion`, and timestamps. Passwords hash through bcryptjs cost 12. Legacy Google identity fields remain in schema.
+- **Report (`reports`):** Title, category/custom category, description, GeoJSON Point `[longitude, latitude]`, address/barangay, photo/image URLs, status (`Pending`, `In Progress`, `Resolved`, `Closed`), priority (`Low`, `Medium`, `High`, `Urgent`), reporter snapshot, assignee/assigned barangay, resolution, views, archive/duplicate/active/seeded/deleted fields, timestamps. Includes 2dsphere, text, and compound status/category/priority indexes. Although `deletedAt` exists in the schema, current report DELETE handlers physically delete documents and stored images.
 - **ActivityLog (`activitylogs`):** User/actor references, actor name/role/barangay, scope, action/message/details, entity/target type and IDs, timestamps.
 - **Notification (`notifications`):** Recipient ID/role, event type, title/message, optional referenced model/ID, read/readAt, creation date; indexes by recipient/read/time.
 - **ContactMessage (`contactmessages`):** Name, email, subject, message, status, timestamps.
@@ -779,7 +780,7 @@ Only variable names are documented. Do not copy values from local `.env` files. 
 
 ## 9. API Endpoints
 
-Base path: `/api`. Protected routes require `Authorization: Bearer <JWT>` plus the role shown. `/api-docs` serves Swagger UI. `staff` in route guards means `superadmin`, `admin`, `staff`, or `barangay`; user-management `isAdmin` means `superadmin` or `admin`.
+Base path: `/api`. Protected routes require `Authorization: Bearer <JWT>` plus the role shown. `/api-docs` serves Swagger UI. Report-management guards allow `superadmin`, `admin`, and `barangay`; user-management `isAdmin` allows `superadmin` or `admin`.
 
 ### Health and authentication
 
@@ -813,7 +814,7 @@ Base path: `/api`. Protected routes require `Authorization: Bearer <JWT>` plus t
 | POST | `/auth/verify-reset-code` | Public | Verify code and return short-lived reset token. |
 | POST | `/auth/reset-password` | Public, dedicated limiter | Consume reset token and update password. |
 
-Privileged roles (`superadmin`, `admin`, and `barangay`) require a second factor at login; `staff` and `user` do not. The second factor is email OTP or a registered biometric credential, with email OTP available as the alternative. Registration and managed-user creation set the 2FA flag for privileged roles; `backend/scripts/enforce2FAPrivileged.js` migrates existing privileged users. The API has no 2FA enable/disable routes; `/auth/biometric/toggle` controls biometric availability only.
+Privileged roles (`superadmin`, `admin`, and `barangay`) require a second factor at login; `user` accounts do not. The second factor is email OTP or a registered biometric credential, with email OTP available as the alternative. Registration and managed-user creation set the 2FA flag for privileged roles; `backend/scripts/enforce2FAPrivileged.js` migrates existing privileged users. The API has no 2FA enable/disable routes; `/auth/biometric/toggle` controls biometric availability only.
 
 ### Reports
 
@@ -821,17 +822,16 @@ Privileged roles (`superadmin`, `admin`, and `barangay`) require a second factor
 |---|---|---|---|
 | GET | `/reports/public` | Public | Reduced report listing with filters, viewport bounds, and pagination. |
 | GET | `/reports/export` | Admin/superadmin | Export filtered report list as CSV. |
-| GET | `/reports/search` | Staff | Staff report query/search. |
-| GET | `/reports` | Staff | Paginated/filterable staff queue. |
+| GET | `/reports/search` | Superadmin/admin/barangay | Report query/search. |
+| GET | `/reports` | Superadmin/admin/barangay | Paginated/filterable report queue. |
 | GET | `/reports/mine` | Authenticated | Reports whose reporter snapshot matches the current email. |
-| GET | `/reports/archived` | Staff | Archived reports, barangay-scoped for barangay users. |
-| GET | `/reports/:id` | Staff | Retrieve report and increment view count. |
+| GET | `/reports/archived` | Superadmin/admin/barangay | Archived reports, barangay-scoped for barangay users. |
+| GET | `/reports/:id` | Superadmin/admin/barangay | Retrieve report and increment view count. |
 | POST | `/reports` | Authenticated, submission limiter | Multipart report with up to three images; route validates location/category/photo. |
-| PUT | `/reports/:id` | Staff | Update permitted report fields within barangay scope. |
-| PATCH | `/reports/:id/status` | Staff | Update status; `Closed` archives. |
-| PATCH | `/reports/:id/priority` | Staff | Update priority. |
+| PUT | `/reports/:id` | Superadmin/admin/barangay | Update permitted report fields within barangay scope. |
+| PATCH | `/reports/:id/status` | Superadmin/admin/barangay | Update status; `Closed` archives. |
+| PATCH | `/reports/:id/priority` | Superadmin/admin/barangay | Update priority. |
 | PATCH | `/reports/:id/assign` | Admin/superadmin | Assign user and/or barangay. |
-| POST | `/reports/:id/comments` | Staff | Append validated comment. |
 | DELETE | `/reports/bulk` | Admin/superadmin/barangay | Delete selected reports; IDs are validated and barangay scope enforced. |
 | DELETE | `/reports/:id` | Admin/superadmin/barangay | Delete report and clean related images/notifications. |
 
@@ -862,22 +862,22 @@ No `/users/:id/preferences` route is currently declared; older API documentation
 | Method | Path | Access | Handler behavior |
 |---|---|---|---|
 | GET | `/statistics/public` | Public | Public report totals, active/resolved counts, covered areas, top categories. |
-| GET | `/statistics/overview` | Staff | Scoped totals/status/priority. |
-| GET | `/statistics/categories` | Staff | Scoped category counts. |
-| GET | `/statistics/status` | Staff | Scoped status counts. |
-| GET | `/statistics/timeline` | Staff | Daily report counts. |
-| GET | `/statistics/barangay` | Staff | Reports grouped by barangay. |
-| GET | `/statistics/barangay/:barangay` | Staff | Barangay overview; barangay caller may only request own barangay. |
-| GET | `/statistics/barangay/:barangay/status` | Staff | Barangay status counts. |
-| GET | `/statistics/barangay/:barangay/priority` | Staff | Barangay priority counts. |
-| GET | `/statistics/barangay/:barangay/timeline` | Staff | Barangay daily counts, optional month/year filters. |
-| GET | `/analytics/reports-per-barangay` | Staff | Spark batch barangay aggregate. |
-| GET | `/analytics/reports-per-category` | Staff | Spark batch category aggregate. |
-| GET | `/analytics/reports-per-priority` | Staff | Spark batch priority aggregate. |
-| GET | `/analytics/reports-per-day` | Staff | Spark batch daily aggregate. |
-| GET | `/analytics/tumbling-hourly` | Staff | Spark tumbling hourly windows. |
-| GET | `/analytics/sliding` | Staff | Spark sliding windows. |
-| GET | `/analytics/sessions` | Staff | Spark reporter session windows. |
+| GET | `/statistics/overview` | Superadmin/admin/barangay | Scoped totals/status/priority. |
+| GET | `/statistics/categories` | Superadmin/admin/barangay | Scoped category counts. |
+| GET | `/statistics/status` | Superadmin/admin/barangay | Scoped status counts. |
+| GET | `/statistics/timeline` | Superadmin/admin/barangay | Daily report counts. |
+| GET | `/statistics/barangay` | Superadmin/admin/barangay | Reports grouped by barangay. |
+| GET | `/statistics/barangay/:barangay` | Superadmin/admin/barangay | Barangay overview; barangay caller may only request own barangay. |
+| GET | `/statistics/barangay/:barangay/status` | Superadmin/admin/barangay | Barangay status counts. |
+| GET | `/statistics/barangay/:barangay/priority` | Superadmin/admin/barangay | Barangay priority counts. |
+| GET | `/statistics/barangay/:barangay/timeline` | Superadmin/admin/barangay | Barangay daily counts, optional month/year filters. |
+| GET | `/analytics/reports-per-barangay` | Superadmin/admin/barangay | Spark batch barangay aggregate. |
+| GET | `/analytics/reports-per-category` | Superadmin/admin/barangay | Spark batch category aggregate. |
+| GET | `/analytics/reports-per-priority` | Superadmin/admin/barangay | Spark batch priority aggregate. |
+| GET | `/analytics/reports-per-day` | Superadmin/admin/barangay | Spark batch daily aggregate. |
+| GET | `/analytics/tumbling-hourly` | Superadmin/admin/barangay | Spark tumbling hourly windows. |
+| GET | `/analytics/sliding` | Superadmin/admin/barangay | Spark sliding windows. |
+| GET | `/analytics/sessions` | Superadmin/admin/barangay | Spark reporter session windows. |
 
 ### Activity, notifications, contact, and system settings
 
@@ -913,7 +913,7 @@ No `/users/:id/preferences` route is currently declared; older API documentation
 - **Access tokens:** JWT bearer tokens signed with `JWT_SECRET`; privileged admin/superadmin/barangay roles receive one-day tokens, other roles seven-day tokens. Protected middleware validates signature, denies temporary 2FA challenge tokens, checks blacklist and `authVersion`, loads the active user, then applies role guards.
 - **Refresh/logout revocation:** Refresh and logout store the SHA-256 of the current token in `TokenBlacklist`; MongoDB TTL removes expired entries. These paths do revoke the presented token (contrary to older documentation).
 - **Passwords and one-time codes:** Passwords and email OTP/reset codes are bcrypt-hashed; reset completion tokens are SHA-256 hashed and short-lived. Password policy requires at least eight characters with upper/lower/digit/special and no spaces.
-- **Email verification and 2FA:** New/pending accounts require email verification. Citizens (`user`) and staff sign in with email and password only. Privileged roles (`superadmin`, `admin`, `barangay`) have mandatory login 2FA using email OTP or a registered biometric credential; email codes expire, failed attempts are bounded, and temporary blocking is applied. Biometric credentials are per-device and an account may register multiple devices. There is no 2FA enable/disable UI or HTTP route; the biometric toggle does not turn off mandatory 2FA.
+- **Email verification and 2FA:** New/pending accounts require email verification. Citizen accounts (`user`) sign in with email and password only. Privileged roles (`superadmin`, `admin`, `barangay`) have mandatory login 2FA using email OTP or a registered biometric credential; email codes expire, failed attempts are bounded, and temporary blocking is applied. Biometric credentials are per-device and an account may register multiple devices. There is no 2FA enable/disable UI or HTTP route; the biometric toggle does not turn off mandatory 2FA.
 - **Email and password changes:** Email updates require verification codes sent separately to the old and new addresses, in that order; the old address is notified of the request and both addresses receive completion notices. Password updates require the current password and a code; privileged users re-enter the current password at verification. Both changes increment `authVersion`, invalidating previously issued sessions.
 - **Suspension and auto-ban:** Each suspension increments `suspensionCount` and appends a date to `suspensionHistory`; the third suspension results in a permanent ban, with user/admin email and activity notifications. The UI's five-second option is a test duration, not a 20-second option.
 - **Authorization:** Backend route guards are authoritative. Report, statistics, and activity operations include barangay scope checks. User-management handlers apply target role hierarchy and protect the last superadmin in covered operations.
@@ -946,3 +946,4 @@ No `/users/:id/preferences` route is currently declared; older API documentation
 |---|---|---|
 | 2026-09-28 | Replaced stale inventory with a verified tracked-file breakdown, lockfile versions, current route/model/environment/job references, secret-handling notes, and reconciled security findings. | HazardWatch project maintainers |
 | 2026-10-16 | Updated the inventory, auth/WebAuthn/email-change/suspension behavior, environment variables, UI details, MapLibre worker configuration, direct Node test inventory, known issues, and production map smoke-check results. | HazardWatch project maintainers |
+| 2026-10-18 | Removed the retired account role and report discussion feature; documented the data migration and URL-backed, refreshed report queues. | HazardWatch project maintainers |

@@ -57,7 +57,7 @@ Windows: `analytics_tumbling_hourly`, `analytics_tumbling_daily`, `analytics_sli
 
 Streaming: `streaming_reports_per_barangay`, `streaming_reports_per_category`, and `streaming_reports_per_priority`.
 
-The Express API exposes the batch/window collections under `/api/analytics/*` for authenticated staff users.
+The Express API exposes the batch/window collections under `/api/analytics/*` for authenticated administrators and barangay users.
 
 ## Scalable Analytics - Backend Only
 

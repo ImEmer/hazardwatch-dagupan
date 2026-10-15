@@ -7,12 +7,12 @@ const activityLogSchema = new mongoose.Schema({
   actorBarangay: { type: String, trim: true, default: '' },
   actorRole: {
     type: String,
-    enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'],
+    enum: ['superadmin', 'admin', 'barangay', 'user'],
     default: 'user',
   },
   role: {
     type: String,
-    enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'],
+    enum: ['superadmin', 'admin', 'barangay', 'user'],
     default: 'user',
   },
   scope: { type: String, enum: ['system', 'admin', 'barangay', 'user'], default: 'system' },

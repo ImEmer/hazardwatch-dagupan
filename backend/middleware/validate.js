@@ -46,7 +46,7 @@ export const validateRegister = [
     return true;
   }).isEmail().normalizeEmail().withMessage('A valid email is required.'),
   passwordPolicy(),
-  body('role').optional().isIn(['superadmin', 'admin', 'staff', 'barangay', 'user']),
+  body('role').optional().isIn(['superadmin', 'admin', 'barangay', 'user']),
   body('barangay').optional().trim().escape().isLength({ max: 100 }),
   body('phone').optional().trim().escape().isLength({ max: 30 }),
   body('agreedToTerms').custom((value) => {
@@ -154,11 +154,6 @@ const mutationFieldAllowlist = (allowed) => body().custom((value) => {
   return true;
 });
 
-export const validateReportComment = [
-  mutationFieldAllowlist(['text']),
-  body('text').trim().escape().isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters.'),
-  validateBadRequest,
-];
 export const validateReportStatus = [
   body('status').trim().isIn(['Pending', 'In Progress', 'Resolved', 'Closed']).withMessage('Invalid report status.'),
   validateBadRequest,
@@ -196,7 +191,7 @@ export const validateUserUpdate = [
   mutationFieldAllowlist(['name', 'email', 'role', 'barangay', 'phone']),
   body('name').optional().trim().isLength({ min: 2, max: 50 }).escape(),
   body('email').optional().trim().isEmail().normalizeEmail(),
-  body('role').optional().isIn(['superadmin', 'admin', 'staff', 'barangay', 'user']),
+  body('role').optional().isIn(['superadmin', 'admin', 'barangay', 'user']),
   body('barangay').optional().trim().isLength({ max: 100 }).escape(),
   body('phone').optional().trim().isLength({ max: 30 }).escape(),
   validateBadRequest,

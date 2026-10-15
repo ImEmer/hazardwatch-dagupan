@@ -157,7 +157,7 @@ const BarangayReportDetail = () => {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate(backPath)}
+            onClick={() => navigate(location.state?.returnTo || backPath)}
             className="rounded-lg border border-blue-500 bg-transparent px-4 py-2 text-blue-500 transition-colors hover:bg-blue-500/10"
           >
             {reportSource === "archived"

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { getReportsPerBarangay, getReportsPerCategory, getReportsPerDay, getReportsPerPriority, getSessionWindows, getSlidingWindows, getTumblingHourly } from '../controllers/analyticsController.js';
-import { isStaff, protect } from '../middleware/auth.js';
+import { isOperationsManager, protect } from '../middleware/auth.js';
 
 const router = Router();
-router.use(protect, isStaff);
+router.use(protect, isOperationsManager);
 router.get('/reports-per-barangay', getReportsPerBarangay);
 router.get('/reports-per-category', getReportsPerCategory);
 router.get('/reports-per-priority', getReportsPerPriority);

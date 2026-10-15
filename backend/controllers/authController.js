@@ -136,7 +136,7 @@ export const register = async (req, res, next) => {
     if (typeof password === 'string' && /\s/.test(password)) return res.status(400).json({ success: false, message: 'Email and password cannot contain spaces.' });
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    const safeRole = ['superadmin', 'admin', 'staff', 'barangay', 'user'].includes(role) ? role : 'user';
+    const safeRole = ['superadmin', 'admin', 'barangay', 'user'].includes(role) ? role : 'user';
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser?.isActive) {
       return res.status(409).json({ success: false, message: 'Email already registered. Please log in instead.' });

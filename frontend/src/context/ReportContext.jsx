@@ -7,7 +7,7 @@
 
         export const ReportProvider = ({ children }) => {
         const { token, user } = useAuth();
-        const canAccessStaffReports = Boolean(token && ['superadmin', 'admin', 'staff'].includes(user?.role));
+        const canAccessReports = Boolean(token && ['superadmin', 'admin', 'barangay'].includes(user?.role));
         const [reports, setReports] = useState(INITIAL_REPORTS);
         const [publicReports, setPublicReports] = useState(INITIAL_REPORTS);
         const [reportsLoading, setReportsLoading] = useState(true);
@@ -28,7 +28,7 @@
                 });
                 const nextReports = response.data?.reports || [];
                 setPublicReports(nextReports);
-                if (!canAccessStaffReports) {
+                if (!canAccessReports) {
                     setReports(nextReports);
                 }
                 return nextReports;
@@ -36,7 +36,7 @@
                 const status = error.response?.status;
                 if (status === 401 || status === 403) {
                     setPublicReports([]);
-                    if (!canAccessStaffReports) {
+                    if (!canAccessReports) {
                         setReports([]);
                     }
                     return [];
@@ -44,15 +44,15 @@
 
                 throw new Error(error.response?.data?.message || 'Unable to load public reports.');
             }
-        }, [canAccessStaffReports]);
+        }, [canAccessReports]);
 
         const fetchReports = useCallback(async () => {
-            if (!canAccessStaffReports) return [];
+            if (!canAccessReports) return [];
 
             setReportsLoading(true);
             setReportsError('');
             try {
-                if (canAccessStaffReports) {
+                if (canAccessReports) {
                     const response = await api.get('/reports', {
                         params: { page: 1, limit: 100, includeResolved: true },
                         headers: { Authorization: `Bearer ${token}` },
@@ -75,7 +75,7 @@
             } finally {
                 setReportsLoading(false);
             }
-        }, [canAccessStaffReports, token]);
+        }, [canAccessReports, token]);
 
         useEffect(() => {
             const handleReportsUpdated = () => {
@@ -89,14 +89,14 @@
         }, [fetchReports]);
 
         useEffect(() => {
-            if (canAccessStaffReports) {
+            if (canAccessReports) {
                 fetchReports().catch(() => {});
                 return undefined;
             }
 
             setReportsLoading(false);
             return undefined;
-        }, [canAccessStaffReports, fetchReports]);
+        }, [canAccessReports, fetchReports]);
 
         const addReport = async (newReport, token) => {
             const selectedFiles = Array.from(newReport?.photos || (newReport?.photoFile ? [newReport.photoFile] : []));

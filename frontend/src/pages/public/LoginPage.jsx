@@ -48,7 +48,7 @@ const LoginPage = () => {
       ? '/barangay/dashboard'
       : role === 'superadmin'
         ? '/superadmin/dashboard'
-        : role === 'admin' || role === 'staff'
+        : role === 'admin'
           ? '/admin/dashboard'
           : '/';
     return <Navigate to={targetRoute} replace />;
@@ -88,7 +88,7 @@ const LoginPage = () => {
         ? '/barangay/dashboard'
         : role === 'superadmin'
           ? '/superadmin/dashboard'
-          : role === 'admin' || role === 'staff'
+          : role === 'admin'
             ? '/admin/dashboard'
             : '/';
       navigate(targetRoute, { replace: true });

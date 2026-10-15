@@ -94,7 +94,6 @@ function mapReport(row, citizenUsers) {
     address: `${streetName} St, ${barangay}, Dagupan City`,
     barangay,
     images: [],
-    comments: [],
     status: randomItem(STATUSES),
     priority: randomItem(PRIORITIES),
     reportedBy: { userId: reportedBy._id, name: reportedBy.name, email: reportedBy.email },

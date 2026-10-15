@@ -29,7 +29,7 @@ const paths = {
   '/reports/public': { get: publicOperation('List public reports.', ['Reports'], ['200', '422']) },
   '/reports/export': { get: operation('Export filtered reports as CSV.', ['Reports'], bearer, ['200', '401', '403']) },
   '/reports': {
-    get: operation('List staff-visible reports.', ['Reports']),
+    get: operation('List authorized reports.', ['Reports']),
     post: operation('Create a report with photo evidence.', ['Reports'], bearer, ['201', '400', '401', '422']) },
   '/reports/mine': { get: operation('List reports submitted by the current user.', ['Reports']) },
   '/reports/archived': { get: operation('List archived reports.', ['Reports']) },
@@ -40,7 +40,6 @@ const paths = {
   '/reports/{id}/status': { patch: operation('Update report status.', ['Reports'], bearer, ['200', '400', '401', '403', '404']) },
   '/reports/{id}/priority': { patch: operation('Update report priority.', ['Reports'], bearer, ['200', '400', '401', '403', '404']) },
   '/reports/{id}/assign': { patch: operation('Assign a report.', ['Reports'], bearer, ['200', '400', '401', '403', '404']) },
-  '/reports/{id}/comments': { post: operation('Add a report comment.', ['Reports'], bearer, ['200', '400', '401', '403', '404']) },
   '/reports/bulk': { delete: operation('Soft-delete multiple reports.', ['Reports'], bearer, ['200', '400', '401', '403']) },
   '/users': {
     get: operation('List active users.', ['Users'], bearer, ['200', '401', '403']),
@@ -98,7 +97,7 @@ const swaggerDefinition = {
     schemas: {
       Error: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' } } },
       Location: { type: 'object', required: ['coordinates'], properties: { type: { type: 'string', example: 'Point' }, coordinates: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' }, example: [120.3333, 16.0433] } } },
-      User: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, email: { type: 'string', format: 'email' }, role: { type: 'string', enum: ['superadmin', 'admin', 'staff', 'barangay', 'user'] }, barangay: { type: 'string', nullable: true }, isActive: { type: 'boolean' } } },
+      User: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, email: { type: 'string', format: 'email' }, role: { type: 'string', enum: ['superadmin', 'admin', 'barangay', 'user'] }, barangay: { type: 'string', nullable: true }, isActive: { type: 'boolean' } } },
       Report: { type: 'object', properties: { _id: { type: 'string' }, category: { type: 'string' }, description: { type: 'string' }, location: { $ref: '#/components/schemas/Location' }, status: { type: 'string', enum: ['Pending', 'In Progress', 'Resolved', 'Closed'] }, priority: { type: 'string', enum: ['Low', 'Medium', 'High', 'Urgent'] } } },
     },
   },

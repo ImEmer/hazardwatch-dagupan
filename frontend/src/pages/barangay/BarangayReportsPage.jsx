@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import useTheme from "../../hooks/useTheme";
 import api from "../../services/api";
@@ -13,6 +13,7 @@ import { showError, showSuccess } from "../../services/alerts";
 import Skeleton from "../../components/common/Skeleton";
 import Pagination from "../../components/common/Pagination";
 import useDebounce from "../../hooks/useDebounce";
+import useVisibleReportPolling from "../../hooks/useVisibleReportPolling";
 
 const PAGE_SIZE = 10;
 const STATUSES = ["Pending", "In Progress", "Closed"];
@@ -21,6 +22,8 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
   const { user, token } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isDark = theme === "dark";
   const [reports, setReports] = useState([]);
   const [pagination, setPagination] = useState({
@@ -29,14 +32,23 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     total: 0,
     pages: 1,
   });
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10) || 1));
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const debouncedSearch = useDebounce(search, 300);
-  const [status, setStatus] = useState(resolvedOnly ? "Resolved" : "all");
-  const [priority, setPriority] = useState("all");
-  const [category, setCategory] = useState("all");
+  const [status, setStatus] = useState(resolvedOnly ? "Resolved" : searchParams.get("status") || "all");
+  const [priority, setPriority] = useState(searchParams.get("priority") || "all");
+  const [category, setCategory] = useState(searchParams.get("category") || "all");
+  const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "createdAt");
+  const [sortOrder, setSortOrder] = useState(searchParams.get("sortOrder") === "asc" ? "asc" : "desc");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const filterChangeRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setStatus(resolvedOnly ? "Resolved" : searchParams.get("status") || "all");
+  }, [resolvedOnly, searchParams]);
 
   useEffect(() => {
     if (!token || !user?.barangay) {
@@ -53,6 +65,8 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       priority: priority === "all" ? undefined : priority,
       category: category === "all" ? undefined : category,
       q: debouncedSearch || undefined,
+      sortBy,
+      sortOrder,
     };
     setLoading(true);
     setError("");
@@ -87,6 +101,8 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     };
   }, [
     category,
+    sortBy,
+    sortOrder,
     page,
     priority,
     resolvedOnly,
@@ -94,7 +110,29 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     status,
     token,
     user?.barangay,
+    reloadKey,
   ]);
+
+  useVisibleReportPolling(() => setReloadKey((current) => current + 1), searchFocused || search !== debouncedSearch);
+
+  useEffect(() => {
+    if (!filterChangeRef.current) {
+      filterChangeRef.current = true;
+      return;
+    }
+    setPage(1);
+  }, [search, status, priority, category, sortBy, sortOrder]);
+
+  useEffect(() => {
+    const next = {};
+    [["search", search], ["status", status], ["priority", priority], ["category", category]].forEach(([key, value]) => {
+      if (value && value !== "all" && (!resolvedOnly || key !== "status")) next[key] = value;
+    });
+    if (page > 1) next.page = String(page);
+    if (sortBy !== "createdAt") next.sortBy = sortBy;
+    if (sortOrder !== "desc") next.sortOrder = sortOrder;
+    setSearchParams(next, { replace: true });
+  }, [search, status, priority, category, page, sortBy, sortOrder, resolvedOnly, setSearchParams]);
 
   const isVisible = (report) => {
     const isArchived = report.archived === true || report.status === "Closed";
@@ -109,6 +147,8 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
     setStatus(resolvedOnly ? "Resolved" : "all");
     setPriority("all");
     setCategory("all");
+    setSortBy("createdAt");
+    setSortOrder("desc");
     setPage(1);
   };
   const exportCsv = async () => {
@@ -171,7 +211,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
               Export CSV
             </button>
             {!resolvedOnly && (
-              <button type="button" onClick={() => navigate("/barangay/reports/resolved")} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-sm font-medium text-emerald-500 hover:bg-emerald-500/10">
+              <button type="button"               onClick={() => navigate(`/barangay/reports/resolved${location.search}`)} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-sm font-medium text-emerald-500 hover:bg-emerald-500/10">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 2 2 4-4m5 2a9 9 0 11-18 0z" /><circle cx="12" cy="12" r="9" /></svg>
                 Resolved Cases
               </button>
@@ -202,6 +242,8 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
           <input
             value={search}
             onChange={(event) => updateFilter(setSearch, event.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholder="Search report title, address, category..."
             className={field}
           />
@@ -231,6 +273,23 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
             className={`${field} disabled:opacity-70`}
           >
             <option>{user.barangay}</option>
+          </select>
+          <select
+            aria-label="Sort reports"
+            value={`${sortBy}:${sortOrder}`}
+            onChange={(event) => {
+              const [nextSortBy, nextSortOrder] = event.target.value.split(":");
+              setSortBy(nextSortBy);
+              setSortOrder(nextSortOrder);
+            }}
+            className={field}
+          >
+            <option value="createdAt:desc">Newest first</option>
+            <option value="createdAt:asc">Oldest first</option>
+            <option value="priority:desc">Priority high to low</option>
+            <option value="priority:asc">Priority low to high</option>
+            <option value="status:asc">Status A to Z</option>
+            <option value="status:desc">Status Z to A</option>
           </select>
           <button
             type="button"
@@ -381,7 +440,7 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
                     <td className="px-4 py-4">
                       <Link
                         to={`/barangay/reports/${report._id}`}
-                        state={{ from: resolvedOnly ? "resolved" : "reports" }}
+                        state={{ from: resolvedOnly ? "resolved" : "reports", returnTo: `${location.pathname}${location.search}` }}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#3b82f6] transition hover:bg-[#3b82f6]/10 hover:text-[#60a5fa]"
                         aria-label={`Open details for ${report.title || "report"}`}
                         title="Open details"
