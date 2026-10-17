@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import useAuth from '../../hooks/useAuth';
@@ -11,9 +11,18 @@ import CountUp from '../../components/common/CountUp';
 const priorities = ['Urgent', 'High', 'Medium', 'Low'].map((name) => ({ name, color: PRIORITY_COLORS[name].hex }));
 
 const toCounts = (items = []) => Object.fromEntries(items.map((item) => [item._id || item.name, item.count || item.value || 0]));
+const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const radians = (-midAngle * Math.PI) / 180;
+  const x = cx + radius * Math.cos(radians);
+  const y = cy + radius * Math.sin(radians);
+  const percentage = percent * 100;
+  const label = `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
+  return <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{label}</text>;
+};
 
 const BarangayDashboard = () => {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading, refreshSession } = useAuth();
   const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -25,6 +34,22 @@ const BarangayDashboard = () => {
   const [error, setError] = useState('');
   const [timelineError, setTimelineError] = useState('');
   const [priorityAnimated, setPriorityAnimated] = useState(false);
+  const refreshPromiseRef = useRef(null);
+
+  const requestWithAuthRetry = useCallback(async (request) => {
+    try {
+      return await request();
+    } catch (requestError) {
+      if (requestError.response?.status !== 401) throw requestError;
+      if (!refreshPromiseRef.current) {
+        refreshPromiseRef.current = refreshSession().finally(() => {
+          refreshPromiseRef.current = null;
+        });
+      }
+      await refreshPromiseRef.current;
+      return request();
+    }
+  }, [refreshSession]);
 
   useEffect(() => {
     if (loading) {
@@ -36,8 +61,13 @@ const BarangayDashboard = () => {
   }, [loading]);
 
   useEffect(() => {
+    if (authLoading) {
+      setLoading(true);
+      return undefined;
+    }
     if (!token || !barangay) {
       setLoading(false);
+      if (!token) setError('Authentication required.');
       return undefined;
     }
     let cancelled = false;
@@ -45,8 +75,8 @@ const BarangayDashboard = () => {
     setLoading(true);
     setError('');
     Promise.all([
-      api.get(`/statistics/barangay/${encodedBarangay}`, { headers: { Authorization: `Bearer ${token}` } }),
-      api.get('/reports', { params: { barangay, page: 1, limit: 5 }, headers: { Authorization: `Bearer ${token}` } }),
+      requestWithAuthRetry(() => api.get(`/statistics/barangay/${encodedBarangay}`)),
+      requestWithAuthRetry(() => api.get('/reports', { params: { barangay, page: 1, limit: 5 } })),
     ]).then(([overview, reports]) => {
       if (cancelled) return;
       setDashboard((current) => ({ ...current, total: overview.data?.total || 0, status: overview.data?.status || [], priority: overview.data?.priority || [], reports: reports.data?.reports || [] }));
@@ -54,19 +84,16 @@ const BarangayDashboard = () => {
       if (!cancelled) setError(requestError.response?.data?.message || 'Unable to load barangay dashboard.');
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [barangay, token]);
+  }, [authLoading, barangay, requestWithAuthRetry, token]);
 
   useEffect(() => {
-    if (!token || !barangay) return undefined;
+    if (authLoading || !token || !barangay) return undefined;
 
     let cancelled = false;
     const encodedBarangay = encodeURIComponent(barangay);
     setTimelineError('');
     setDashboard((current) => ({ ...current, timeline: [] }));
-    api.get(`/statistics/barangay/${encodedBarangay}/timeline`, {
-      params: { month },
-      headers: { Authorization: `****** }` },
-    }).then(({ data }) => {
+    requestWithAuthRetry(() => api.get(`/statistics/barangay/${encodedBarangay}/timeline`, { params: { month } })).then(({ data }) => {
       if (!cancelled) {
         setDashboard((current) => ({ ...current, timeline: data?.data || [] }));
       }
@@ -77,11 +104,12 @@ const BarangayDashboard = () => {
     });
 
     return () => { cancelled = true; };
-  }, [barangay, month, token]);
+  }, [authLoading, barangay, month, requestWithAuthRetry, token]);
 
   const statusCounts = toCounts(dashboard.status);
   const priorityCounts = toCounts(dashboard.priority);
   const statusData = REPORT_STATUSES.map((name) => ({ name, value: statusCounts[name] || 0 }));
+  const pieData = statusData.filter((entry) => entry.value > 0);
   const priorityData = priorities.map((item) => ({ ...item, count: priorityCounts[item.name] || 0 }));
   const maxPriority = Math.max(...priorityData.map((item) => item.count), 1);
   const chartText = isDark ? '#d1d5db' : '#475569';
@@ -138,29 +166,17 @@ const BarangayDashboard = () => {
       <div className="grid gap-6 xl:grid-cols-2">
         <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <h2 className={`mb-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by status</h2>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie
-                data={statusData}
-                cx="50%"
-                cy="50%"
-                innerRadius={65}
-                outerRadius={100}
-                paddingAngle={3}
-                dataKey="value"
-                isAnimationActive
-                animationBegin={0}
-                animationDuration={800}
-                animationEasing="ease-out"
-              >
-                {statusData.map((entry) => (
-                  <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
-            </PieChart>
-          </ResponsiveContainer>
+          {pieData.length ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
+                  {pieData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : <p className={`flex h-[280px] items-center justify-center ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No data available</p>}
         </div>
 
         <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>

@@ -22,7 +22,7 @@ const sendActivity = (baseFilter = {}) => async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-export const getAllActivity = sendActivity({});
+export const getAllActivity = sendActivity({ actorRole: { $ne: 'superadmin' }, role: { $ne: 'superadmin' } });
 export const getPublicActivity = sendActivity(legacyRoleFilter(['barangay', 'user']));
 export const getMyActivity = async (req, res, next) => sendActivity({ user: req.user._id })(req, res, next);
 export const getBarangayActivity = async (req, res, next) => {

@@ -71,12 +71,20 @@ const AdminMapPage = () => {
       <div className="grid min-h-0 flex-1 gap-6 overflow-hidden xl:grid-cols-[2fr_1fr]">
         <div className={`relative min-h-0 overflow-hidden rounded-2xl border p-2 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
           <div className="relative h-full min-h-0 overflow-hidden rounded-xl">
-            <div className={`absolute left-5 top-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+            <div className={`absolute bottom-5 left-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
               <label htmlFor="admin-map-barangay" className="block text-xs font-semibold">Find Barangay</label>
               <select id="admin-map-barangay" value={selectedBarangay} onChange={handleBarangayChange} className={`mt-2 w-52 rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
                 <option value="">Select a barangay...</option>
                 {DAGUPAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
               </select>
+            </div>
+            <div className={`absolute left-5 top-5 z-10 rounded-xl border p-3 shadow-lg ${isDark ? 'border-[#2e303a] bg-[#14151d]/95 text-white' : 'border-slate-200 bg-white/95 text-slate-900'}`}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#60a5fa]">Report status</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-yellow-500" aria-hidden="true" /><span>Pending</span></div>
+                <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-blue-500" aria-hidden="true" /><span>In Progress</span></div>
+                <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-emerald-500" aria-hidden="true" /><span>Resolved</span></div>
+              </div>
             </div>
             <InteractiveMap reports={filteredReports} height="100%" colorBy="status" showHeatmap={false} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} onReportSelect={setSelectedReport} />
             {loading && <div className="pointer-events-none absolute right-5 top-16 z-20 rounded-lg border border-[#2e303a] bg-[#14151d]/95 px-4 py-3 text-sm text-white shadow-lg">Loading reports...</div>}

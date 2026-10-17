@@ -33,14 +33,14 @@ export const passwordPolicy = (field = 'password') => body(field)
     return true;
   });
 
-export const validateRegister = [
+const registerValidators = (nameValidator) => [
   body().custom((value) => {
     const allowed = ['name', 'email', 'password', 'role', 'barangay', 'phone', 'agreedToTerms'];
     const unknown = Object.keys(value || {}).find((key) => !allowed.includes(key));
     if (unknown) throw new Error(`Field ${unknown} is not allowed.`);
     return true;
   }),
-  body('name').trim().escape().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
+  nameValidator,
   body('email').custom((value) => {
     if (typeof value !== 'string' || /\s/.test(value)) throw new Error('Email and password cannot contain spaces.');
     return true;
@@ -55,6 +55,12 @@ export const validateRegister = [
   }),
   validateBadRequest,
 ];
+export const validateRegister = registerValidators(
+  body('name').trim().escape().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
+);
+export const validatePublicRegister = registerValidators(
+  body('name').trim().matches(/^[\p{L} '-]+$/u).withMessage('Full name must contain letters only.').escape().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
+);
 export const validateLogin = [
   body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
   body('password').notEmpty().withMessage('Password is required.'),

@@ -21,6 +21,7 @@ const roleBadge = {
 };
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'user', barangay: '' };
+const DEFAULT_BARANGAY_PASSWORD = 'Barangay@123';
 const PAGE_SIZE = 10;
 
 const roleKeyword = (value) => {
@@ -40,7 +41,7 @@ const SuperAdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: PAGE_SIZE });
-  const [stats, setStats] = useState({ total: 0, citizens: 0, barangay: 0, admins: 0 });
+  const [stats, setStats] = useState({ total: 0, citizens: 0, barangay: 0, admins: 0, adminAccounts: 0 });
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
@@ -121,9 +122,37 @@ const SuperAdminUsers = () => {
   };
 
   const closeCreator = () => { setForm(EMPTY_FORM); setIsCreating(false); };
+  const handleCreateFieldChange = (key, value) => {
+    setForm((previous) => {
+      if (key === 'role') {
+        if (value === 'admin') return { ...previous, role: value, name: `Admin ${(stats.adminAccounts || 0) + 1}`, email: '', barangay: '' };
+        if (value === 'barangay') {
+          return {
+            ...previous,
+            role: value,
+            password: DEFAULT_BARANGAY_PASSWORD,
+            name: previous.barangay ? `${previous.barangay} Captain` : '',
+            email: previous.barangay ? `${previous.barangay.toLowerCase().replace(/\s+/g, '')}@hazardwatch.com` : '',
+          };
+        }
+        return { ...previous, role: value, name: '', email: '', barangay: '', password: '' };
+      }
+      if (key === 'barangay') {
+        return {
+          ...previous,
+          barangay: value,
+          password: DEFAULT_BARANGAY_PASSWORD,
+          name: value ? `${value} Captain` : '',
+          email: value ? `${value.toLowerCase().replace(/\s+/g, '')}@hazardwatch.com` : '',
+        };
+      }
+      return { ...previous, [key]: value };
+    });
+  };
   const handleCreate = async () => {
     if (form.role === 'barangay' && !form.barangay) { await showError('Barangay is required for Barangay users.'); return; }
-    if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) { await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.'); return; }
+    if (!form.name.trim() || !form.email.trim()) { await showError('Name and email are required.'); return; }
+    if (form.role !== 'barangay' && (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password))) { await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.'); return; }
     setSaving(true);
     try { await api.post('/users', { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role, barangay: form.role === 'barangay' ? form.barangay : '' }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await fetchStats(); closeCreator(); await showSuccess('User created successfully.'); } catch (error) { await showError(error.response?.data?.message || error.message || 'Failed to create user.'); } finally { setSaving(false); }
   };
@@ -314,7 +343,7 @@ const SuperAdminUsers = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </main>
   );
 };

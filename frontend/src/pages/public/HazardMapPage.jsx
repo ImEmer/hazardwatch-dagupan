@@ -64,7 +64,7 @@ const HazardMapPage = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#eab308]" aria-hidden="true" /><span className="text-gray-200">Pending</span></div>
               <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#3b82f6]" aria-hidden="true" /><span className="text-gray-200">In Progress</span></div>
-              <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#10b981]" aria-hidden="true" /><span className="text-gray-200">Resolved</span></div>
+              {mapPreferences.showResolved && <div className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full bg-[#10b981]" aria-hidden="true" /><span className="text-gray-200">Resolved</span></div>}
             </div>
           </div>
           <InteractiveMap reports={visibleReports} height="100%" colorBy="status" showHeatmap={false} flyTo={flyTo} onBoundsChange={onBoundsChange} mapPreferences={mapPreferences} />

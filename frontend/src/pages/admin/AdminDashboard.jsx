@@ -23,6 +23,16 @@
     import { SkeletonDashboard } from '../../components/common/Skeleton';
     import CountUp from '../../components/common/CountUp';
 
+    const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+      const radians = (-midAngle * Math.PI) / 180;
+      const x = cx + radius * Math.cos(radians);
+      const y = cy + radius * Math.sin(radians);
+      const percentage = percent * 100;
+      const label = `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
+      return <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{label}</text>;
+    };
+
     const AdminDashboard = ({ headingLabel = 'Admin Dashboard' }) => {
       const { reports, reportsLoading, reportsError } = useReports();
       const { token } = useAuth();
@@ -82,6 +92,7 @@
         { name: 'Resolved', value: resolved },
         { name: 'Closed', value: statusCounts.Closed || 0 },
       ];
+      const pieData = statusData.filter((entry) => entry.value > 0);
       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
       const timelineData = Array.from({ length: daysInMonth }, (_, index) => {
         const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`;
@@ -149,15 +160,17 @@
           <div className="grid gap-6 xl:grid-cols-2">
             <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
               <h3 className={`mb-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Reports by status</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
-                    {statusData.map((entry) => <Cell key={entry.name} fill={STATUS_COLORS[entry.name]?.hex || '#6b7280'} />)}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
+              {pieData.length ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
+                      {pieData.map((entry) => <Cell key={entry.name} fill={STATUS_COLORS[entry.name]?.hex || '#6b7280'} />)}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : <p className={`flex h-[280px] items-center justify-center ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>No data available</p>}
             </div>
 
             <div className={`rounded-2xl border p-5 shadow-xl ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>

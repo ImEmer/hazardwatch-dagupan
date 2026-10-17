@@ -632,14 +632,13 @@ const InteractiveMap = ({
              */
             const visual = document.createElement('div');
 
+            visual.className = 'selected-location-visual';
             visual.style.width = '48px';
             visual.style.height = '60px';
             visual.style.display = 'flex';
             visual.style.alignItems = 'flex-start';
             visual.style.justifyContent = 'center';
             visual.style.pointerEvents = 'none';
-            visual.style.animation =
-                'pulse-marker 1.5s infinite ease-in-out';
 
             visual.innerHTML = `
                 <svg
@@ -670,6 +669,10 @@ const InteractiveMap = ({
                 </svg>
             `;
 
+            const radar = document.createElement('span');
+            radar.className = 'selected-location-radar';
+            radar.setAttribute('aria-hidden', 'true');
+            visual.appendChild(radar);
             el.appendChild(visual);
 
             markerElementRef.current = el;
@@ -723,51 +726,41 @@ const InteractiveMap = ({
             selectedLabelRef.current = labelMarker;
 
             // Add pulse animation only once
-            if (!document.getElementById('pulse-marker-style')) {
+            if (!document.getElementById('selected-location-marker-style')) {
                 const style = document.createElement('style');
 
-                style.id = 'pulse-marker-style';
+                style.id = 'selected-location-marker-style';
 
                 style.textContent = `
-                    @keyframes pulse-marker {
-                        0% {
-                            transform: scale(1);
-                            filter:
-                                drop-shadow(
-                                    0 4px 15px
-                                    rgba(239, 68, 68, 0.8)
-                                )
-                                drop-shadow(
-                                    0 0 30px
-                                    rgba(239, 68, 68, 0.3)
-                                );
-                        }
-
-                        50% {
-                            transform: scale(1.08);
-                            filter:
-                                drop-shadow(
-                                    0 4px 25px
-                                    rgba(239, 68, 68, 1)
-                                )
-                                drop-shadow(
-                                    0 0 50px
-                                    rgba(239, 68, 68, 0.5)
-                                );
-                        }
-
-                        100% {
-                            transform: scale(1);
-                            filter:
-                                drop-shadow(
-                                    0 4px 15px
-                                    rgba(239, 68, 68, 0.8)
-                                )
-                                drop-shadow(
-                                    0 0 30px
-                                    rgba(239, 68, 68, 0.3)
-                                );
-                        }
+                    .selected-location-visual {
+                        position: relative;
+                        animation: selected-location-pin-pulse 1.8s ease-in-out infinite;
+                        transform-origin: 50% 85%;
+                    }
+                    .selected-location-radar {
+                        position: absolute;
+                        left: 50%;
+                        bottom: -10px;
+                        width: 18px;
+                        height: 18px;
+                        margin-left: -9px;
+                        border: 2px solid rgba(34, 211, 238, 0.8);
+                        border-radius: 50%;
+                        box-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
+                        animation: selected-location-radar-pulse 1.8s ease-out infinite;
+                    }
+                    @keyframes selected-location-pin-pulse {
+                        0%, 100% { transform: scale(1); filter: drop-shadow(0 3px 10px rgba(34, 211, 238, 0.16)); }
+                        50% { transform: scale(1.035); filter: drop-shadow(0 3px 14px rgba(34, 211, 238, 0.4)); }
+                    }
+                    @keyframes selected-location-radar-pulse {
+                        0% { transform: scale(0.65); opacity: 0.75; }
+                        100% { transform: scale(2.4); opacity: 0; }
+                    }
+                    @media (prefers-reduced-motion: reduce) {
+                        .selected-location-visual,
+                        .selected-location-radar { animation: none !important; }
+                        .selected-location-radar { opacity: 0.55; }
                     }
                 `;
 

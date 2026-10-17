@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useReports } from '../../context/ReportContext';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
+import { useConfirm } from '../../context/ConfirmContext';
 import api from '../../services/api';
 import { HAZARD_CATEGORY_COLORS, PRIORITY_COLORS, REPORT_STATUSES, STATUS_BADGES, STATUS_BADGES_LIGHT } from '../../services/reportOptions';
 import { showError } from '../../services/alerts';
@@ -13,6 +14,7 @@ const AdminReportDetailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { reports, updateReportStatus, updateReportPriority } = useReports();
+  const confirm = useConfirm();
   const { token } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -24,6 +26,19 @@ const AdminReportDetailPage = () => {
   const reportImages = Array.isArray(report?.images) && report.images.length
     ? report.images
     : [report?.photo].filter(Boolean);
+  const changeStatus = async (nextStatus) => {
+    if (['Resolved', 'In Progress', 'Closed'].includes(nextStatus)) {
+      const approved = await confirm({
+        title: 'Change Status',
+        description: `Are you sure you want to mark this report as ${nextStatus}?`,
+        confirmText: 'Confirm',
+        cancelText: 'Cancel',
+        variant: 'info',
+      });
+      if (!approved) return;
+    }
+    await updateReportStatus(report._id || report.id, nextStatus).catch((error) => showError(error.message || 'Unable to update report status.'));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -182,7 +197,7 @@ const AdminReportDetailPage = () => {
                 id="status"
                 name="status"
                 value={report.status}
-                onChange={(event) => updateReportStatus(report._id || report.id, event.target.value).catch((error) => showError(error.message || 'Unable to update report status.'))}
+                onChange={(event) => changeStatus(event.target.value)}
                 className={`mt-2 w-full rounded-xl border px-3 py-2.5 focus:border-[#3b82f6] focus:outline-none ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
               >
                 {REPORT_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}

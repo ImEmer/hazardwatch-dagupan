@@ -30,7 +30,7 @@ import {
   verifyTwoFactorLogin,
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
-import { validateChangeCode, validateEmail, validateEmailChangeRequest, validateEmailVerification, validateLogin, validatePasswordChangeRequest, validateProfile, validateRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
+import { validateChangeCode, validateEmail, validateEmailChangeRequest, validateEmailVerification, validateLogin, validatePasswordChangeRequest, validateProfile, validatePublicRegister, validateResetCode, validateResetPassword } from '../middleware/validate.js';
 import { logActivity } from '../utils/logActivity.js';
 import {
   authLimiter,
@@ -49,7 +49,7 @@ const router = Router();
 router.use(authLimiter);
 router.get('/check-email', checkEmail);
 router.post('/verify-email', validateEmailVerification, verifyEmail);
-router.post('/register', validateRegister, register);
+router.post('/register', validatePublicRegister, register);
 router.post('/login', validateLogin, login);
 router.post('/2fa/verify', verifyTwoFactorLogin);
 router.post('/2fa/resend', resendTwoFactorLoginCode);

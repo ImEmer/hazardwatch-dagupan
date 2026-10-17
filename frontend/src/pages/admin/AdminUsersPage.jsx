@@ -29,6 +29,7 @@ const statusBadge = {
 
 const PAGE_SIZE = 10;
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'user', barangay: '' };
+const DEFAULT_BARANGAY_PASSWORD = 'Barangay@123';
 
 const roleKeyword = (value) => {
   const query = value.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -138,13 +139,25 @@ const AdminUsersPage = () => {
 
   const openCreator = () => {
     setSelectedUser(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, role: currentUser?.role === 'admin' ? 'barangay' : EMPTY_FORM.role });
     setIsCreating(true);
   };
 
   const closeCreator = () => {
     setForm(EMPTY_FORM);
     setIsCreating(false);
+  };
+
+  const handleCreateFieldChange = (key, value) => {
+    setForm((previous) => {
+      if (key !== 'barangay') return { ...previous, [key]: value };
+      return {
+        ...previous,
+        barangay: value,
+        name: value ? `${value} Captain` : '',
+        email: value ? `${value.toLowerCase().replace(/\s+/g, '')}@hazardwatch.com` : '',
+      };
+    });
   };
 
   const handleSave = async () => {
@@ -174,17 +187,8 @@ const AdminUsersPage = () => {
   };
 
   const handleCreate = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.password) {
-      await showError('Name, email, and password are required.');
-      return;
-    }
-
-    if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
-      await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.');
-      return;
-    }
-    if (form.role === 'barangay' && !form.barangay) {
-      await showError('Barangay is required for Barangay users.');
+    if (!form.name.trim() || !form.email.trim() || !form.barangay) {
+      await showError('Select a barangay to create its account.');
       return;
     }
     setSaving(true);
@@ -192,9 +196,9 @@ const AdminUsersPage = () => {
       await api.post('/users', {
         name: form.name.trim(),
         email: form.email.trim(),
-        password: form.password,
-        role: form.role,
-        barangay: form.role === 'barangay' ? form.barangay.trim() : '',
+        password: DEFAULT_BARANGAY_PASSWORD,
+        role: 'barangay',
+        barangay: form.barangay.trim(),
       }, { headers: { Authorization: `Bearer ${token}` } });
       await fetchUsers();
       await fetchStats();
@@ -401,7 +405,7 @@ const AdminUsersPage = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={currentUser?.role === 'superadmin' ? [{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }] : [{ value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'barangay', label: 'Barangay' }]} roleNote="Admins can only create Barangay accounts." onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </div>
   );
 };

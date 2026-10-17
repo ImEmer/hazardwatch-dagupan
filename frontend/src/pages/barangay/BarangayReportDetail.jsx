@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import useTheme from "../../hooks/useTheme";
+import { useConfirm } from "../../context/ConfirmContext";
 import api from "../../services/api";
 import Skeleton from "../../components/common/Skeleton";
 import {
@@ -19,6 +20,7 @@ const BarangayReportDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, token } = useAuth();
+  const confirm = useConfirm();
   const { theme } = useTheme();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,16 @@ const BarangayReportDetail = () => {
 
   const updateReport = async (path, value, successMessage) => {
     if (readOnly) return;
+    if (path === "status" && ["Resolved", "In Progress", "Closed"].includes(value)) {
+      const approved = await confirm({
+        title: "Change Status",
+        description: `Are you sure you want to mark this report as ${value}?`,
+        confirmText: "Confirm",
+        cancelText: "Cancel",
+        variant: "info",
+      });
+      if (!approved) return;
+    }
     try {
       const response = await api.patch(
         `/reports/${id}/${path}`,

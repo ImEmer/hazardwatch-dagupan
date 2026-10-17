@@ -7,6 +7,9 @@ import PasswordToggle from '../../components/PasswordToggle';
 import CodeInput from '../../components/common/CodeInput';
 import api from '../../services/api';
 
+const fullNamePattern = /^[\p{L} '-]+$/u;
+const fullNameValidationMessage = 'Full name must contain letters only.';
+
 const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -34,8 +37,9 @@ const RegisterPage = () => {
   const submit = async (event) => {
     event.preventDefault();
     const trimmedEmail = form.email.trim();
+    const trimmedName = form.name.trim();
     const nextErrors = {
-      name: !form.name.trim() ? 'Full name is required.' : form.name.trim().length < 2 ? 'Name must be at least 2 characters.' : form.name.trim().length > 50 ? 'Name must be 50 characters or fewer.' : '',
+      name: !trimmedName ? 'Full name is required.' : !fullNamePattern.test(trimmedName) ? fullNameValidationMessage : trimmedName.length < 2 ? 'Name must be at least 2 characters.' : trimmedName.length > 50 ? 'Name must be 50 characters or fewer.' : '',
       email: validateEmail(trimmedEmail),
       password: validatePassword(form.password),
       confirmPassword: !form.confirmPassword ? 'Please confirm your password.' : form.password !== form.confirmPassword ? 'Passwords do not match.' : '',
@@ -129,7 +133,11 @@ const RegisterPage = () => {
       <>
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm text-gray-300">Full Name
-          <input type="text" id="name" name="name" autoComplete="name" maxLength="50" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={`auth-input mt-2 ${errors.name ? 'border-red-500' : ''}`} />
+          <input type="text" id="name" name="name" autoComplete="name" maxLength="50" placeholder="Full name" value={form.name} onChange={(event) => {
+            const name = event.target.value;
+            setForm((previous) => ({ ...previous, name }));
+            setErrors((previous) => ({ ...previous, name: name.trim() && !fullNamePattern.test(name.trim()) ? fullNameValidationMessage : '' }));
+          }} className={`auth-input mt-2 ${errors.name ? 'border-red-500' : ''}`} />
           {errors.name && <span className="mt-1 block text-xs text-red-400">{errors.name}</span>}
         </label>
         <label className="block text-sm text-gray-300">Email

@@ -119,10 +119,12 @@ export const AuthProvider = ({ children }) => {
         setUser(storedSession.user);
       } else if (storedSession.token || storedSession.user) {
         clearSession();
+        setLoading(false);
+      } else {
+        setLoading(false);
       }
     } catch {
       clearSession();
-    } finally {
       setLoading(false);
     }
   }, []);
@@ -135,6 +137,7 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
 
+    setLoading(true);
     try {
       const response = await request('/auth/me', {}, currentToken);
       const nextUser = response.user || response;

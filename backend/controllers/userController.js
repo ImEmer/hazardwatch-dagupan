@@ -112,6 +112,7 @@ export const getUserStats = async (req, res, next) => {
         citizens: counts.user || 0,
         barangay: counts.barangay || 0,
         admins: (counts.admin || 0) + (counts.superadmin || 0),
+        adminAccounts: counts.admin || 0,
       },
     });
   } catch (e) { next(e); }
@@ -156,8 +157,8 @@ export const getUser = async (req, res, next) => { try { const user = await User
 export const createUser = async (req, res, next) => {
   try {
     const role = req.body.role || 'user';
-    if (req.user.role === 'admin' && !['user', 'barangay'].includes(role)) {
-      return res.status(403).json({ success: false, message: 'Admins can only create citizen or barangay accounts.' });
+    if (req.user.role === 'admin' && role !== 'barangay') {
+      return res.status(403).json({ success: false, message: 'Admins can only create barangay accounts.' });
     }
     if (req.user.role === 'superadmin' && role === 'superadmin') {
       return res.status(403).json({ success: false, message: 'SuperAdmin cannot create another superadmin account through the UI.' });
