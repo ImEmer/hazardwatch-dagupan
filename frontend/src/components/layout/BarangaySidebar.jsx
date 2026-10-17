@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Archive, Bell, FileText, LayoutDashboard, LogOut, Map, PanelLeftClose, PanelLeftOpen, Settings, X } from 'lucide-react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Activity, Archive, Bell, FileText, LayoutDashboard, Map, PanelLeftClose, PanelLeftOpen, Settings, X } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
-import { confirmAction } from '../../services/alerts';
 import { HEADER_HEIGHT } from './layoutConstants';
 
 const items = [
@@ -17,10 +16,9 @@ const items = [
 ];
 
 const BarangaySidebar = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
   const isDark = theme === 'dark';
@@ -48,14 +46,6 @@ const BarangaySidebar = () => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
-
-  const handleLogout = async () => {
-    const result = await confirmAction('Are you sure you want to logout?');
-    if (!result.isConfirmed) return;
-    setIsOpen(false);
-    await logout();
-    navigate('/login');
-  };
 
   const linkClass = ({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${collapsed ? 'justify-center px-2' : ''} ${isActive ? isDark ? 'bg-[#3b82f6]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-700' : isDark ? 'text-gray-300 hover:bg-[#14151d] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
 
@@ -96,21 +86,10 @@ const BarangaySidebar = () => {
       })}
     </nav>
 
-    <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
-      <button
-        type="button"
-        onClick={handleLogout}
-        className={`flex items-center gap-3 rounded-xl border border-red-500 px-3 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950 ${collapsed ? 'justify-center px-2' : 'w-full text-left'}`}
-        title={collapsed ? 'Logout' : undefined}
-      >
-        <LogOut className="h-4 w-4" aria-hidden="true" />
-        {!collapsed && <span>Logout</span>}
-      </button>
-    </div>
   </aside>;
 
   return <>
-    <div className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 lg:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}><button type="button" onClick={() => setIsOpen((value) => !value)} className="rounded-lg p-2" aria-label={isOpen ? 'Close menu' : 'Open menu'}><X className={`h-4 w-4 ${isOpen ? '' : 'rotate-180'}`} /></button><span className="text-sm font-semibold">{user?.barangay || 'Barangay'} Barangay</span><button type="button" onClick={handleLogout} className="rounded-lg border border-red-500 p-2 text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950" aria-label="Logout"><LogOut className="h-4 w-4" /></button></div>
+    <div className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 lg:hidden ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}><button type="button" onClick={() => setIsOpen((value) => !value)} className="rounded-lg p-2" aria-label={isOpen ? 'Close menu' : 'Open menu'}><X className={`h-4 w-4 ${isOpen ? '' : 'rotate-180'}`} /></button><span className="text-sm font-semibold">{user?.barangay || 'Barangay'} Barangay</span></div>
     {isOpen && <button type="button" aria-label="Close navigation" onClick={() => setIsOpen(false)} className="fixed inset-0 z-40 bg-black/60 lg:hidden" />}
     {sidebar}
   </>;

@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Archive, Bell, FileText, LayoutDashboard, LogOut, Map, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from 'lucide-react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Activity, Archive, Bell, FileText, LayoutDashboard, Map, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
-import { confirmAction } from '../../services/alerts';
 import { HEADER_HEIGHT } from './layoutConstants';
 
 const items = [
@@ -20,10 +19,9 @@ const items = [
 ];
 
 const AdminSidebar = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
   const isDark = theme === 'dark';
@@ -61,15 +59,6 @@ const AdminSidebar = () => {
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  const handleLogout = async () => {
-    const result = await confirmAction('Are you sure you want to logout?');
-    if (result.isConfirmed) {
-      setIsOpen(false);
-      await logout();
-      navigate('/');
-    }
-  };
-
   const linkClass = ({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${collapsed ? 'justify-center px-2' : ''} ${isActive ? isDark ? 'bg-[#3b82f6]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-700' : isDark ? 'text-gray-300 hover:bg-[#14151d] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
 
   const sidebar = <aside className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:z-40 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-20' : 'w-72'} ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-800'}`}>
@@ -106,17 +95,6 @@ const AdminSidebar = () => {
       })}
     </nav>
 
-    <div className={`border-t px-3 py-4 ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`}>
-      <button
-        type="button"
-        onClick={handleLogout}
-        className={`flex items-center gap-2 rounded-xl border border-red-500 px-3 py-2 text-sm text-red-500 transition hover:bg-red-500 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950 ${collapsed ? 'justify-center px-2' : 'w-full text-left'}`}
-        title={collapsed ? 'Logout' : undefined}
-      >
-        <LogOut className="h-4 w-4" aria-hidden="true" />
-        {!collapsed && <span>Logout</span>}
-      </button>
-    </div>
   </aside>;
 
   return <>
