@@ -201,7 +201,7 @@ export const AuthProvider = ({ children }) => {
     if (response.requiresOTP) return response;
     const session = response.token ? response : response.data;
     persistSession(session);
-    return session.user;
+    return { ...session.user, twoFactorDisabled: Boolean(session.twoFactorDisabled) };
   }, [persistSession]);
 
   const completeLogin = useCallback((session) => {
@@ -278,7 +278,14 @@ export const AuthProvider = ({ children }) => {
     const response = await api.patch('/users/me/preferences', preferences, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
-    const nextUser = { ...user, preferences: response.data.preferences };
+    const nextUser = {
+      ...user,
+      preferences: response.data.preferences,
+      ...(Object.hasOwn(response.data, 'login2FAEnabled') ? {
+        login2FAEnabled: response.data.login2FAEnabled,
+        login2FALastUpdated: response.data.login2FALastUpdated,
+      } : {}),
+    };
     setUser(nextUser);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     return response.data.preferences;

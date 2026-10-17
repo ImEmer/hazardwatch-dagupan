@@ -8,6 +8,7 @@ import SettingsToggle from './SettingsToggle';
 import MapPreferencesSection, { DEFAULT_MAP_PREFERENCES, normalizeMapPreferences } from './MapPreferencesSection';
 import AccountChangeDialogs from './AccountChangeDialogs';
 import BiometricSettingsSection from './BiometricSettingsSection';
+import Login2FASettingsSection from './Login2FASettingsSection';
 
 const DEFAULT_PREFERENCES = {
   theme: 'dark',
@@ -97,6 +98,10 @@ const SettingsDashboard = () => {
       <SettingsSection title="Security" description="Change your password. Use at least 8 characters with uppercase, lowercase, a number, and a symbol.">
         <AccountChangeDialogs mode="password" inputClass={inputClass} primaryButtonClass={saveButton} secondaryButtonClass={secondaryButton} isDark={isDark} />
       </SettingsSection>
+
+      {['superadmin', 'admin', 'barangay'].includes(user?.role) && (
+        <Login2FASettingsSection user={user} updatePreferences={updatePreferences} />
+      )}
 
       <BiometricSettingsSection />
 

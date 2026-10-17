@@ -8,6 +8,7 @@
     "start": "node server.js",
     "seed": "node seeders/seed.js",
     "seed:barangays": "node seeders/seedBarangays.js",
+    "migrate:login-2fa": "node scripts/migrateLogin2FA.js",
     "backup": "node scripts/backup.js"
   },
   "dependencies": {

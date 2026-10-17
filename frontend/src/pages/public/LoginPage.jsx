@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import { showError, showSuccess } from '../../services/alerts';
+import { showError, showSuccess, showWarning } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
 import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
@@ -82,6 +82,9 @@ const LoginPage = () => {
       }
       const role = loggedInUser?.role?.toLowerCase();
       const name = form.email.split('@')[0];
+      if (loggedInUser?.twoFactorDisabled) {
+        await showWarning('2FA is disabled on this account (testing mode).');
+      }
       await showSuccess(`Welcome back, ${name}!`);
 
       const targetRoute = role === 'barangay'

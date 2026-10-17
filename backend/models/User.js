@@ -51,6 +51,8 @@ const userSchema = new mongoose.Schema({
   emailVerified: { type: Boolean, default: false },
   verificationRequired: { type: Boolean, default: true },
   twoFactorEnabled: { type: Boolean, default: false },
+  login2FAEnabled: { type: Boolean, default: false },
+  login2FALastUpdated: { type: Date },
   biometricEnabled: { type: Boolean, default: false },
   biometricCredentials: [{
     credentialId: { type: String, required: true },

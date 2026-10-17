@@ -42,18 +42,67 @@ const mergePreferences = (current, updates) => {
   return { preferences: next };
 };
 
-export const getMyPreferences = (req, res) => res.json({ success: true, preferences: req.user.preferences });
+export const getMyPreferences = (req, res) => res.json({
+  success: true,
+  preferences: req.user.preferences,
+  login2FAEnabled: req.user.login2FAEnabled,
+  login2FALastUpdated: req.user.login2FALastUpdated,
+});
 
 const canManageUserSettings = (actor, target) => actor.role === 'superadmin'
   || (actor.role === 'admin' && ['user', 'barangay'].includes(target.role));
 
 export const updateMyPreferences = async (req, res, next) => {
   try {
+    const updatesLogin2FA = Object.hasOwn(req.body || {}, 'login2FAEnabled');
+    if (updatesLogin2FA) {
+      if (!privilegedRoles.includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Only privileged accounts can change login 2FA settings.' });
+      }
+      if (typeof req.body.login2FAEnabled !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'login2FAEnabled must be a boolean.' });
+      }
+      if (req.body.login2FAEnabled === false) {
+        if (typeof req.body.currentPassword !== 'string' || !req.body.currentPassword) {
+          return res.status(400).json({ success: false, message: 'Current password is required to disable login 2FA.' });
+        }
+        const userWithPassword = await User.findById(req.user._id).select('+password');
+        if (!userWithPassword || !(await userWithPassword.comparePassword(req.body.currentPassword))) {
+          return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+        }
+      }
+    }
+
     const result = mergePreferences(req.user.preferences, req.body);
     if (result.error) return res.status(400).json({ success: false, message: result.error });
     req.user.preferences = result.preferences;
+    const login2FAChanged = updatesLogin2FA && req.user.login2FAEnabled !== req.body.login2FAEnabled;
+    if (login2FAChanged) {
+      req.user.login2FAEnabled = req.body.login2FAEnabled;
+      req.user.login2FALastUpdated = new Date();
+    }
     await req.user.save({ validateBeforeSave: false });
-    res.json({ success: true, preferences: req.user.preferences });
+    if (login2FAChanged) {
+      try {
+        await logActivity({
+          actor: req.user,
+          action: '2FA_SETTING_CHANGED',
+          message: `${req.user.name} ${req.user.login2FAEnabled ? 'enabled' : 'disabled'} email 2FA for login`,
+          details: {
+            login2FAEnabled: req.user.login2FAEnabled,
+            ip: req.ip || req.socket?.remoteAddress || 'unknown-ip',
+            userAgent: String(req.headers['user-agent'] || ''),
+            updatedAt: req.user.login2FALastUpdated,
+          },
+          scope: req.user.role === 'barangay' ? 'barangay' : 'admin',
+          entityType: 'user',
+          entityId: req.user._id,
+        });
+      } catch (error) {
+        console.error('[users] Login 2FA activity logging failed:', error.message);
+      }
+    }
+    res.json({ success: true, preferences: req.user.preferences, login2FAEnabled: req.user.login2FAEnabled, login2FALastUpdated: req.user.login2FALastUpdated });
   } catch (error) { next(error); }
 };
 

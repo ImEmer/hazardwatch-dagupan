@@ -10,7 +10,7 @@ import { sendAccountVerifiedEmail, sendEmailChangeCodeNew, sendEmailChangeCodeOl
 
 const VERIFICATION_CUTOFF = new Date('2026-09-25T00:00:00.000Z');
 
-export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled, biometricEnabled: user.biometricEnabled, preferences: user.preferences });
+export const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, barangay: user.barangay, isActive: user.isActive, emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled, login2FAEnabled: user.login2FAEnabled, login2FALastUpdated: user.login2FALastUpdated, biometricEnabled: user.biometricEnabled, preferences: user.preferences });
 const tokenExpiryFor = (role) => ['admin', 'superadmin', 'barangay'].includes(role) ? '1d' : '7d';
 export const issueToken = (user) => jwt.sign({ id: user._id, role: user.role, authVersion: user.authVersion || 0 }, process.env.JWT_SECRET, { expiresIn: tokenExpiryFor(user.role) });
 const privilegedRoles = ['superadmin', 'admin', 'barangay'];
@@ -242,7 +242,9 @@ export const login = async (req, res, next) => {
       || (user.verificationRequired !== false && (!user.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF));
     if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first. Check your inbox for the 6-digit code.', needsVerification: true, email: user.email });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
-    if (requiresTwoFactor(user)) {
+    const requiresOTP = privilegedRoles.includes(user.role) && user.login2FAEnabled === true;
+    const twoFactorDisabled = privilegedRoles.includes(user.role) && !requiresOTP;
+    if (requiresOTP) {
       const now = new Date();
       if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
         const retryAfter = Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000);
@@ -300,8 +302,16 @@ export const login = async (req, res, next) => {
       }
     }
 
-    await logActivity({ actor: user, action: 'login', message: `${user.name} logged in`, scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin', entityType: 'auth', entityId: user._id }).catch(() => {});
-    res.json({ success: true, token: issueToken(user), user: publicUser(user) });
+    await logActivity({
+      actor: user,
+      action: twoFactorDisabled ? 'LOGGED_IN_WITHOUT_2FA' : 'login',
+      message: twoFactorDisabled ? `${user.name} logged in without email 2FA (testing mode)` : `${user.name} logged in`,
+      details: twoFactorDisabled ? { ip: req.ip || req.socket?.remoteAddress || 'unknown-ip', userAgent } : undefined,
+      scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
+      entityType: 'auth',
+      entityId: user._id,
+    }).catch((error) => console.error('[auth] Login activity logging failed:', error.message));
+    res.json({ success: true, token: issueToken(user), user: publicUser(user), ...(twoFactorDisabled ? { twoFactorDisabled: true } : {}) });
   } catch (error) { next(error); }
 };
 
