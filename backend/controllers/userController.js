@@ -160,6 +160,9 @@ export const createUser = async (req, res, next) => {
     if (req.user.role === 'admin' && role !== 'barangay') {
       return res.status(403).json({ success: false, message: 'Admins can only create barangay accounts.' });
     }
+    if (req.user.role === 'superadmin' && role === 'user') {
+      return res.status(400).json({ success: false, message: 'Citizens must register through the public page.' });
+    }
     if (req.user.role === 'superadmin' && role === 'superadmin') {
       return res.status(403).json({ success: false, message: 'SuperAdmin cannot create another superadmin account through the UI.' });
     }

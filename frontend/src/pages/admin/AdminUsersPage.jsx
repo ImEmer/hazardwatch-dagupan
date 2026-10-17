@@ -405,7 +405,7 @@ const AdminUsersPage = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'barangay', label: 'Barangay' }]} roleNote="Admins can only create Barangay accounts." onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} isCreating barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'barangay', label: 'Barangay' }]} onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </div>
   );
 };

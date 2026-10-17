@@ -1,11 +1,15 @@
 import ActivityLog from '../models/ActivityLog.js';
+import Report from '../models/Report.js';
+import User from '../models/User.js';
 
 const legacyRoleFilter = (roles) => ({ $or: [{ actorRole: { $in: roles } }, { actorRole: { $exists: false }, role: { $in: roles } }] });
 
 const buildQuery = (req, baseFilter = {}) => {
-  const { page = 1, limit = 5, role, search, startDate, endDate, sort = 'desc' } = req.query;
+  const { page = 1, limit = 5, role, category, search, startDate, endDate, sort = 'desc' } = req.query;
   const filter = { ...baseFilter };
   if (role) filter.$and = [...(filter.$and || []), { $or: [{ actorRole: role }, { actorRole: { $exists: false }, role }] }];
+  if (category === 'reports') filter.$and = [...(filter.$and || []), { entityType: 'report' }];
+  if (category === 'users') filter.$and = [...(filter.$and || []), { entityType: { $in: ['user', 'auth', 'profile'] } }];
   if (search) {
     const pattern = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     filter.$and = [...(filter.$and || []), { $or: [{ actorName: pattern }, { action: pattern }, { message: pattern }, { details: pattern }] }];
@@ -26,8 +30,24 @@ export const getAllActivity = sendActivity({ actorRole: { $ne: 'superadmin' }, r
 export const getPublicActivity = sendActivity(legacyRoleFilter(['barangay', 'user']));
 export const getMyActivity = async (req, res, next) => sendActivity({ user: req.user._id })(req, res, next);
 export const getBarangayActivity = async (req, res, next) => {
-  if (req.user.role === 'barangay' && req.params.barangay.toLowerCase() !== String(req.user.barangay || '').toLowerCase()) return res.status(403).json({ success: false, message: 'You can only view your own barangay activity.' });
-  return sendActivity({ actorBarangay: req.params.barangay })(req, res, next);
+  const barangay = req.params.barangay;
+  if (req.user.role === 'barangay' && barangay.toLowerCase() !== String(req.user.barangay || '').toLowerCase()) return res.status(403).json({ success: false, message: 'You can only view your own barangay activity.' });
+  try {
+    const barangayPattern = new RegExp(`^${barangay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const [reportIds, userIds] = await Promise.all([
+      Report.distinct('_id', { $or: [{ barangay: barangayPattern }, { assignedBarangay: barangayPattern }] }),
+      User.distinct('_id', { barangay: barangayPattern }),
+    ]);
+    return sendActivity({
+      $or: [
+        { actorBarangay: barangayPattern },
+        { entityType: 'report', entityId: { $in: reportIds } },
+        { entityType: { $in: ['user', 'auth', 'profile'] }, entityId: { $in: userIds } },
+      ],
+    })(req, res, next);
+  } catch (error) {
+    return next(error);
+  }
 };
 export const getActivityLogs = async (req, res, next) => {
   if (req.user.role === 'superadmin') return getAllActivity(req, res, next);

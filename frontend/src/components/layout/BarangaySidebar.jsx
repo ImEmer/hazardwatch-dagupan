@@ -9,6 +9,7 @@ import { HEADER_HEIGHT } from './layoutConstants';
 const items = [
   { to: '/barangay/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/barangay/reports', label: 'Reports', icon: FileText },
+  { to: '/barangay/activity', label: 'Activity', icon: Activity },
   { to: '/barangay/archived', label: 'Archived', icon: Archive },
   { to: '/barangay/map', label: 'Map View', icon: Map },
   { to: '/barangay/notifications', label: 'Notifications', icon: Bell },

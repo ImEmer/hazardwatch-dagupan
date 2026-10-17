@@ -23,7 +23,7 @@ const formatActivityMessage = (message) => String(message || '').replace(
   (timestamp) => formatDateTime(timestamp),
 );
 
-const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
+const ActivityPage = ({ endpoint, tabs, title, roleParam = true, categoryParam = false }) => {
   const { token } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -39,7 +39,13 @@ const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
   useEffect(() => { setPage(1); }, [activeTab, search, dateFilter]);
   useEffect(() => {
     let cancelled = false;
-    const params = { page, limit: 5, role: roleParam && activeTab !== 'all' ? activeTab : undefined, search: search || undefined };
+    const params = {
+      page,
+      limit: 5,
+      role: roleParam && activeTab !== 'all' ? activeTab : undefined,
+      category: categoryParam && activeTab !== 'all' ? activeTab : undefined,
+      search: search || undefined,
+    };
     if (dateFilter !== 'all') params.startDate = new Date(Date.now() - Number(dateFilter) * 86400000).toISOString().slice(0, 10);
     setLoading(true);
     setError('');
@@ -55,7 +61,7 @@ const ActivityPage = ({ endpoint, tabs, title, roleParam = true }) => {
       }
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [activeTab, dateFilter, endpoint, page, roleParam, search, token]);
+  }, [activeTab, categoryParam, dateFilter, endpoint, page, roleParam, search, token]);
 
   const totalPages = Math.max(1, pagination.pages || 1);
   const panel = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';

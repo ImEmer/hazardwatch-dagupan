@@ -125,7 +125,17 @@ const SuperAdminUsers = () => {
   const handleCreateFieldChange = (key, value) => {
     setForm((previous) => {
       if (key === 'role') {
-        if (value === 'admin') return { ...previous, role: value, name: `Admin ${(stats.adminAccounts || 0) + 1}`, email: '', barangay: '' };
+        if (value === 'admin') {
+          const adminNumber = (stats.adminAccounts || 0) + 1;
+          return {
+            ...previous,
+            role: value,
+            name: `Admin ${adminNumber}`,
+            email: `admin${adminNumber}@hazardwatch.com`,
+            password: `admin${adminNumber}@hazard123`,
+            barangay: '',
+          };
+        }
         if (value === 'barangay') {
           return {
             ...previous,
@@ -152,7 +162,7 @@ const SuperAdminUsers = () => {
   const handleCreate = async () => {
     if (form.role === 'barangay' && !form.barangay) { await showError('Barangay is required for Barangay users.'); return; }
     if (!form.name.trim() || !form.email.trim()) { await showError('Name and email are required.'); return; }
-    if (form.role !== 'barangay' && (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password))) { await showError('Password must be at least 8 characters and include uppercase, lowercase, and a number.'); return; }
+    if (form.role === 'admin' && !/^admin\d+@hazard123$/.test(form.password)) { await showError('Unable to generate the default Admin password. Please try again.'); return; }
     setSaving(true);
     try { await api.post('/users', { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role, barangay: form.role === 'barangay' ? form.barangay : '' }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await fetchStats(); closeCreator(); await showSuccess('User created successfully.'); } catch (error) { await showError(error.response?.data?.message || error.message || 'Failed to create user.'); } finally { setSaving(false); }
   };
@@ -343,7 +353,7 @@ const SuperAdminUsers = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }, { value: 'user', label: 'Citizen' }]} onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }]} roleNote="Citizens can register through the public page." onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </main>
   );
 };

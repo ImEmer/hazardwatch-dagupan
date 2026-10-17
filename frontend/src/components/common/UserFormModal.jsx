@@ -4,6 +4,7 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
   if (!isOpen) return null;
   const inputClass = `mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`;
   const barangayCreation = isCreating && form.role === 'barangay';
+  const adminCreation = isCreating && form.role === 'admin';
   const roleLocked = roleOptions.length === 1;
   const barangayField = form.role === 'barangay' && (
     <label className="block text-sm">
@@ -32,11 +33,17 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
             <span>Email</span>
             <input required type="email" value={form.email} onChange={(event) => onChange('email', event.target.value)} className={inputClass} />
           </label>
-          {isCreating && !barangayCreation && (
+          {isCreating && !barangayCreation && !adminCreation && (
             <label className="block text-sm">
               <span>Password</span>
               <input required type="password" minLength="8" value={form.password} onChange={(event) => onChange('password', event.target.value)} className={inputClass} />
             </label>
+          )}
+          {adminCreation && (
+            <div className="space-y-1 text-sm">
+              <p>Default password: <span className="font-semibold">{form.password}</span></p>
+              <p className="text-amber-500">User must change password on first login.</p>
+            </div>
           )}
           {barangayCreation && (
             <div className="space-y-1 text-sm">

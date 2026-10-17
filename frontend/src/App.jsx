@@ -38,6 +38,7 @@ import ProfilePage from './pages/public/ProfilePage';
 import BarangayLayout from './components/layout/BarangayLayout';
 import BarangayDashboard from './pages/barangay/BarangayDashboard';
 import BarangayReportsPage from './pages/barangay/BarangayReportsPage';
+import BarangayActivityPage from './pages/barangay/BarangayActivityPage';
 import BarangayReportDetail from './pages/barangay/BarangayReportDetail';
 import BarangayMapPage from './pages/barangay/BarangayMapPage';
 import BarangayArchivedPage from './pages/barangay/BarangayArchivedPage';
@@ -143,6 +144,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<BarangayDashboard />} />
               <Route path="reports" element={<BarangayReportsPage />} />
+              <Route path="activity" element={<ProtectedRoute allowedRoles={['barangay']}><BarangayActivityPage /></ProtectedRoute>} />
               <Route path="archived" element={<BarangayArchivedPage />} />
               <Route path="reports/resolved" element={<BarangayReportsPage resolvedOnly />} />
               <Route path="reports/:id" element={<BarangayReportDetail />} />
