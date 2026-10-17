@@ -5,7 +5,6 @@ import useAuth from '../../hooks/useAuth';
 const tabs = [
   { key: 'all', label: 'All' },
   { key: 'reports', label: 'Reports' },
-  { key: 'users', label: 'Users' },
 ];
 
 const BarangayActivityPage = () => {

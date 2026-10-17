@@ -15,6 +15,7 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
       </select>
     </label>
   );
+  const showRoleFields = roleLocked || Boolean(form.role);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4">
       <form onSubmit={onSubmit} className={`my-auto w-full max-w-lg rounded-2xl border p-6 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`}>
@@ -23,8 +24,19 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
           <button type="button" onClick={onClose} className="text-sm text-gray-400 hover:text-white">Close</button>
         </div>
         <div className="space-y-4">
-          {roleNote && <p className="text-sm text-amber-500">{roleNote}</p>}
-          {barangayCreation && barangayField}
+          {!roleLocked && (
+            <label className="block text-sm">
+              <span>Role</span>
+              <select required value={form.role} onChange={(event) => onChange('role', event.target.value)} className={inputClass}>
+                <option value="" disabled className="text-gray-400">Select role...</option>
+                {roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+          )}
+          {showRoleFields && roleNote && <p className="text-sm text-amber-500">{roleNote}</p>}
+          {showRoleFields && barangayCreation && barangayField}
+          {showRoleFields && (
+          <>
           <label className="block text-sm">
             <span>Full name</span>
             <input required value={form.name} onChange={(event) => onChange('name', event.target.value)} className={inputClass} />
@@ -41,7 +53,7 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
           )}
           {adminCreation && (
             <div className="space-y-1 text-sm">
-              <p>Default password: <span className="font-semibold">{form.password}</span></p>
+              <p>Default password: <span className="font-semibold" aria-readonly="true">{form.password}</span></p>
               <p className="text-amber-500">User must change password on first login.</p>
             </div>
           )}
@@ -51,21 +63,14 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
               <p className="text-amber-500">User must change password on first login.</p>
             </div>
           )}
-          <label className="block text-sm">
-            <span>Role</span>
-            {roleLocked ? (
-              <input value={roleOptions[0].label} readOnly className={inputClass} />
-            ) : (
-              <select required value={form.role} onChange={(event) => onChange('role', event.target.value)} className={inputClass}>
-                {roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            )}
-          </label>
+          {roleLocked && <label className="block text-sm"><span>Role</span><input value={roleOptions[0].label} readOnly className={inputClass} /></label>}
           {!barangayCreation && barangayField}
+          </>
+          )}
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={onClose} className="rounded-lg border border-[#2e303a] px-4 py-2 text-sm text-gray-300">Cancel</button>
-          <button type="submit" disabled={saving} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{isCreating ? 'Create user' : 'Save changes'}</button>
+          <button type="submit" disabled={saving || !showRoleFields} className="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{isCreating ? 'Create user' : 'Save changes'}</button>
         </div>
       </form>
     </div>

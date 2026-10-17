@@ -215,6 +215,8 @@ const InteractiveMap = ({
     const [lng] = useState(defaultCenter[0]);
     const [lat] = useState(defaultCenter[1]);
     const [zoom] = useState(mapPreferences.defaultZoom || 13);
+    const minZoom = Number.isFinite(Number(mapPreferences.minZoom)) ? Number(mapPreferences.minZoom) : 1;
+    const maxZoom = Number.isFinite(Number(mapPreferences.maxZoom)) ? Number(mapPreferences.maxZoom) : 18;
 
     const reverseGeocode = async (lng, lat, accuracyMeters = null) => {
         let rawAddress = {};
@@ -248,8 +250,8 @@ const InteractiveMap = ({
             style: createRasterStyle(mapPreferences.mapStyle || 'streets'),
             center: [lng, lat],
             zoom: zoom,
-            minZoom: 1,
-            maxZoom: 18,
+            minZoom,
+            maxZoom,
             maxBounds: [
                 [120.25, 16.00],
                 [120.42, 16.10]
@@ -345,9 +347,9 @@ const InteractiveMap = ({
 
     useEffect(() => {
         if (!map.current || !mapReady || !mapPreferences.defaultZoom) return;
-        const targetZoom = Math.min(18, Math.max(1, Number(mapPreferences.defaultZoom) || 13));
+        const targetZoom = Math.min(maxZoom, Math.max(minZoom, Number(mapPreferences.defaultZoom) || 13));
         if (map.current.getZoom() !== targetZoom) map.current.easeTo({ zoom: targetZoom, duration: 350 });
-    }, [mapReady, mapPreferences.defaultZoom]);
+    }, [mapReady, mapPreferences.defaultZoom, maxZoom, minZoom]);
 
     useEffect(() => {
         if (!map.current || !mapReady || !onBoundsChange) return;
@@ -740,27 +742,28 @@ const InteractiveMap = ({
                     .selected-location-radar {
                         position: absolute;
                         left: 50%;
-                        bottom: -10px;
-                        width: 18px;
-                        height: 18px;
-                        margin-left: -9px;
-                        border: 2px solid rgba(34, 211, 238, 0.8);
+                        bottom: -40px;
+                        width: 80px;
+                        height: 80px;
+                        margin-left: -40px;
+                        border: 2px solid rgba(34, 211, 238, 0.5);
                         border-radius: 50%;
-                        box-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
-                        animation: selected-location-radar-pulse 1.8s ease-out infinite;
+                        box-shadow: 0 0 16px rgba(34, 211, 238, 0.35);
+                        opacity: 0.5;
+                        animation: selected-location-radar-pulse 1.8s ease-in-out infinite;
                     }
                     @keyframes selected-location-pin-pulse {
                         0%, 100% { transform: scale(1); filter: drop-shadow(0 3px 10px rgba(34, 211, 238, 0.16)); }
                         50% { transform: scale(1.035); filter: drop-shadow(0 3px 14px rgba(34, 211, 238, 0.4)); }
                     }
                     @keyframes selected-location-radar-pulse {
-                        0% { transform: scale(0.65); opacity: 0.75; }
-                        100% { transform: scale(2.4); opacity: 0; }
+                        0%, 100% { transform: scale(0.96); opacity: 0.35; }
+                        50% { transform: scale(1); opacity: 0.5; }
                     }
                     @media (prefers-reduced-motion: reduce) {
                         .selected-location-visual,
                         .selected-location-radar { animation: none !important; }
-                        .selected-location-radar { opacity: 0.55; }
+                        .selected-location-radar { opacity: 0.5; transform: none; }
                     }
                 `;
 

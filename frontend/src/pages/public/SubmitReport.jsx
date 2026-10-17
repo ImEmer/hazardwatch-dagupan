@@ -373,6 +373,7 @@ const SubmitReport = () => {
                         height="100%"
                         showClickInstruction={false}
                         showSelectedMarker={true}
+                        mapPreferences={{ defaultZoom: 16, minZoom: 10, maxZoom: 19 }}
                     />
                 </div>
                 <div className={`flex items-center gap-2 border-t p-3 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/50' : 'border-gray-200 bg-slate-50'}`}>
@@ -411,7 +412,10 @@ const SubmitReport = () => {
                         <svg className="w-4 h-4 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.5 7.5l-1.5 4.5L9 12" />
                         </svg>
-                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No location selected yet.</span>
+                        <div className="min-w-0">
+                            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No location selected yet.</p>
+                            <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Location not available? You can still share your current approximate location by clicking on the map.</p>
+                        </div>
                     </>
                     )}
                     {selectedLocation && <p className="mt-1 text-xs text-green-400">Location selected.</p>}

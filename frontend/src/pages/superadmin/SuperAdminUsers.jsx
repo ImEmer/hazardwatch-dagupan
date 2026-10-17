@@ -20,7 +20,7 @@ const roleBadge = {
   user: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
 };
 
-const EMPTY_FORM = { name: '', email: '', password: '', role: 'user', barangay: '' };
+const EMPTY_FORM = { name: '', email: '', password: '', role: '', barangay: '' };
 const DEFAULT_BARANGAY_PASSWORD = 'Barangay@123';
 const PAGE_SIZE = 10;
 
@@ -93,7 +93,7 @@ const SuperAdminUsers = () => {
     if (!token) return;
     try {
       const response = await api.get('/users/stats', { headers: { Authorization: `Bearer ${token}` } });
-      setStats(response.data?.stats || { total: 0, citizens: 0, barangay: 0, admins: 0 });
+      setStats(response.data?.stats || { total: 0, citizens: 0, barangay: 0, admins: 0, adminAccounts: 0 });
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Unable to load user statistics.');
     }
@@ -132,7 +132,7 @@ const SuperAdminUsers = () => {
             role: value,
             name: `Admin ${adminNumber}`,
             email: `admin${adminNumber}@hazardwatch.com`,
-            password: `admin${adminNumber}@hazard123`,
+            password: `admin${adminNumber}@06`,
             barangay: '',
           };
         }
@@ -162,7 +162,7 @@ const SuperAdminUsers = () => {
   const handleCreate = async () => {
     if (form.role === 'barangay' && !form.barangay) { await showError('Barangay is required for Barangay users.'); return; }
     if (!form.name.trim() || !form.email.trim()) { await showError('Name and email are required.'); return; }
-    if (form.role === 'admin' && !/^admin\d+@hazard123$/.test(form.password)) { await showError('Unable to generate the default Admin password. Please try again.'); return; }
+    if (form.role === 'admin' && !/^admin\d+@06$/.test(form.password)) { await showError('Unable to generate the default Admin password. Please try again.'); return; }
     setSaving(true);
     try { await api.post('/users', { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role, barangay: form.role === 'barangay' ? form.barangay : '' }, { headers: { Authorization: `Bearer ${token}` } }); await fetchUsers(); await fetchStats(); closeCreator(); await showSuccess('User created successfully.'); } catch (error) { await showError(error.response?.data?.message || error.message || 'Failed to create user.'); } finally { setSaving(false); }
   };
@@ -245,7 +245,7 @@ const SuperAdminUsers = () => {
               <p className="text-xs uppercase tracking-[0.25em] text-[#60a5fa]">Super Admin</p>
               <h1 className={`mt-2 text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>User management</h1>
             </div>
-            <button type="button" onClick={() => { setForm({ ...EMPTY_FORM, role: 'user' }); setIsCreating(true); }} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white">+ Add user</button>
+            <button type="button" onClick={() => { setForm(EMPTY_FORM); setIsCreating(true); }} className="rounded-lg bg-[#3b82f6] px-3 py-2 text-sm font-semibold text-white">+ Add user</button>
           </div>
         </div>
 
@@ -353,7 +353,7 @@ const SuperAdminUsers = () => {
           </div>
         </div>
       )}
-      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }]} roleNote="Citizens can register through the public page." onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
+      <UserFormModal isOpen={isCreating} isDark={isDark} form={form} saving={saving} barangayOptions={DAGUPAN_BARANGAYS} roleOptions={[{ value: 'admin', label: 'Admin' }, { value: 'barangay', label: 'Barangay' }]} onChange={handleCreateFieldChange} onClose={closeCreator} onSubmit={(event) => { event.preventDefault(); handleCreate(); }} />
     </main>
   );
 };

@@ -27,7 +27,7 @@ export const validateBadRequest = (req, res, next) => {
 export const passwordPolicy = (field = 'password') => body(field)
   .custom((value, { req }) => {
     if (typeof value !== 'string' || /\s/.test(value)) throw new Error('Password cannot contain spaces.');
-    if (req.user?.role === 'superadmin' && req.body?.role === 'admin' && /^admin\d+@hazard123$/.test(value)) return true;
+    if (req.user?.role === 'superadmin' && req.body?.role === 'admin' && /^admin\d+@06$/.test(value)) return true;
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(value)) {
       throw new Error('Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.');
     }

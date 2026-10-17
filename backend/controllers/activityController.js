@@ -1,6 +1,5 @@
 import ActivityLog from '../models/ActivityLog.js';
 import Report from '../models/Report.js';
-import User from '../models/User.js';
 
 const legacyRoleFilter = (roles) => ({ $or: [{ actorRole: { $in: roles } }, { actorRole: { $exists: false }, role: { $in: roles } }] });
 
@@ -34,16 +33,10 @@ export const getBarangayActivity = async (req, res, next) => {
   if (req.user.role === 'barangay' && barangay.toLowerCase() !== String(req.user.barangay || '').toLowerCase()) return res.status(403).json({ success: false, message: 'You can only view your own barangay activity.' });
   try {
     const barangayPattern = new RegExp(`^${barangay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-    const [reportIds, userIds] = await Promise.all([
-      Report.distinct('_id', { $or: [{ barangay: barangayPattern }, { assignedBarangay: barangayPattern }] }),
-      User.distinct('_id', { barangay: barangayPattern }),
-    ]);
+    const reportIds = await Report.distinct('_id', { $or: [{ barangay: barangayPattern }, { assignedBarangay: barangayPattern }] });
     return sendActivity({
-      $or: [
-        { actorBarangay: barangayPattern },
-        { entityType: 'report', entityId: { $in: reportIds } },
-        { entityType: { $in: ['user', 'auth', 'profile'] }, entityId: { $in: userIds } },
-      ],
+      entityType: 'report',
+      entityId: { $in: reportIds },
     })(req, res, next);
   } catch (error) {
     return next(error);
