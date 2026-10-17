@@ -291,12 +291,14 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
             <option value="status:asc">Status A to Z</option>
             <option value="status:desc">Status Z to A</option>
           </select>
+        </div>
+        <div className="mt-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={resetFilters}
             title="Reset filters"
             aria-label="Reset filters"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm xl:ml-auto"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm"
           >
             <svg
               className="h-4 w-4"
@@ -314,40 +316,9 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
             </svg>
             Reset Filters
           </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className={`rounded-xl border px-3 py-2.5 text-sm ${panel}`}>
             {pagination.total} results
           </div>
-          {[
-            [search, `Search: ${search}`, () => updateFilter(setSearch, "")],
-            [
-              !resolvedOnly && status !== "all" && status,
-              status,
-              () => updateFilter(setStatus, "all"),
-            ],
-            [
-              priority !== "all" && priority,
-              priority,
-              () => updateFilter(setPriority, "all"),
-            ],
-            [
-              category !== "all" && category,
-              category,
-              () => updateFilter(setCategory, "all"),
-            ],
-          ]
-            .filter(([value]) => value)
-            .map(([value, label, remove]) => (
-              <button
-                type="button"
-                key={label}
-                onClick={remove}
-                className="rounded-full bg-[#3b82f6]/10 px-2.5 py-1 text-xs text-[#60a5fa]"
-              >
-                {label} ×
-              </button>
-            ))}
         </div>
       </section>
 
