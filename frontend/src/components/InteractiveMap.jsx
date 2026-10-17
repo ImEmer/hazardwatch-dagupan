@@ -742,23 +742,23 @@ const InteractiveMap = ({
                     .selected-location-radar {
                         position: absolute;
                         left: 50%;
-                        bottom: -40px;
-                        width: 80px;
-                        height: 80px;
-                        margin-left: -40px;
-                        border: 2px solid rgba(34, 211, 238, 0.5);
+                        bottom: -20px;
+                        width: 40px;
+                        height: 40px;
+                        margin-left: -20px;
+                        border: 2px solid rgba(6, 182, 212, 0.8);
                         border-radius: 50%;
-                        box-shadow: 0 0 16px rgba(34, 211, 238, 0.35);
-                        opacity: 0.5;
-                        animation: selected-location-radar-pulse 1.8s ease-in-out infinite;
+                        opacity: 1;
+                        transform: scale(0.5);
+                        animation: selected-location-radar-pulse 2s ease-out infinite;
                     }
                     @keyframes selected-location-pin-pulse {
                         0%, 100% { transform: scale(1); filter: drop-shadow(0 3px 10px rgba(34, 211, 238, 0.16)); }
                         50% { transform: scale(1.035); filter: drop-shadow(0 3px 14px rgba(34, 211, 238, 0.4)); }
                     }
                     @keyframes selected-location-radar-pulse {
-                        0%, 100% { transform: scale(0.96); opacity: 0.35; }
-                        50% { transform: scale(1); opacity: 0.5; }
+                        0% { transform: scale(0.5); opacity: 1; }
+                        100% { transform: scale(2.5); opacity: 0; }
                     }
                     @media (prefers-reduced-motion: reduce) {
                         .selected-location-visual,

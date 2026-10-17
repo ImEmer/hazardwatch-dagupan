@@ -3,7 +3,6 @@ import ActivityPage from '../../components/ActivityPage';
 import useAuth from '../../hooks/useAuth';
 
 const tabs = [
-  { key: 'all', label: 'All' },
   { key: 'reports', label: 'Reports' },
 ];
 

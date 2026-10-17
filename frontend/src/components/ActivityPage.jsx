@@ -30,7 +30,7 @@ const ActivityPage = ({ endpoint, tabs, title, roleParam = true, categoryParam =
   const [activities, setActivities] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 5, total: 0, pages: 1 });
   const [page, setPage] = useState(1);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(tabs[0]?.key || 'all');
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
   const [loading, setLoading] = useState(true);
