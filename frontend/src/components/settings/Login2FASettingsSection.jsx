@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
@@ -100,16 +101,17 @@ const Login2FASettingsSection = ({ user, updatePreferences }) => {
           disabled={saving}
           onChange={handleToggle}
         />
-        <p
+        <div
           role="status"
-          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+          className={`mt-4 flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
             email2FAEnabled
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+              ? 'bg-green-500/10 text-green-400'
+              : 'bg-amber-500/10 text-amber-400'
           }`}
         >
-          {email2FAEnabled ? '✅ 2FA is active' : 'Testing mode: 2FA is disabled'}
-        </p>
+          {email2FAEnabled ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" /> : <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />}
+          <span>{email2FAEnabled ? '2FA is active' : 'Testing mode: 2FA is disabled'}</span>
+        </div>
       </SettingsSection>
 
       {showDisableDialog && (
