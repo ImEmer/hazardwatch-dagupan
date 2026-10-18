@@ -188,9 +188,11 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "barangay-reports.csv";
+      link.download = `barangay-reports-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
       await showSuccess("Reports exported successfully.");
     } catch (requestError) {
       await showError(

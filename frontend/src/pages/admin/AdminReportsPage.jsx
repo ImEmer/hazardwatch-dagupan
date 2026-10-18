@@ -122,9 +122,24 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const resetFilters = () => { setSearch(''); setStatusFilter(resolvedOnly ? 'Resolved' : 'all'); setPriorityFilter('all'); setCategoryFilter('all'); setBarangayFilter('all'); setSortBy('createdAt'); setSortOrder('desc'); setPage(1); };
   const exportCsv = async () => {
     try {
-      const params = { search, status: statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter, priority: priorityFilter === 'all' ? undefined : priorityFilter, barangay: barangayFilter === 'all' ? undefined : barangayFilter, includeResolved: resolvedOnly };
-      const response = await api.get('/reports/export', { params, responseType: 'blob', headers: { Authorization: `Bearer ${token}` } });
-      const url = URL.createObjectURL(response.data); const link = document.createElement('a'); link.href = url; link.download = `hazardwatch-reports-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url); await showSuccess('Reports exported successfully.');
+      const params = {
+        search: search || undefined,
+        status: resolvedOnly ? 'Resolved' : statusFilter === 'all' ? undefined : statusFilter,
+        category: categoryFilter === 'all' ? undefined : categoryFilter,
+        priority: priorityFilter === 'all' ? undefined : priorityFilter,
+        barangay: barangayFilter === 'all' ? undefined : barangayFilter,
+        includeResolved: resolvedOnly,
+      };
+      const response = await api.get('/reports/export', { params, responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `hazardwatch-reports-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      await showSuccess('Reports exported successfully.');
     } catch (error) { await showError(error.response?.data?.message || 'Unable to export reports.'); }
   };
 
