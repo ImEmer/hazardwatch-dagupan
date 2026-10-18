@@ -1,7 +1,11 @@
 import 'dotenv/config';
+import http from 'http';
+import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import jwt from 'jsonwebtoken';
+import { Server } from 'socket.io';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import reportRoutes from './routes/reports.js';
@@ -19,8 +23,10 @@ import { swaggerSpec } from './swagger.js';
 import { globalLimiter } from './middleware/rateLimit.js';
 import cron from 'node-cron';
 import { runBackup } from './scripts/backup.js';
+import TokenBlacklist from './models/TokenBlacklist.js';
 
 const app = express();
+const server = http.createServer(app);
 app.set('trust proxy', 1);
 const port = process.env.PORT || 5000;
 const configuredOrigins = (process.env.CLIENT_URL || '')
@@ -43,7 +49,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://tile.openstreetmap.org', 'https://server.arcgisonline.com', 'https://tile.opentopomap.org'],
-      connectSrc: ["'self'", ...allowedOrigins, 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', 'https://hazardwatch-dagupan.onrender.com', 'https://server.arcgisonline.com', 'https://tile.opentopomap.org'],
+      connectSrc: ["'self'", ...allowedOrigins, `http://localhost:${port}`, `http://127.0.0.1:${port}`, 'https://api.cloudinary.com', 'https://nominatim.openstreetmap.org', 'https://hazardwatch-dagupan.onrender.com', 'https://server.arcgisonline.com', 'https://tile.opentopomap.org'],
       fontSrc: ["'self'", 'data:'],
       frameAncestors: ["'none'"],
     },
@@ -68,6 +74,51 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('/*splat', cors(corsOptions));
+
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+console.log('[socket] Socket.IO initialized');
+
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (typeof token !== 'string' || !token) return next(new Error('Authentication required.'));
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.purpose || !decoded.id) return next(new Error('A full access token is required.'));
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    if (await TokenBlacklist.exists({ token: tokenHash })) return next(new Error('Token has been revoked.'));
+
+    const user = await User.findById(decoded.id).select('_id role barangay authVersion isActive');
+    if (!user || !user.isActive || (decoded.authVersion || 0) !== (user.authVersion || 0)) {
+      return next(new Error('User is inactive or the session has been revoked.'));
+    }
+
+    socket.data.user = user;
+    next();
+  } catch {
+    next(new Error('Authentication failed.'));
+  }
+});
+
+io.on('connection', (socket) => {
+  const { role, barangay } = socket.data.user;
+  if (role === 'admin' || role === 'superadmin') {
+    socket.join('room:admin');
+    console.log(`[socket] ${role} joined room:admin`);
+  }
+  if (role === 'barangay' && barangay) {
+    socket.join(`room:barangay:${barangay}`);
+    console.log(`[socket] barangay joined room:barangay:${barangay}`);
+  }
+});
+app.set('io', io);
 
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', globalLimiter);
@@ -99,7 +150,7 @@ connectDB().then(async () => {
       console.log(`[backup] Daily backup scheduled: ${schedule} (${process.env.BACKUP_TIMEZONE || 'UTC'}).`);
     }
   }
-  app.listen(port, () => console.log(`HazardWatch API listening on port ${port}`));
+  server.listen(port, () => console.log(`HazardWatch API listening on port ${port}`));
 }).catch((error) => {
   console.error('Unable to start API:', error.message);
   process.exit(1);

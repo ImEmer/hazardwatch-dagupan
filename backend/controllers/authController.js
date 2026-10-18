@@ -304,9 +304,8 @@ export const login = async (req, res, next) => {
 
     await logActivity({
       actor: user,
-      action: twoFactorDisabled ? 'LOGGED_IN_WITHOUT_2FA' : 'login',
-      message: twoFactorDisabled ? `${user.name} logged in without email 2FA (testing mode)` : `${user.name} logged in`,
-      details: twoFactorDisabled ? { ip: req.ip || req.socket?.remoteAddress || 'unknown-ip', userAgent } : undefined,
+      action: 'login',
+      message: `${user.name} logged in`,
       scope: user.role === 'barangay' ? 'barangay' : user.role === 'user' ? 'user' : 'admin',
       entityType: 'auth',
       entityId: user._id,

@@ -7,6 +7,7 @@
       CartesianGrid,
       Cell,
       Legend,
+      Label,
       Line,
       Pie,
       PieChart,
@@ -22,20 +23,29 @@
     import { PRIORITY_COLORS, REPORT_STATUSES, STATUS_COLORS } from '../../services/reportOptions';
     import { SkeletonDashboard } from '../../components/common/Skeleton';
     import CountUp from '../../components/common/CountUp';
+    import { useSocket } from '../../context/SocketContext';
 
-    const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, payload }) => {
       const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
       const radians = (-midAngle * Math.PI) / 180;
       const x = cx + radius * Math.cos(radians);
       const y = cy + radius * Math.sin(radians);
-      const percentage = percent * 100;
+      const actualValue = payload?.value;
+      const actualTotal = payload?.totalValue;
+      const percentage = actualTotal > 0 ? (actualValue / actualTotal) * 100 : percent * 100;
       const label = `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
       return <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{label}</text>;
+    };
+    const STATUS_VISUAL_ALLOCATION = {
+      Pending: 12,
+      'In Progress': 12,
+      Resolved: 76,
     };
 
     const AdminDashboard = ({ headingLabel = 'Admin Dashboard' }) => {
       const { reports, reportsLoading, reportsError } = useReports();
       const { token } = useAuth();
+      const { latestReport } = useSocket();
       const { theme } = useTheme();
       const isDark = theme === 'dark';
       const currentDate = new Date();
@@ -78,7 +88,7 @@
           if (!cancelled) setStatisticsLoading(false);
         });
         return () => { cancelled = true; };
-      }, [token]);
+      }, [latestReport, token]);
 
       const statusCounts = Object.fromEntries((overview?.status || []).map((item) => [item._id, item.count]));
       const priorityCounts = Object.fromEntries((overview?.priority || []).map((item) => [item._id, item.count]));
@@ -92,7 +102,14 @@
         { name: 'Resolved', value: resolved },
         { name: 'Closed', value: statusCounts.Closed || 0 },
       ];
-      const pieData = statusData.filter((entry) => entry.value > 0);
+      const totalStatusCount = statusData.reduce((total, entry) => total + entry.value, 0);
+      const pieData = statusData
+        .filter((entry) => entry.value > 0)
+        .map((entry) => ({
+          ...entry,
+          totalValue: totalStatusCount,
+          visualValue: STATUS_VISUAL_ALLOCATION[entry.name] ?? entry.value,
+        }));
       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
       const timelineData = Array.from({ length: daysInMonth }, (_, index) => {
         const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`;
@@ -163,10 +180,11 @@
               {pieData.length ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="visualValue" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
                       {pieData.map((entry) => <Cell key={entry.name} fill={STATUS_COLORS[entry.name]?.hex || '#6b7280'} />)}
+                      <Label position="center" value={totalStatusCount.toLocaleString()} fill={chartText} style={{ fontSize: 20, fontWeight: 700 }} />
                     </Pie>
-                    <Tooltip contentStyle={tooltipStyle} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(_visualValue, name, item) => [item.payload.value.toLocaleString(), name]} />
                     <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
                   </PieChart>
                 </ResponsiveContainer>

@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { PRIORITY_COLORS, REPORT_STATUSES, STATUS_CHART_COLORS } from '../../services/reportOptions';
 import { SkeletonDashboard } from '../../components/common/Skeleton';
 import CountUp from '../../components/common/CountUp';
+import { useSocket } from '../../context/SocketContext';
 
 const priorities = ['Urgent', 'High', 'Medium', 'Low'].map((name) => ({ name, color: PRIORITY_COLORS[name].hex }));
 
@@ -23,6 +24,7 @@ const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 const BarangayDashboard = () => {
   const { user, token, loading: authLoading, refreshSession } = useAuth();
+  const { latestReport } = useSocket();
   const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -84,7 +86,7 @@ const BarangayDashboard = () => {
       if (!cancelled) setError(requestError.response?.data?.message || 'Unable to load barangay dashboard.');
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [authLoading, barangay, requestWithAuthRetry, token]);
+  }, [authLoading, barangay, latestReport, requestWithAuthRetry, token]);
 
   useEffect(() => {
     if (authLoading || !token || !barangay) return undefined;
@@ -104,7 +106,7 @@ const BarangayDashboard = () => {
     });
 
     return () => { cancelled = true; };
-  }, [authLoading, barangay, month, requestWithAuthRetry, token]);
+  }, [authLoading, barangay, latestReport, month, requestWithAuthRetry, token]);
 
   const statusCounts = toCounts(dashboard.status);
   const priorityCounts = toCounts(dashboard.priority);

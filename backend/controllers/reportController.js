@@ -328,6 +328,23 @@ export const createReport = async (req, res, next) => {
         phone: req.user.phone,
       },
     });
+    const newReportData = {
+      id: String(report._id),
+      title: report.title,
+      category: report.category,
+      location: report.location,
+      barangay: report.barangay,
+      priority: report.priority,
+      status: report.status,
+      createdAt: report.createdAt,
+    };
+    const io = req.app?.get?.('io');
+    if (io) {
+      io.to('room:admin').emit('new-report', newReportData);
+      io.to(`room:barangay:${report.barangay}`).emit('new-report', newReportData);
+    } else {
+      console.error('[socket] Socket.IO is unavailable; saved report was not broadcast:', String(report._id));
+    }
     const reportMessage = `A new ${report.category} report was submitted in ${report.barangay || 'your area'}.`;
     await notifyReportOperators(report, 'report_submitted', 'New Report Submitted', reportMessage);
     await logActivity({ actor: req.user, action: 'report_submitted', message: `${req.user.name} submitted a report`, scope: 'user', entityType: 'report', entityId: report._id }).catch(() => {});

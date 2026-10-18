@@ -83,10 +83,20 @@ test('report creation ignores a frontend barangay claim and stores the polygon r
     createActivity: ActivityLog.create,
   };
   let storedReport;
+  const emittedEvents = [];
+  const io = {
+    to(room) {
+      return {
+        emit(event, data) {
+          emittedEvents.push({ room, event, data });
+        },
+      };
+    },
+  };
   Report.findOne = () => ({ select() { return this; }, lean: async () => null });
   Report.create = async (document) => {
     storedReport = document;
-    return { ...document, _id: 'test-report-id', status: 'Pending' };
+    return { ...document, _id: 'test-report-id', status: 'Pending', createdAt: new Date('2026-10-03T00:00:00.000Z') };
   };
   User.find = () => ({ select: async () => [] });
   ActivityLog.create = async () => null;
@@ -108,6 +118,7 @@ test('report creation ignores a frontend barangay claim and stores the polygon r
       },
       files: [],
       user: { _id: 'test-user-id', name: 'Test User', email: 'test@example.invalid' },
+      app: { get: (name) => name === 'io' ? io : undefined },
     };
     const res = {
       status(code) { responseStatus = code; return this; },
@@ -122,6 +133,20 @@ test('report creation ignores a frontend barangay claim and stores the polygon r
     assert.deepEqual(storedReport.location.coordinates, [120.3410, 16.0485]);
     assert.equal(storedReport.locationAccuracyMeters, 8);
     assert.equal(new Date(storedReport.locationCapturedAt).toISOString(), '2026-10-03T00:00:00.000Z');
+    assert.deepEqual(emittedEvents.map(({ room, event }) => ({ room, event })), [
+      { room: 'room:admin', event: 'new-report' },
+      { room: 'room:barangay:Pantal', event: 'new-report' },
+    ]);
+    assert.deepEqual(emittedEvents[0].data, {
+      id: 'test-report-id',
+      title: responseBody.report.title,
+      category: 'Pothole',
+      location: storedReport.location,
+      barangay: 'Pantal',
+      priority: responseBody.report.priority,
+      status: 'Pending',
+      createdAt: new Date('2026-10-03T00:00:00.000Z'),
+    });
   } finally {
     Report.findOne = originals.findOne;
     Report.create = originals.create;

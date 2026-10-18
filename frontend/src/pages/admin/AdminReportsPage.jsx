@@ -8,6 +8,7 @@ import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
 import useDebounce from '../../hooks/useDebounce';
 import useVisibleReportPolling from '../../hooks/useVisibleReportPolling';
+import { useSocket } from '../../context/SocketContext';
 import Skeleton from '../../components/common/Skeleton';
 import Pagination from '../../components/common/Pagination';
 
@@ -16,6 +17,7 @@ const PAGE_SIZE = 10;
 const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   const { deleteReport } = useReports();
   const { token } = useAuth();
+  const { latestReport } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,6 +73,18 @@ const AdminReportsPage = ({ resolvedOnly = false, basePath = '/admin' }) => {
   }, [barangayFilter, categoryFilter, debouncedSearch, page, priorityFilter, reloadKey, resolvedOnly, sortBy, sortOrder, statusFilter, token]);
 
   useVisibleReportPolling(() => setReloadKey((current) => current + 1), searchFocused || search !== debouncedSearch);
+
+  useEffect(() => {
+    if (!latestReport) return;
+    const matchesCurrentView = (!resolvedOnly || latestReport.status === 'Resolved')
+      && (statusFilter === 'all' || latestReport.status === statusFilter)
+      && (priorityFilter === 'all' || latestReport.priority === priorityFilter)
+      && (categoryFilter === 'all' || latestReport.category === categoryFilter)
+      && (barangayFilter === 'all' || latestReport.barangay === barangayFilter);
+    if (matchesCurrentView && !searchFocused && search === debouncedSearch) {
+      setReloadKey((current) => current + 1);
+    }
+  }, [barangayFilter, categoryFilter, debouncedSearch, latestReport, priorityFilter, resolvedOnly, search, searchFocused, statusFilter]);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {

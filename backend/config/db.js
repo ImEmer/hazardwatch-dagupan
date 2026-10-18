@@ -22,5 +22,5 @@ export const connectDB = async () => {
   if (!process.env.MONGO_URI) throw new Error('MONGO_URI is not configured.');
   await mongoose.connect(process.env.MONGO_URI);
   await Promise.all([syncTextIndex(Report), syncTextIndex(User)]);
-  console.log(`MongoDB connected: ${mongoose.connection.host}`);
+  console.log(`MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`);
 };

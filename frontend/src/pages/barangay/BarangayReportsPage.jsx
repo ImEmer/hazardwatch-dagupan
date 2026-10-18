@@ -14,12 +14,14 @@ import Skeleton from "../../components/common/Skeleton";
 import Pagination from "../../components/common/Pagination";
 import useDebounce from "../../hooks/useDebounce";
 import useVisibleReportPolling from "../../hooks/useVisibleReportPolling";
+import { useSocket } from "../../context/SocketContext";
 
 const PAGE_SIZE = 10;
 const STATUSES = ["Pending", "In Progress", "Closed"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const BarangayReportsPage = ({ resolvedOnly = false }) => {
   const { user, token } = useAuth();
+  const { latestReport } = useSocket();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,6 +116,20 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
   ]);
 
   useVisibleReportPolling(() => setReloadKey((current) => current + 1), searchFocused || search !== debouncedSearch);
+
+  useEffect(() => {
+    if (
+      latestReport?.barangay === user?.barangay
+      && (!resolvedOnly || latestReport.status === "Resolved")
+      && (status === "all" || latestReport.status === status)
+      && (priority === "all" || latestReport.priority === priority)
+      && (category === "all" || latestReport.category === category)
+      && !searchFocused
+      && search === debouncedSearch
+    ) {
+      setReloadKey((current) => current + 1);
+    }
+  }, [category, debouncedSearch, latestReport, priority, resolvedOnly, search, searchFocused, status, user?.barangay]);
 
   useEffect(() => {
     if (!filterChangeRef.current) {

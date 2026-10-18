@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import { ReportProvider } from './context/ReportContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ConfirmProvider } from './context/ConfirmContext';
@@ -111,11 +112,12 @@ const PageTitle = () => {
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <ConfirmProvider>
-          <Toaster position="top-right" richColors closeButton duration={4000} theme="system" />
-          <ReportProvider>
-            <Router>
+      <SocketProvider>
+        <ThemeProvider>
+          <ConfirmProvider>
+            <Toaster position="top-right" richColors closeButton duration={4000} theme="system" />
+            <ReportProvider>
+              <Router>
             <SessionExpiryModal />
             <ScrollToTop />
             <PageTitle />
@@ -184,10 +186,11 @@ function App() {
             <Route path="/logout" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            </Router>
-          </ReportProvider>
-        </ConfirmProvider>
-      </ThemeProvider>
+              </Router>
+            </ReportProvider>
+          </ConfirmProvider>
+        </ThemeProvider>
+      </SocketProvider>
     </AuthProvider>
   );
 }
