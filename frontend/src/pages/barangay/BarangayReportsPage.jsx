@@ -208,6 +208,11 @@ const BarangayReportsPage = ({ resolvedOnly = false }) => {
 
   return (
     <div className="space-y-6">
+      {resolvedOnly && (
+        <Link to="/barangay/reports" className="inline-flex items-center rounded-lg border border-[#3b82f6] px-3 py-2 text-sm text-[#60a5fa] hover:bg-[#3b82f6]/10">
+          Back to Reports
+        </Link>
+      )}
       <section className={`rounded-2xl border p-4 shadow-xl ${panel}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

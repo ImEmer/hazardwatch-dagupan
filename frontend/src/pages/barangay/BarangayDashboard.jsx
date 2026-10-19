@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Area, AreaChart, CartesianGrid, Cell, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, Cell, Label, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
@@ -12,14 +12,24 @@ import { useSocket } from '../../context/SocketContext';
 const priorities = ['Urgent', 'High', 'Medium', 'Low'].map((name) => ({ name, color: PRIORITY_COLORS[name].hex }));
 
 const toCounts = (items = []) => Object.fromEntries(items.map((item) => [item._id || item.name, item.count || item.value || 0]));
-const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+const renderPercentageLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, payload }) => {
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const radians = (-midAngle * Math.PI) / 180;
   const x = cx + radius * Math.cos(radians);
   const y = cy + radius * Math.sin(radians);
-  const percentage = percent * 100;
-  const label = `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
+  const actualValue = payload?.value;
+  const actualTotal = payload?.totalValue;
+  const percentage = actualTotal > 0 ? (actualValue / actualTotal) * 100 : percent * 100;
+  const label = actualValue > 0 && percentage < 0.1
+    ? '<0.1%'
+    : `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
   return <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{label}</text>;
+};
+
+const STATUS_VISUAL_ALLOCATION = {
+  Pending: 12,
+  'In Progress': 12,
+  Resolved: 76,
 };
 
 const BarangayDashboard = () => {
@@ -111,7 +121,14 @@ const BarangayDashboard = () => {
   const statusCounts = toCounts(dashboard.status);
   const priorityCounts = toCounts(dashboard.priority);
   const statusData = REPORT_STATUSES.map((name) => ({ name, value: statusCounts[name] || 0 }));
-  const pieData = statusData.filter((entry) => entry.value > 0);
+  const totalStatusCount = statusData.reduce((total, entry) => total + entry.value, 0);
+  const pieData = statusData
+    .filter((entry) => entry.value > 0)
+    .map((entry) => ({
+      ...entry,
+      totalValue: totalStatusCount,
+      visualValue: STATUS_VISUAL_ALLOCATION[entry.name] ?? entry.value,
+    }));
   const priorityData = priorities.map((item) => ({ ...item, count: priorityCounts[item.name] || 0 }));
   const maxPriority = Math.max(...priorityData.map((item) => item.count), 1);
   const chartText = isDark ? '#d1d5db' : '#475569';
@@ -171,10 +188,11 @@ const BarangayDashboard = () => {
           {pieData.length ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="visualValue" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
                   {pieData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}
+                  <Label position="center" value={totalStatusCount.toLocaleString()} fill={chartText} style={{ fontSize: 20, fontWeight: 700 }} />
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(_visualValue, name, item) => [item.payload.value.toLocaleString(), name]} />
                 <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
               </PieChart>
             </ResponsiveContainer>

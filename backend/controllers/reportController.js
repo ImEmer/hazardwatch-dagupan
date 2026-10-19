@@ -128,6 +128,21 @@ const applyReportSearch = async (filter, value) => {
 };
 
 const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+const csvDateValue = (value) => {
+  if (value === null || value === undefined || value === '') return '';
+  try {
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  } catch {
+    return '';
+  }
+};
+const csvCoordinateValue = (location, index) => {
+  const coordinates = location?.coordinates;
+  const value = Array.isArray(coordinates) ? coordinates[index] : undefined;
+  return typeof value === 'number' && Number.isFinite(value) ? value : '';
+};
+const csvTextValue = (value, fallback = '') => typeof value === 'string' ? value : fallback;
 const DUPLICATE_DISTANCE_METERS = 100;
 const DUPLICATE_WINDOW_HOURS = 24;
 
@@ -215,18 +230,76 @@ export const getArchivedReports = async (req, res, next) => {
 };
 
 export const exportReportsCsv = async (req, res, next) => {
+  let cursor;
+  let currentReportId = '';
   try {
     const filter = await applyReportSearch(reportFilter(req), req.query.q ?? req.query.search);
-    const reports = await Report.find(filter).sort({ createdAt: -1 }).lean();
-    const rows = [
-      ['ID', 'Title', 'Category', 'Status', 'Priority', 'Barangay', 'Address', 'Latitude', 'Longitude', 'Reported By', 'Date Submitted'],
-      ...reports.map((report) => [report._id, report.title, report.category, report.status, report.priority, report.assignedBarangay || report.barangay, report.address, report.location?.coordinates?.[1], report.location?.coordinates?.[0], report.reportedBy?.name, report.createdAt?.toISOString()]),
-    ];
-    const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n');
-    const date = new Date().toISOString().slice(0, 10);
-    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="hazardwatch-reports-${date}.csv"` });
-    res.send(csv);
-  } catch (error) { next(error); }
+    cursor = Report.find(filter).sort({ createdAt: -1 }).lean().cursor({ batchSize: 500 });
+    const headers = ['ID', 'Title', 'Category', 'Status', 'Priority', 'Barangay', 'Address', 'Latitude', 'Longitude', 'Reported By', 'Date Submitted', 'Resolution', 'Resolved At'];
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="reports.csv"');
+    res.write(`${headers.map(csvCell).join(',')}\r\n`);
+
+    const writeChunk = async (chunk) => {
+      if (res.destroyed || res.writableEnded) throw new Error('CSV response is no longer writable.');
+      if (res.write(chunk)) return;
+      await new Promise((resolve, reject) => {
+        const cleanup = () => {
+          res.removeListener('drain', onDrain);
+          res.removeListener('close', onClose);
+          res.removeListener('error', onError);
+        };
+        const onDrain = () => { cleanup(); resolve(); };
+        const onClose = () => { cleanup(); reject(new Error('CSV response closed before the stream drained.')); };
+        const onError = (error) => { cleanup(); reject(error); };
+        res.once('drain', onDrain);
+        res.once('close', onClose);
+        res.once('error', onError);
+      });
+    };
+
+    for await (const report of cursor) {
+      const reportId = report?._id ? String(report._id) : '';
+      currentReportId = reportId || 'unknown';
+      const values = [
+        reportId,
+        csvTextValue(report?.title),
+        csvTextValue(report?.category),
+        csvTextValue(report?.status),
+        csvTextValue(report?.priority),
+        csvTextValue(report?.assignedBarangay) || csvTextValue(report?.barangay),
+        csvTextValue(report?.address),
+        csvCoordinateValue(report?.location, 1),
+        csvCoordinateValue(report?.location, 0),
+        csvTextValue(report?.reportedBy?.name, 'Unknown'),
+        csvDateValue(report?.createdAt),
+        csvTextValue(report?.resolution?.notes),
+        csvDateValue(report?.resolution?.resolvedAt),
+      ];
+      const row = values.map((value, index) => {
+        try {
+          return csvCell(value);
+        } catch (error) {
+          throw new Error(`Unable to serialize CSV field "${headers[index]}" for report "${currentReportId}": ${error.message}`, { cause: error });
+        }
+      }).join(',');
+      await writeChunk(`${row}\r\n`);
+    }
+    res.end();
+  } catch (error) {
+    console.error('[reports/export] CSV generation failed:', error?.stack || error);
+    if (cursor) {
+      await cursor.close().catch((closeError) => {
+        console.error('[reports/export] Failed to close report cursor:', closeError?.stack || closeError);
+      });
+    }
+    if (!res.headersSent) {
+      next(error);
+      return;
+    }
+    if (!res.destroyed && !res.writableEnded) res.end();
+  }
 };
 
 export const getMyReports = async (req, res, next) => {

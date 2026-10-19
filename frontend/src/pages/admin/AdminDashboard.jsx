@@ -33,7 +33,9 @@
       const actualValue = payload?.value;
       const actualTotal = payload?.totalValue;
       const percentage = actualTotal > 0 ? (actualValue / actualTotal) * 100 : percent * 100;
-      const label = `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
+      const label = actualValue > 0 && percentage < 0.1
+        ? '<0.1%'
+        : `${Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1)}%`;
       return <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>{label}</text>;
     };
     const STATUS_VISUAL_ALLOCATION = {
