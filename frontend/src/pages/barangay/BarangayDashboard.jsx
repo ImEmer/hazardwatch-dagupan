@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Area, AreaChart, CartesianGrid, Cell, Label, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, Cell, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
@@ -190,7 +190,6 @@ const BarangayDashboard = () => {
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="visualValue" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
                   {pieData.map((entry) => <Cell key={entry.name} fill={STATUS_CHART_COLORS[entry.name]} />)}
-                  <Label position="center" value={totalStatusCount.toLocaleString()} fill={chartText} style={{ fontSize: 20, fontWeight: 700 }} />
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} formatter={(_visualValue, name, item) => [item.payload.value.toLocaleString(), name]} />
                 <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />

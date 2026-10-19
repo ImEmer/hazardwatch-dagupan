@@ -7,7 +7,6 @@
       CartesianGrid,
       Cell,
       Legend,
-      Label,
       Line,
       Pie,
       PieChart,
@@ -184,7 +183,6 @@
                   <PieChart>
                     <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="visualValue" label={renderPercentageLabel} labelLine={false} isAnimationActive animationBegin={0} animationDuration={800} animationEasing="ease-out">
                       {pieData.map((entry) => <Cell key={entry.name} fill={STATUS_COLORS[entry.name]?.hex || '#6b7280'} />)}
-                      <Label position="center" value={totalStatusCount.toLocaleString()} fill={chartText} style={{ fontSize: 20, fontWeight: 700 }} />
                     </Pie>
                     <Tooltip contentStyle={tooltipStyle} formatter={(_visualValue, name, item) => [item.payload.value.toLocaleString(), name]} />
                     <Legend formatter={(value) => <span style={{ color: chartText }}>{value}</span>} />
