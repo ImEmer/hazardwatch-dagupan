@@ -4,11 +4,14 @@ import useTheme from '../../hooks/useTheme';
 import api from '../../services/api';
 import { showError, showSuccess } from '../../services/alerts';
 import { formatDateTime } from '../../utils/formatDate';
+import { useSocket } from '../../context/SocketContext';
 
 const AdminInboxPage = () => {
+  const { socket } = useSocket();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [messages, setMessages] = useState([]);
+  const [activeTab, setActiveTab] = useState('unread');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState('');
@@ -18,7 +21,15 @@ const AdminInboxPage = () => {
     setError('');
     try {
       const response = await api.get('/contact');
-      setMessages(response.data?.messages || []);
+      const fetchedMessages = response.data?.messages || [];
+      setMessages((current) => {
+        const liveById = new Map(current.map((message) => [message._id, message]));
+        const fetchedIds = new Set(fetchedMessages.map((message) => message._id));
+        return [
+          ...fetchedMessages.map((message) => liveById.get(message._id) || message),
+          ...current.filter((message) => !fetchedIds.has(message._id)),
+        ];
+      });
     } catch (requestError) {
       const message = requestError.response?.data?.message || 'Unable to load contact messages.';
       setError(message);
@@ -31,6 +42,32 @@ const AdminInboxPage = () => {
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    if (!socket) return undefined;
+
+    const prependMessage = (incomingMessage) => {
+      setMessages((current) => [
+        incomingMessage,
+        ...current.filter((message) => message._id !== incomingMessage._id),
+      ]);
+    };
+    const updateMessage = (updatedMessage) => {
+      setMessages((current) => {
+        const exists = current.some((message) => message._id === updatedMessage._id);
+        return exists
+          ? current.map((message) => message._id === updatedMessage._id ? updatedMessage : message)
+          : [updatedMessage, ...current];
+      });
+    };
+
+    socket.on('new-contact-message', prependMessage);
+    socket.on('contact-message-updated', updateMessage);
+    return () => {
+      socket.off('new-contact-message', prependMessage);
+      socket.off('contact-message-updated', updateMessage);
+    };
+  }, [socket]);
 
   const markResolved = async (messageId) => {
     setUpdatingId(messageId);
@@ -49,18 +86,40 @@ const AdminInboxPage = () => {
 
   const panelClass = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';
   const mutedClass = isDark ? 'text-gray-400' : 'text-slate-500';
+  const visibleMessages = messages.filter((message) => {
+    if (activeTab === 'unread') return message.status === 'new' || message.status === 'unread';
+    if (activeTab === 'resolved') return message.status === 'resolved';
+    return true;
+  });
+  const tabs = [
+    { key: 'unread', label: 'Unread', count: messages.filter((message) => message.status === 'new' || message.status === 'unread').length },
+    { key: 'resolved', label: 'Resolved' },
+    { key: 'all', label: 'All' },
+  ];
 
   return (
     <main className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header>
         <div>
           <p className={`text-xs uppercase tracking-[0.25em] ${mutedClass}`}>Support</p>
           <h1 className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Contact Inbox</h1>
         </div>
-        <button type="button" onClick={loadMessages} disabled={loading} className="rounded-lg border border-[#3b82f6]/40 px-4 py-2 text-sm font-medium text-[#60a5fa] disabled:opacity-50">
-          Refresh
-        </button>
       </header>
+
+      <nav className={`flex gap-2 border-b ${isDark ? 'border-[#2e303a]' : 'border-slate-200'}`} aria-label="Filter contact messages">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            aria-pressed={activeTab === tab.key}
+            className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium ${activeTab === tab.key ? 'border-[#3b82f6] text-[#3b82f6]' : `border-transparent ${mutedClass}`}`}
+          >
+            {tab.label}
+            {tab.count > 0 && <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-400">{tab.count}</span>}
+          </button>
+        ))}
+      </nav>
 
       {loading ? (
         <p className={`rounded-xl border p-8 text-center ${panelClass} ${mutedClass}`}>Loading messages...</p>
@@ -69,15 +128,15 @@ const AdminInboxPage = () => {
           <p className="text-red-400">{error}</p>
           <button type="button" onClick={loadMessages} className="mt-3 text-sm text-[#60a5fa] hover:underline">Try again</button>
         </div>
-      ) : messages.length === 0 ? (
+      ) : visibleMessages.length === 0 ? (
         <div className={`rounded-xl border p-10 text-center ${panelClass}`}>
           <Mail className={`mx-auto h-8 w-8 ${mutedClass}`} aria-hidden="true" />
-          <p className={`mt-3 ${mutedClass}`}>No contact messages yet.</p>
+          <p className={`mt-3 ${mutedClass}`}>{messages.length ? `No ${activeTab} messages.` : 'No contact messages yet.'}</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {messages.map((message) => {
-            const unread = message.status === 'new';
+          {visibleMessages.map((message) => {
+            const unread = message.status === 'new' || message.status === 'unread';
             const resolved = message.status === 'resolved';
             return (
               <article key={message._id} className={`rounded-xl border p-5 shadow-sm ${panelClass} ${unread ? 'border-l-4 border-l-blue-500' : ''}`}>
