@@ -365,7 +365,7 @@ const AdminUsersPage = () => {
               {isCreating && (
                 <label className="block text-sm">
                   <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>Password</span>
-                  <div className="relative mt-1"><input maxLength={255} type={showInlinePassword ? 'text' : 'password'} value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} className={`w-full rounded-lg border px-3 py-2 pr-10 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /><PasswordToggle visible={showInlinePassword} onToggle={() => setShowInlinePassword((value) => !value)} label="password" /></div>
+                  <div className="relative mt-1"><input maxLength={72} type={showInlinePassword ? 'text' : 'password'} value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} className={`w-full rounded-lg border px-3 py-2 pr-10 ${isDark ? 'border-[#2e303a] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`} /><PasswordToggle visible={showInlinePassword} onToggle={() => setShowInlinePassword((value) => !value)} label="password" /></div>
                 </label>
               )}
 

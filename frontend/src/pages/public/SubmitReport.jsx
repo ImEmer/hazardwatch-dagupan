@@ -103,20 +103,22 @@ const SubmitReport = () => {
         const newErrors = {};
         if (!form.category) newErrors.category = 'Please select a hazard type.';
         if (form.category === 'Other' && !form.customCategory.trim()) newErrors.customCategory = 'Please specify the hazard type.';
-        if (form.category === 'Other' && form.customCategory.trim() && (!/^[A-Za-z0-9 ]+$/.test(form.customCategory.trim()) || form.customCategory.trim().length > 60)) newErrors.customCategory = 'Use only letters, numbers, and spaces, up to 60 characters.';
+        if (form.category === 'Other' && form.customCategory.trim() && (!/^[A-Za-z0-9 ]+$/.test(form.customCategory.trim()) || form.customCategory.trim().length > 100)) newErrors.customCategory = 'Use only letters, numbers, and spaces, up to 100 characters.';
         if (!form.description.trim()) {
             newErrors.description = 'Please describe the hazard.';
         } else if (form.description.trim().length < 10) {
             newErrors.description = 'Description must be at least 10 characters long.';
+        } else if (form.description.trim().length > 500) {
+            newErrors.description = 'Description cannot exceed 500 characters.';
         }
         if (!images.length) newErrors.photo = 'Photo evidence is required.';
         if (!selectedLocation) newErrors.location = 'Please select a location on the map.';
         else if (!withinDagupanBounds(selectedLocation)) {
-            newErrors.location = 'HazardWatch only accepts reports within Dagupan City. Please select a location inside Dagupan City.';
+            newErrors.location = 'The selected coordinates are outside the official boundary of Dagupan City. Please drop the pin closer to the hazard\'s exact location.';
         } else if (locationResolution?.status !== 'resolved' || !selectedBarangay) {
             newErrors.location = locationResolution?.status === 'low_accuracy'
                 ? `GPS accuracy (${Math.round(selectedLocation.accuracyMeters)} m) overlaps a barangay boundary. Use a more accurate fix or select a point on the map.`
-                : 'HazardWatch only accepts reports within Dagupan City. Please select a location inside Dagupan City.';
+                : 'The selected coordinates are outside the official boundary of Dagupan City. Please drop the pin closer to the hazard\'s exact location.';
         }
         return newErrors;
     };
@@ -226,7 +228,7 @@ const SubmitReport = () => {
                     {form.category === 'Other' && (
                     <div className="mt-3">
                         <label htmlFor="customCategory" className="mb-1.5 block text-sm font-medium text-gray-300">Please specify the hazard type <span className="text-red-400">*</span></label>
-                        <input id="customCategory" name="customCategory" type="text" maxLength={60} required value={form.customCategory} onChange={handleChange} placeholder="e.g., Fallen billboard, Stray animal, Broken fence" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
+                        <input id="customCategory" name="customCategory" type="text" maxLength={100} required value={form.customCategory} onChange={handleChange} placeholder="e.g., Fallen billboard, Stray animal, Broken fence" className={`w-full rounded-lg border bg-[#0a0b0f] px-4 py-2.5 text-white outline-none transition focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] ${errors.customCategory ? 'border-red-500' : 'border-[#2e303a]'}`} />
                         {errors.customCategory && <p className="mt-1 text-xs text-red-400">{errors.customCategory}</p>}
                     </div>
                     )}
@@ -245,7 +247,7 @@ const SubmitReport = () => {
                     <textarea
                     id="description"
                     name="description"
-                    maxLength={2000}
+                    maxLength={500}
                     value={form.description}
                     onChange={handleChange}
                     rows="4"
@@ -366,6 +368,9 @@ const SubmitReport = () => {
                     Click the map to select the hazard location.
                     </p>
                 </div>
+                <p className={`px-3 pt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Note: Map address labels may sometimes show 'Dagupan' even if the exact coordinates are outside the city limits.
+                </p>
                 <div className="flex-1 min-h-[400px]">
                     <InteractiveMap
                         reports={[]}
@@ -390,7 +395,7 @@ const SubmitReport = () => {
                                 {locationResolution?.status === 'low_accuracy'
                                     ? `Location accuracy is too low (${Math.round(selectedLocation.accuracyMeters)} m).`
                                     : locationResolution?.status !== 'resolved'
-                                        ? 'Location is outside Dagupan City.'
+                                        ? 'The selected coordinates are outside the official boundary of Dagupan City. Please drop the pin closer to the hazard\'s exact location.'
                                         : `GPS accuracy: ${Math.round(selectedLocation.accuracyMeters)} m.`}
                             </p>
                         )}

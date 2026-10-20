@@ -33,7 +33,7 @@ export const passwordPolicy = (field = 'password') => body(field)
     }
     return true;
   })
-  .isLength({ max: 255 }).withMessage('Password cannot exceed 255 characters.');
+  .isLength({ max: 72 }).withMessage('Password cannot exceed 72 characters.');
 
 const emailPattern = /^[^\s@]+@[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
 const emailValidator = (field = 'email') => body(field)
@@ -69,7 +69,7 @@ export const validatePublicRegister = registerValidators(
 );
 export const validateLogin = [
   emailValidator(),
-  body('password').notEmpty().withMessage('Password is required.').isLength({ max: 255 }).withMessage('Password cannot exceed 255 characters.'),
+  body('password').notEmpty().withMessage('Password is required.').isLength({ max: 72 }).withMessage('Password cannot exceed 72 characters.'),
   validateBadRequest,
 ];
 export const validateEmailVerification = [
@@ -83,11 +83,11 @@ export const validateReport = [
     const customCategory = typeof value === 'string' ? value.trim() : '';
     if (req.body.category === 'Other' && customCategory.length < 3) throw new Error('Please specify the hazard type using at least 3 characters.');
     if (req.body.category !== 'Other' && customCategory) throw new Error('Custom hazard type is only allowed when category is Other.');
-    if (customCategory.length > 60 || !/^[A-Za-z0-9 ]*$/.test(customCategory)) throw new Error('Custom hazard type must contain only letters, numbers, and spaces, up to 60 characters.');
+    if (customCategory.length > 100 || !/^[A-Za-z0-9 ]*$/.test(customCategory)) throw new Error('Custom hazard type must contain only letters, numbers, and spaces, up to 100 characters.');
     req.body.customCategory = customCategory.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[character]);
     return true;
   }),
-  body('description').trim().isLength({ min: 10, max: 2000 }).escape(),
+  body('description').trim().escape().isLength({ min: 10, max: 500 }),
   body('locationAccuracyMeters').optional().isFloat({ min: 0 }).toFloat().withMessage('GPS accuracy must be a non-negative number.'),
   body('locationCapturedAt').optional().isISO8601().toDate().withMessage('GPS timestamp must be a valid date.'),
   body('location').custom((value, { req }) => {
@@ -143,8 +143,8 @@ export const validateReportUpdate = [
     }
     return true;
   }),
-  body('title').optional().trim().isLength({ min: 3, max: 150 }).escape(),
-  body('description').optional().trim().isLength({ min: 10, max: 2000 }).escape(),
+  body('title').optional().trim().escape().isLength({ min: 3, max: 100 }),
+  body('description').optional().trim().escape().isLength({ min: 10, max: 500 }),
   body('category').optional().isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
   body('priority').optional().isIn(['Low', 'Medium', 'High', 'Urgent']),
   body('locationAccuracyMeters').optional().isFloat({ min: 0 }).toFloat().withMessage('GPS accuracy must be a non-negative number.'),
@@ -233,12 +233,12 @@ export const validateEmailChangeRequest = [
 export const validateChangeCode = [
   mutationFieldAllowlist(['code', 'currentPassword']),
   body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Verification code must be 6 digits.'),
-  body('currentPassword').optional().isString().isLength({ min: 1, max: 128 }).withMessage('Current password is required.'),
+  body('currentPassword').optional().isString().isLength({ min: 1, max: 72 }).withMessage('Current password must be between 1 and 72 characters.'),
   validateBadRequest,
 ];
 export const validatePasswordChangeRequest = [
   mutationFieldAllowlist(['currentPassword', 'newPassword']),
-  body('currentPassword').isString().isLength({ min: 1, max: 128 }).withMessage('Current password is required.'),
+  body('currentPassword').isString().isLength({ min: 1, max: 72 }).withMessage('Current password must be between 1 and 72 characters.'),
   passwordPolicy('newPassword'),
   validateBadRequest,
 ];

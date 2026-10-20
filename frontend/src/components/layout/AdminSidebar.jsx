@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Archive, Bell, FileText, LayoutDashboard, Map, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from 'lucide-react';
+import { Activity, Archive, Bell, FileText, LayoutDashboard, Mail, Map, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -14,6 +14,7 @@ const items = [
   { to: '/admin/activity', label: 'Activity', roles: ['admin'], icon: Activity },
   { to: '/superadmin/activity', label: 'Activity', roles: ['superadmin'], icon: Activity },
   { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'], icon: Users },
+  { to: '/admin/inbox', label: 'Contact Inbox', roles: ['superadmin', 'admin'], icon: Mail },
   { to: '/admin/notifications', label: 'Notifications', roles: ['superadmin', 'admin'], icon: Bell },
   { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin'], icon: Settings },
 ];
@@ -28,7 +29,7 @@ const AdminSidebar = () => {
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const visibleItems = useMemo(() => items.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
-    if (user?.role === 'superadmin' && ['/admin/reports', '/admin/map', '/admin/users', '/admin/notifications', '/admin/settings'].includes(item.to)) return { ...item, to: item.to.replace('/admin', '/superadmin') };
+    if (user?.role === 'superadmin' && ['/admin/reports', '/admin/map', '/admin/users', '/admin/inbox', '/admin/notifications', '/admin/settings'].includes(item.to)) return { ...item, to: item.to.replace('/admin', '/superadmin') };
     return item;
   }), [user?.role]);
 

@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
   // Kept for existing Google users. Google Sign-In is deprecated.
   googleId: { type: String, unique: true, sparse: true },
   authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
-  password: { type: String, required: function passwordRequired() { return this.authProvider !== 'google'; }, minlength: 8, select: false },
+  password: { type: String, required: function passwordRequired() { return this.authProvider !== 'google'; }, minlength: 8, maxlength: 72, select: false },
   role: { type: String, enum: ['superadmin', 'admin', 'barangay', 'user'], default: 'user' },
   barangay: { type: String, trim: true, default: null },
   phone: { type: String, trim: true },

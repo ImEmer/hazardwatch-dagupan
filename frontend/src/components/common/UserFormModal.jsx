@@ -48,7 +48,7 @@ const UserFormModal = ({ isOpen, isDark, form, roleOptions, barangayOptions = []
           {isCreating && !barangayCreation && !adminCreation && (
             <label className="block text-sm">
               <span>Password</span>
-              <input required type="password" minLength="8" maxLength={255} value={form.password} onChange={(event) => onChange('password', event.target.value)} className={inputClass} />
+              <input required type="password" minLength="8" maxLength={72} value={form.password} onChange={(event) => onChange('password', event.target.value)} className={inputClass} />
             </label>
           )}
           {adminCreation && (
