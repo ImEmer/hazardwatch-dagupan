@@ -227,15 +227,15 @@ const AccountChangeDialogs = ({
               <form onSubmit={requestPasswordCode} className="mt-5 space-y-4">
                 <label className="block text-sm">
                   Current password
-                  <input required type="password" autoComplete="current-password" value={verificationCurrentPassword} onChange={(event) => setVerificationCurrentPassword(event.target.value)} className={`${inputClass} mt-2`} />
+                  <input required type="password" maxLength={128} autoComplete="current-password" value={verificationCurrentPassword} onChange={(event) => setVerificationCurrentPassword(event.target.value)} className={`${inputClass} mt-2`} />
                 </label>
                 <label className="block text-sm">
                   New password
-                  <input required type="password" autoComplete="new-password" value={passwords.next} onChange={(event) => setPasswords((current) => ({ ...current, next: event.target.value }))} className={`${inputClass} mt-2`} />
+                  <input required type="password" maxLength={255} autoComplete="new-password" value={passwords.next} onChange={(event) => setPasswords((current) => ({ ...current, next: event.target.value }))} className={`${inputClass} mt-2`} />
                 </label>
                 <label className="block text-sm">
                   Confirm new password
-                  <input required type="password" autoComplete="new-password" value={passwords.confirm} onChange={(event) => setPasswords((current) => ({ ...current, confirm: event.target.value }))} className={`${inputClass} mt-2`} />
+                  <input required type="password" maxLength={255} autoComplete="new-password" value={passwords.confirm} onChange={(event) => setPasswords((current) => ({ ...current, confirm: event.target.value }))} className={`${inputClass} mt-2`} />
                 </label>
                 <div className="flex justify-end gap-3">
                   <button type="button" onClick={closeDialog} disabled={saving} className={secondaryButtonClass}>Cancel</button>
@@ -252,7 +252,7 @@ const AccountChangeDialogs = ({
                 {privileged && (
                   <label className="block text-sm">
                     Current password
-                    <input required type="password" autoComplete="current-password" value={passwords.current} onChange={(event) => setPasswords((current) => ({ ...current, current: event.target.value }))} className={`${inputClass} mt-2`} />
+                    <input required type="password" maxLength={128} autoComplete="current-password" value={passwords.current} onChange={(event) => setPasswords((current) => ({ ...current, current: event.target.value }))} className={`${inputClass} mt-2`} />
                   </label>
                 )}
                 <CodeInput

@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
+import { setActivitySocketServer } from './utils/logActivity.js';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import reportRoutes from './routes/reports.js';
@@ -82,6 +83,7 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+setActivitySocketServer(io);
 console.log('[socket] Socket.IO initialized');
 
 io.use(async (socket, next) => {
@@ -111,6 +113,7 @@ io.on('connection', (socket) => {
   const { role, barangay } = socket.data.user;
   if (role === 'admin' || role === 'superadmin') {
     socket.join('room:admin');
+    if (role === 'superadmin') socket.join('room:superadmin');
     console.log(`[socket] ${role} joined room:admin`);
   }
   if (role === 'barangay' && barangay) {

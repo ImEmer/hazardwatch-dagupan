@@ -38,6 +38,7 @@ import {
   emailChangeRequestLimiter,
   emailChangeVerifyLimiter,
   forgotPasswordLimiter,
+  loginLimiter,
   passwordChangeRequestLimiter,
   passwordChangeVerifyLimiter,
   reactivationRequestLimiter,
@@ -50,7 +51,7 @@ router.use(authLimiter);
 router.get('/check-email', checkEmail);
 router.post('/verify-email', validateEmailVerification, verifyEmail);
 router.post('/register', validatePublicRegister, register);
-router.post('/login', validateLogin, login);
+router.post('/login', loginLimiter, validateLogin, login);
 router.post('/2fa/verify', verifyTwoFactorLogin);
 router.post('/2fa/resend', resendTwoFactorLoginCode);
 router.post('/biometric/register-challenge', biometricLimiter, protect, registerBiometricChallenge);

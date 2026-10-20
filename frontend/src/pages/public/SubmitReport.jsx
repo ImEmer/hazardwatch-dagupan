@@ -245,6 +245,7 @@ const SubmitReport = () => {
                     <textarea
                     id="description"
                     name="description"
+                    maxLength={2000}
                     value={form.description}
                     onChange={handleChange}
                     rows="4"

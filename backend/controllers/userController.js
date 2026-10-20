@@ -240,6 +240,17 @@ export const updateUser = async (req, res, next) => {
 
     const nextRole = req.body.role;
     if (nextRole !== undefined && nextRole !== targetUser.role) {
+      await logActivity({
+        actor: req.user,
+        action: 'user_role_change_rejected',
+        message: `${req.user.name} attempted to change ${targetUser.name}'s role from ${targetUser.role} to ${nextRole}`,
+        details: { currentRole: targetUser.role, requestedRole: nextRole, outcome: 'rejected' },
+        scope: 'admin',
+        entityType: 'user',
+        entityId: targetUser._id,
+      }).catch((error) => {
+        console.error('[users] Role change activity logging failed:', error.message);
+      });
       return res.status(403).json({ success: false, message: 'User roles cannot be changed through this update flow.' });
     }
     const permissionError = managedTargetError(req.user, targetUser, 'edit');
@@ -257,7 +268,6 @@ export const updateUser = async (req, res, next) => {
     const changes = [];
     if (payload.name && payload.name !== targetUser.name) changes.push(['user_name_updated', `updated ${user.name}'s name`]);
     if (payload.email && payload.email !== targetUser.email) changes.push(['user_email_updated', `updated ${user.name}'s email`]);
-    if (nextRole && nextRole !== targetUser.role) changes.push(['user_role_changed', `changed role of ${user.name} to ${user.role}`]);
     if (payload.barangay !== undefined && payload.barangay !== (targetUser.barangay || '')) changes.push(['user_barangay_changed', `changed barangay of ${user.name} to ${user.barangay || 'none'}`]);
     if (!changes.length) changes.push(['user_updated', `updated user ${user.name}`]);
     await Promise.all(changes.map(([action, message]) => logActivity({ actor: req.user, action, message, scope: 'admin', entityType: 'user', entityId: user._id }).catch(() => {})));

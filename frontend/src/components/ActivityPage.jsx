@@ -6,6 +6,7 @@ import { showError } from '../services/alerts';
 import { formatDateTime } from '../utils/formatDate';
 import Skeleton from './common/Skeleton';
 import Pagination from './common/Pagination';
+import { useSocket } from '../context/SocketContext';
 
 const getActivityDetails = (details) => {
   if (details && typeof details === 'object') return details;
@@ -25,6 +26,7 @@ const formatActivityMessage = (message) => String(message || '').replace(
 
 const ActivityPage = ({ endpoint, tabs, title, roleParam = true, categoryParam = false }) => {
   const { token } = useAuth();
+  const { socket } = useSocket();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [activities, setActivities] = useState([]);
@@ -62,6 +64,34 @@ const ActivityPage = ({ endpoint, tabs, title, roleParam = true, categoryParam =
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [activeTab, categoryParam, dateFilter, endpoint, page, roleParam, search, token]);
+
+  useEffect(() => {
+    if (!socket || endpoint.includes('/activity/barangay/')) return undefined;
+    const handleNewActivity = (activity) => {
+      if (activities.some((item) => item._id === activity._id)) return;
+      const actorRole = activity.actorRole || activity.role;
+      if (endpoint === '/activity/public' && !['barangay', 'user'].includes(actorRole)) return;
+      if (endpoint === '/activity/all' && actorRole === 'superadmin') return;
+      if (roleParam && activeTab !== 'all' && actorRole !== activeTab) return;
+      if (categoryParam && activeTab === 'reports' && activity.entityType !== 'report') return;
+      if (dateFilter !== 'all') {
+        const startDate = new Date(Date.now() - Number(dateFilter) * 86400000).toISOString().slice(0, 10);
+        if (new Date(activity.createdAt) < new Date(startDate)) return;
+      }
+      if (search) {
+        const searchable = [activity.actorName, activity.action, activity.message, activity.details]
+          .map((value) => String(value || '').toLowerCase())
+          .join(' ');
+        if (!searchable.includes(search.toLowerCase())) return;
+      }
+      setPagination((current) => ({ ...current, total: current.total + 1, pages: Math.max(1, Math.ceil((current.total + 1) / current.limit)) }));
+      if (page === 1) {
+        setActivities((current) => [activity, ...current.filter((item) => item._id !== activity._id)].slice(0, 5));
+      }
+    };
+    socket.on('new-activity', handleNewActivity);
+    return () => socket.off('new-activity', handleNewActivity);
+  }, [activeTab, activities, categoryParam, dateFilter, endpoint, page, roleParam, search, socket]);
 
   const totalPages = Math.max(1, pagination.pages || 1);
   const panel = isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white';

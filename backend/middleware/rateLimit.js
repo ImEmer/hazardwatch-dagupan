@@ -6,10 +6,11 @@ const retryAfterSeconds = (req) => {
   return Math.max(1, Math.ceil((resetTime.getTime() - Date.now()) / 1000));
 };
 
-const createLimiter = ({ windowMs, limit, keyGenerator }) => rateLimit({
+const createLimiter = ({ windowMs, limit, keyGenerator, skipSuccessfulRequests = false }) => rateLimit({
   windowMs,
   limit,
   keyGenerator,
+  skipSuccessfulRequests,
   standardHeaders: 'draft-7', 
   legacyHeaders: false,
   handler: (req, res) => {
@@ -20,9 +21,10 @@ const createLimiter = ({ windowMs, limit, keyGenerator }) => rateLimit({
 });
 
 export const authLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 100 });
+export const loginLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 5, skipSuccessfulRequests: true });
 export const biometricLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 20 });
 export const contactLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });
-export const forgotPasswordLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 3 });
+export const forgotPasswordLimiter = createLimiter({ windowMs: 15 * 60 * 1000, limit: 3 });
 export const resetPasswordLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });
 export const reactivationRequestLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 3 });
 export const reactivationVerifyLimiter = createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });

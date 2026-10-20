@@ -140,6 +140,7 @@ const Login2FASettingsSection = ({ user, updatePreferences }) => {
               <input
                 ref={passwordInputRef}
                 type="password"
+                maxLength={128}
                 autoComplete="current-password"
                 required
                 value={currentPassword}

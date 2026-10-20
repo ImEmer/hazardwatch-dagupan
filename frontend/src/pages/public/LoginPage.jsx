@@ -116,7 +116,7 @@ const LoginPage = () => {
         </label>
         <label className="block text-sm text-gray-300">Password
           <div className="relative mt-2">
-            <input type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="current-password" placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${errors.password ? 'border-red-500' : ''}`} />
+            <input maxLength={255} type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="current-password" placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${errors.password ? 'border-red-500' : ''}`} />
             <PasswordToggle visible={showPassword} onToggle={() => setShowPassword((value) => !value)} label="password" />
           </div>
           {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}

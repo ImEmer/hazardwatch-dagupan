@@ -32,7 +32,15 @@ export const passwordPolicy = (field = 'password') => body(field)
       throw new Error('Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.');
     }
     return true;
-  });
+  })
+  .isLength({ max: 255 }).withMessage('Password cannot exceed 255 characters.');
+
+const emailPattern = /^[^\s@]+@[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
+const emailValidator = (field = 'email') => body(field)
+  .trim()
+  .isEmail().withMessage('Enter a valid email address.')
+  .matches(emailPattern).withMessage('Enter a valid email address.')
+  .normalizeEmail();
 
 const registerValidators = (nameValidator) => [
   body().custom((value) => {
@@ -42,10 +50,7 @@ const registerValidators = (nameValidator) => [
     return true;
   }),
   nameValidator,
-  body('email').custom((value) => {
-    if (typeof value !== 'string' || /\s/.test(value)) throw new Error('Email and password cannot contain spaces.');
-    return true;
-  }).isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  emailValidator(),
   passwordPolicy(),
   body('role').optional().isIn(['superadmin', 'admin', 'barangay', 'user']),
   body('barangay').optional().trim().escape().isLength({ max: 100 }),
@@ -63,12 +68,12 @@ export const validatePublicRegister = registerValidators(
   body('name').trim().matches(/^[\p{L} '-]+$/u).withMessage('Full name must contain letters only.').escape().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
 );
 export const validateLogin = [
-  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
-  body('password').notEmpty().withMessage('Password is required.'),
+  emailValidator(),
+  body('password').notEmpty().withMessage('Password is required.').isLength({ max: 255 }).withMessage('Password cannot exceed 255 characters.'),
   validateBadRequest,
 ];
 export const validateEmailVerification = [
-  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  emailValidator(),
   body('code').isString().matches(/^\d{6}$/).withMessage('Enter the 6-digit verification code.'),
   validateBadRequest,
 ];
@@ -82,7 +87,7 @@ export const validateReport = [
     req.body.customCategory = customCategory.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[character]);
     return true;
   }),
-  body('description').trim().escape().isLength({ min: 10, max: 5000 }),
+  body('description').trim().isLength({ min: 10, max: 2000 }).escape(),
   body('locationAccuracyMeters').optional().isFloat({ min: 0 }).toFloat().withMessage('GPS accuracy must be a non-negative number.'),
   body('locationCapturedAt').optional().isISO8601().toDate().withMessage('GPS timestamp must be a valid date.'),
   body('location').custom((value, { req }) => {
@@ -138,8 +143,8 @@ export const validateReportUpdate = [
     }
     return true;
   }),
-  body('title').optional().trim().isLength({ min: 3, max: 120 }).escape(),
-  body('description').optional().trim().isLength({ min: 10, max: 5000 }).escape(),
+  body('title').optional().trim().isLength({ min: 3, max: 150 }).escape(),
+  body('description').optional().trim().isLength({ min: 10, max: 2000 }).escape(),
   body('category').optional().isIn(['Pothole', 'Broken Streetlight', 'Clogged Drainage', 'Flooding', 'Waste Disposal', 'Damaged Public Facility', 'Fallen Electrical Wire', 'Damaged Road', 'Illegal Dumping', 'Air Pollution', 'Animal Related', 'Blocked Fire Exit', 'Broken Traffic Light', 'Broken Water Pipe', 'Clogged Canal (Waste)', 'Contaminated Water', 'Damaged Bridge', 'Damaged Sidewalk', 'Deforestation', 'Fallen Tree', 'Fire Hazard', 'Gas Leak', 'Missing Road Sign', 'Noise Pollution', 'Oil Spill', 'Other', 'Overflowing Trash Bin', 'Public Safety Hazard', 'Public Toilet Issue', 'Smoke Report', 'Traffic Obstruction', 'Vandalism', 'Water Leak']),
   body('priority').optional().isIn(['Low', 'Medium', 'High', 'Urgent']),
   body('locationAccuracyMeters').optional().isFloat({ min: 0 }).toFloat().withMessage('GPS accuracy must be a non-negative number.'),
@@ -197,15 +202,15 @@ export const validateBanReason = [
 export const validateUserUpdate = [
   mutationFieldAllowlist(['name', 'email', 'role', 'barangay', 'phone']),
   body('name').optional().trim().isLength({ min: 2, max: 50 }).escape(),
-  body('email').optional().trim().isEmail().normalizeEmail(),
+  emailValidator().optional(),
   body('role').optional().isIn(['superadmin', 'admin', 'barangay', 'user']),
   body('barangay').optional().trim().isLength({ max: 100 }).escape(),
   body('phone').optional().trim().isLength({ max: 30 }).escape(),
   validateBadRequest,
 ];
-export const validateEmail = [body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'), validateBadRequest];
+export const validateEmail = [emailValidator(), validateBadRequest];
 export const validateResetCode = [
-  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  emailValidator(),
   body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Reset code must be a 6-digit number.'),
   validateBadRequest,
 ];
@@ -217,12 +222,12 @@ export const validateResetPassword = [
 export const validateProfile = [
   mutationFieldAllowlist(['name', 'email']),
   body('name').trim().escape().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
-  body('email').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  emailValidator(),
   validateBadRequest,
 ];
 export const validateEmailChangeRequest = [
   mutationFieldAllowlist(['newEmail']),
-  body('newEmail').trim().isEmail().normalizeEmail().withMessage('A valid email is required.'),
+  emailValidator('newEmail'),
   validateBadRequest,
 ];
 export const validateChangeCode = [

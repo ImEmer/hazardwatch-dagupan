@@ -146,7 +146,7 @@ const RegisterPage = () => {
         </label>
         <label className="block text-sm text-gray-300">Password
           <div className="relative mt-2">
-            <input minLength="8" type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${passwordError ? 'border-red-500' : ''}`} />
+            <input minLength="8" maxLength={255} type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={`auth-input ${passwordError ? 'border-red-500' : ''}`} />
             <PasswordToggle visible={showPassword} onToggle={() => setShowPassword((value) => !value)} label="password" />
           </div>
           {passwordStrength && <span className={`mt-1 block text-xs ${passwordStrength === 'strong' ? 'text-emerald-400' : passwordStrength === 'fair' ? 'text-amber-400' : 'text-red-400'}`}>Strength: {passwordStrength}</span>}
@@ -155,7 +155,7 @@ const RegisterPage = () => {
         </label>
         <label className="block text-sm text-gray-300">Confirm Password
           <div className="relative mt-2">
-            <input minLength="8" type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+            <input minLength="8" maxLength={255} type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} className={`auth-input ${errors.confirmPassword ? 'border-red-500' : ''}`} />
             <PasswordToggle visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((value) => !value)} label="confirmed password" />
           </div>
           {errors.confirmPassword && <span className="mt-1 block text-xs text-red-400">{errors.confirmPassword}</span>}
