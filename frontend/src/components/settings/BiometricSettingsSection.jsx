@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 import { confirmAction } from '../../services/alerts';
 import { authApi } from '../../services/api';
 import { isPlatformAuthenticatorAvailable } from '../../services/biometric';
+import useAuth from '../../hooks/useAuth';
 import SettingsSection from './SettingsSection';
 import SettingsToggle from './SettingsToggle';
 
 const BiometricSettingsSection = () => {
+  const { user } = useAuth();
   const [available, setAvailable] = useState(false);
   const [availabilityChecked, setAvailabilityChecked] = useState(false);
   const [enabled, setEnabled] = useState(false);
@@ -57,6 +59,7 @@ const BiometricSettingsSection = () => {
                 : 'This device';
       await authApi.verifyBiometricRegistration(credential, deviceLabel);
       await refreshDevices();
+      if (user?.email) localStorage.setItem('lastBiometricUser', user.email);
       toast.success('Biometric login registered for this device.');
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Unable to register this biometric device.');
@@ -74,6 +77,10 @@ const BiometricSettingsSection = () => {
     try {
       await authApi.toggleBiometric(nextEnabled);
       await refreshDevices();
+      if (nextEnabled && user?.email) localStorage.setItem('lastBiometricUser', user.email);
+      if (!nextEnabled && localStorage.getItem('lastBiometricUser') === user?.email) {
+        localStorage.removeItem('lastBiometricUser');
+      }
       toast.success(nextEnabled ? 'Biometric login enabled.' : 'Biometric login paused.');
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Unable to update biometric settings.');
@@ -103,7 +110,7 @@ const BiometricSettingsSection = () => {
       description="Use your device's fingerprint, Face ID, or Windows Hello to sign in faster. If unavailable, the 6-digit email code remains available."
     >
       <SettingsToggle
-        label="Enable biometric login"
+        label="Enable Biometric Login (Passkeys)"
         description={!available && availabilityChecked
           ? 'Not available on this device.'
           : 'Turning off biometric login pauses it on this account. Your registered devices will remain and can be used again when you re-enable biometric login.'}

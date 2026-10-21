@@ -11,7 +11,7 @@ const AdminInboxPage = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [messages, setMessages] = useState([]);
-  const [activeTab, setActiveTab] = useState('unread');
+  const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState('');
@@ -92,9 +92,9 @@ const AdminInboxPage = () => {
     return true;
   });
   const tabs = [
+    { key: 'all', label: 'All' },
     { key: 'unread', label: 'Unread', count: messages.filter((message) => message.status === 'new' || message.status === 'unread').length },
     { key: 'resolved', label: 'Resolved' },
-    { key: 'all', label: 'All' },
   ];
 
   return (

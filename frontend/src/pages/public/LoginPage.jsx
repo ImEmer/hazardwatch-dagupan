@@ -5,15 +5,29 @@ import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
 import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
+import { authenticateBiometricLogin, isBiometricPromptCancelled } from '../../services/biometric';
 
 const LoginPage = () => {
-  const { login, user, isAuthenticated } = useAuth();
+  const { login, completeLogin, user, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [lastBiometricUser] = useState(() => localStorage.getItem('lastBiometricUser') || '');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [biometricSubmitting, setBiometricSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const navigateAfterLogin = (loggedInUser) => {
+    const role = loggedInUser?.role?.toLowerCase();
+    const targetRoute = role === 'barangay'
+      ? '/barangay/dashboard'
+      : role === 'superadmin'
+        ? '/superadmin/dashboard'
+        : role === 'admin'
+          ? '/admin/dashboard'
+          : '/';
+    navigate(targetRoute, { replace: true });
+  };
   const getFriendlyError = (message = '') => {
     const normalized = message.toLowerCase();
 
@@ -71,6 +85,7 @@ const LoginPage = () => {
       const loggedInUser = await login(form.email, form.password);
       if (loggedInUser?.requiresOTP) {
         const email = form.email.trim().toLowerCase();
+        if (loggedInUser.biometricAvailable) localStorage.setItem('lastBiometricUser', email);
         const twoFactorState = {
           tempToken: loggedInUser.tempToken,
           email,
@@ -106,6 +121,24 @@ const LoginPage = () => {
     }
   };
 
+  const submitBiometric = async () => {
+    if (!lastBiometricUser || biometricSubmitting) return;
+    setError('');
+    setBiometricSubmitting(true);
+    try {
+      const session = await authenticateBiometricLogin(lastBiometricUser);
+      const loggedInUser = completeLogin(session);
+      await showSuccess(`Welcome back, ${loggedInUser?.name || lastBiometricUser}!`);
+      navigateAfterLogin(loggedInUser);
+    } catch (loginError) {
+      if (!isBiometricPromptCancelled(loginError)) {
+        setError(loginError.response?.data?.message || loginError.message || 'Unable to sign in with biometrics.');
+      }
+    } finally {
+      setBiometricSubmitting(false);
+    }
+  };
+
   return (
     <AuthCard title="Welcome Back" description="Login to HazardWatch">
       <form onSubmit={submit} className="space-y-4">
@@ -122,7 +155,17 @@ const LoginPage = () => {
           {errors.password && <span className="mt-1 block text-xs text-red-400">{errors.password}</span>}
         </label>
         <div className="text-right"><Link className="auth-link text-sm" to="/forgot-password">Forgot Password?</Link></div>
-        <button disabled={submitting} className="auth-button">{submitting ? 'Signing in...' : 'Login'}</button>
+        <button disabled={submitting || biometricSubmitting} className="auth-button">{submitting ? 'Signing in...' : 'Login'}</button>
+        {lastBiometricUser && (
+          <button
+            type="button"
+            onClick={submitBiometric}
+            disabled={biometricSubmitting || submitting}
+            className="auth-button border border-blue-400/50 bg-transparent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {biometricSubmitting ? 'Waiting for biometrics...' : 'Login with Biometrics (Passkey)'}
+          </button>
+        )}
         <p className="text-center text-sm text-gray-400">Don't have an account? <Link className="auth-link" to="/register">Register</Link></p>
       </form>
     </AuthCard>

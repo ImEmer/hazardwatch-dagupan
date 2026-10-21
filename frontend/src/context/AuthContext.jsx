@@ -97,6 +97,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(TOKEN_KEY, nextToken);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     localStorage.setItem('token', nextToken);
+    if (nextUser?.biometricEnabled && nextUser.email) {
+      localStorage.setItem('lastBiometricUser', nextUser.email);
+    }
   }, []);
 
   const logout = useCallback(async () => {

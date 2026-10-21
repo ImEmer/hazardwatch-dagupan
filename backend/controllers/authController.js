@@ -17,6 +17,10 @@ const privilegedRoles = ['superadmin', 'admin', 'barangay'];
 const PRIVILEGED_NOTIFICATION_EMAIL = 'emersonisla06@gmail.com';
 const createOtp = () => crypto.randomInt(100000, 1000000).toString();
 const requiresTwoFactor = (user) => privilegedRoles.includes(user.role);
+const canVerifyLogin = (user) => (
+  (requiresTwoFactor(user) && user.login2FAEnabled === true)
+  || (user.biometricEnabled === true && Boolean(user.biometricCredentials?.length))
+);
 const resolveWebAuthnContext = (req) => {
   const origin = req.get('origin');
   if (!origin) return null;
@@ -46,11 +50,32 @@ const loginChallengeUser = async (tempToken, email) => {
   }
   if (decoded.purpose !== 'login-2fa') return { error: { status: 401, message: 'Invalid verification session.' } };
   const user = await User.findById(decoded.id).select('+biometricAuthenticationChallenge +biometricAuthenticationChallengeExpires +biometricAuthenticationChallengeOrigin +biometricAuthenticationChallengeRpId +biometricCredentials');
-  if (!user || !user.isActive || user.status !== 'active' || !requiresTwoFactor(user)) {
+  if (!user || !user.isActive || user.status !== 'active' || !canVerifyLogin(user)) {
     return { error: { status: 403, message: 'This verification session is no longer valid.' } };
   }
   if (email && String(email).trim().toLowerCase() !== user.email) {
     return { error: { status: 403, message: 'This verification session is no longer valid.' } };
+  }
+  return { user };
+};
+const passwordlessBiometricUser = async (email) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return { error: { status: 400, message: 'An email address is required for biometric login.' } };
+
+  const user = await User.findOne({ email: normalizedEmail }).select(
+    '+biometricCredentials +biometricAuthenticationChallenge +biometricAuthenticationChallengeExpires +biometricAuthenticationChallengeOrigin +biometricAuthenticationChallengeRpId',
+  );
+  const requiresVerification = user?.status === 'pending'
+    || (user?.verificationRequired !== false && (!user?.createdAt || new Date(user.createdAt) > VERIFICATION_CUTOFF));
+  if (
+    !user
+    || !user.isActive
+    || user.status !== 'active'
+    || (!user.emailVerified && requiresVerification)
+    || !user.biometricEnabled
+    || !user.biometricCredentials?.length
+  ) {
+    return { error: { status: 401, message: 'Biometric login is not available for this account.' } };
   }
   return { user };
 };
@@ -243,8 +268,9 @@ export const login = async (req, res, next) => {
     if (!user.emailVerified && requiresVerification) return res.status(403).json({ success: false, message: 'Please verify your email first. Check your inbox for the 6-digit code.', needsVerification: true, email: user.email });
     if (user.status === 'deleted' || !user.isActive) return res.status(403).json({ success: false, message: 'This account is inactive.' });
     const requiresOTP = privilegedRoles.includes(user.role) && user.login2FAEnabled === true;
+    const requiresBiometric = user.biometricEnabled === true && Boolean(user.biometricCredentials?.length);
     const twoFactorDisabled = privilegedRoles.includes(user.role) && !requiresOTP;
-    if (requiresOTP) {
+    if (requiresOTP || requiresBiometric) {
       const now = new Date();
       if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
         const retryAfter = Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000);
@@ -265,7 +291,7 @@ export const login = async (req, res, next) => {
         success: true,
         requiresOTP: true,
         biometricEnabled: Boolean(user.biometricEnabled),
-        biometricAvailable: Boolean(user.biometricEnabled && user.biometricCredentials?.length),
+        biometricAvailable: requiresBiometric,
         tempToken: createLoginChallenge(user),
         message: 'A security code was sent to your email.',
       });
@@ -319,7 +345,7 @@ export const verifyTwoFactorLogin = async (req, res, next) => {
     const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
     if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
     const user = await User.findById(decoded.id).select('+otpCode +otpExpires +otpAttempts +otpBlockedUntil');
-    if (!user || !user.isActive || !requiresTwoFactor(user)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
+    if (!user || !user.isActive || user.status !== 'active' || !canVerifyLogin(user)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
     const now = new Date();
     if (user.otpBlockedUntil && user.otpBlockedUntil > now) {
       res.set('Retry-After', String(Math.ceil((user.otpBlockedUntil.getTime() - now.getTime()) / 1000)));
@@ -397,7 +423,7 @@ export const resendTwoFactorLoginCode = async (req, res, next) => {
     const decoded = jwt.verify(String(req.body.tempToken || ''), process.env.JWT_SECRET);
     if (decoded.purpose !== 'login-2fa') return res.status(401).json({ success: false, message: 'Invalid verification session.' });
     const user = await User.findById(decoded.id).select('+notificationEmail +otpAttempts +otpBlockedUntil');
-    if (!user || !user.isActive || !requiresTwoFactor(user)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
+    if (!user || !user.isActive || user.status !== 'active' || !canVerifyLogin(user)) return res.status(403).json({ success: false, message: 'This verification session is no longer valid.' });
     if (user.otpBlockedUntil && user.otpBlockedUntil > new Date()) return res.status(429).json({ success: false, message: 'Two-factor verification is temporarily locked.' });
     const code = createOtp();
     await deliverTwoFactorCode(user, code);
@@ -549,7 +575,9 @@ export const toggleBiometric = async (req, res, next) => {
 
 export const loginBiometricChallenge = async (req, res, next) => {
   try {
-    const { user, error } = await loginChallengeUser(req.body.tempToken, req.body.email);
+    const { user, error } = req.body.tempToken
+      ? await loginChallengeUser(req.body.tempToken, req.body.email)
+      : await passwordlessBiometricUser(req.body.email);
     if (error) return res.status(error.status).json({ success: false, message: error.message });
     if (!user.biometricEnabled || !user.biometricCredentials?.length) {
       return res.status(400).json({ success: false, message: 'Biometric login is not available for this account.' });
@@ -573,11 +601,20 @@ export const loginBiometricChallenge = async (req, res, next) => {
 
 export const loginBiometricVerify = async (req, res, next) => {
   try {
-    const { user, error } = await loginChallengeUser(req.body.tempToken, req.body.email);
+    const { user, error } = req.body.tempToken
+      ? await loginChallengeUser(req.body.tempToken, req.body.email)
+      : await passwordlessBiometricUser(req.body.email);
     if (error) return res.status(error.status).json({ success: false, message: error.message });
     const challenge = user.biometricAuthenticationChallenge;
     const now = new Date();
-    if (!user.biometricEnabled || !challenge || !user.biometricAuthenticationChallengeExpires || user.biometricAuthenticationChallengeExpires <= now) {
+    if (
+      !user.isActive
+      || user.status !== 'active'
+      || !user.biometricEnabled
+      || !challenge
+      || !user.biometricAuthenticationChallengeExpires
+      || user.biometricAuthenticationChallengeExpires <= now
+    ) {
       return res.status(400).json({ success: false, message: 'Authentication challenge is missing or expired. Please try again.' });
     }
 
