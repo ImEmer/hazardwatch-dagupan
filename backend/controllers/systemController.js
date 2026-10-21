@@ -81,6 +81,9 @@ export const updateSystemSettings = async (req, res, next) => {
     if (Object.hasOwn(body, 'globalAnnouncement')) {
       req.app.get('io').emit('announcement-updated', { text: settings.globalAnnouncement });
     }
+    if (Object.hasOwn(body, 'maintenanceMode')) {
+      req.app.get('io').emit('maintenance-updated', { maintenanceMode: settings.maintenanceMode });
+    }
     res.json({ success: true, settings });
   } catch (error) { next(error); }
 };

@@ -12,6 +12,8 @@ const allowedDuringMaintenance = (req) => (
     '/auth/biometric/login-challenge',
     '/auth/biometric/login-verify',
   ].includes(req.path))
+  || (req.method === 'GET' && req.path === '/auth/me')
+  || (req.method === 'POST' && req.path === '/auth/logout')
 );
 
 export const enforceMaintenanceMode = async (req, res, next) => {

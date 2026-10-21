@@ -70,6 +70,8 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
 
+    if (status === 503) return Promise.reject(error);
+
     if (status === 401 && !isAuthRoute(requestUrl)) {
       let sessionIsValid = false;
       if (requestUrl.includes('/auth/me')) {

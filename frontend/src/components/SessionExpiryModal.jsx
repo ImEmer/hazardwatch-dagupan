@@ -13,8 +13,8 @@ const SessionExpiryModal = () => {
   const handleStayLoggedIn = async () => {
     try {
       await refreshSession();
-    } catch {
-      await logout();
+    } catch (error) {
+      if (error.status !== 503) await logout();
     }
   };
 

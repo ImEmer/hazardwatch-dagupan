@@ -4,7 +4,7 @@ import useAuth from '../hooks/useAuth';
 import { showInfo } from '../services/alerts';
 import { systemSettingsApi } from '../services/api';
 
-const SocketContext = createContext({ socket: null, latestReport: null, announcement: '' });
+const SocketContext = createContext({ socket: null, latestReport: null, announcement: '', maintenanceMode: false });
 const API_URL = import.meta.env.VITE_API_URL || 'https://hazardwatch-dagupan.onrender.com/api';
 const SOCKET_URL = API_URL.replace(/\/api\/?$/, '');
 
@@ -13,14 +13,20 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [latestReport, setLatestReport] = useState(null);
   const [announcement, setAnnouncement] = useState('');
-  const announcementUpdatedOverSocket = useRef(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const announcementSocketUpdatedAt = useRef(0);
+  const maintenanceSocketUpdatedAt = useRef(0);
 
   useEffect(() => {
     let active = true;
+    const requestStartedAt = Date.now();
     systemSettingsApi.getPublic()
       .then(({ data }) => {
-        if (active && !announcementUpdatedOverSocket.current) {
+        if (active && requestStartedAt >= announcementSocketUpdatedAt.current) {
           setAnnouncement(data?.settings?.globalAnnouncement || '');
+        }
+        if (active && requestStartedAt >= maintenanceSocketUpdatedAt.current) {
+          setMaintenanceMode(Boolean(data?.settings?.maintenanceMode));
         }
       })
       .catch((error) => {
@@ -28,6 +34,24 @@ export const SocketProvider = ({ children }) => {
       });
 
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(async () => {
+      const requestStartedAt = Date.now();
+      try {
+        const { data } = await systemSettingsApi.getPublic();
+        if (requestStartedAt >= maintenanceSocketUpdatedAt.current) {
+          setMaintenanceMode(Boolean(data?.settings?.maintenanceMode));
+        }
+        if (requestStartedAt >= announcementSocketUpdatedAt.current) {
+          setAnnouncement(data?.settings?.globalAnnouncement || '');
+        }
+      } catch (error) {
+        console.error('Unable to refresh public system settings.', error);
+      }
+    }, 30_000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -45,8 +69,14 @@ export const SocketProvider = ({ children }) => {
     };
     const handleAnnouncementUpdated = ({ text } = {}) => {
       if (typeof text === 'string') {
-        announcementUpdatedOverSocket.current = true;
+        announcementSocketUpdatedAt.current = Date.now();
         setAnnouncement(text);
+      }
+    };
+    const handleMaintenanceUpdated = ({ maintenanceMode: isEnabled } = {}) => {
+      if (typeof isEnabled === 'boolean') {
+        maintenanceSocketUpdatedAt.current = Date.now();
+        setMaintenanceMode(isEnabled);
       }
     };
     const handleConnect = () => {
@@ -61,6 +91,7 @@ export const SocketProvider = ({ children }) => {
 
     connection.on('new-report', handleNewReport);
     connection.on('announcement-updated', handleAnnouncementUpdated);
+    connection.on('maintenance-updated', handleMaintenanceUpdated);
     connection.on('connect', handleConnect);
     connection.on('disconnect', handleDisconnect);
     connection.on('connect_error', handleConnectError);
@@ -69,6 +100,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       connection.off('new-report', handleNewReport);
       connection.off('announcement-updated', handleAnnouncementUpdated);
+      connection.off('maintenance-updated', handleMaintenanceUpdated);
       connection.off('connect', handleConnect);
       connection.off('disconnect', handleDisconnect);
       connection.off('connect_error', handleConnectError);
@@ -76,7 +108,7 @@ export const SocketProvider = ({ children }) => {
     };
   }, [token, user?.barangay, user?.role]);
 
-  const value = useMemo(() => ({ socket, latestReport, announcement }), [announcement, latestReport, socket]);
+  const value = useMemo(() => ({ socket, latestReport, announcement, maintenanceMode }), [announcement, latestReport, maintenanceMode, socket]);
   return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
 };
 

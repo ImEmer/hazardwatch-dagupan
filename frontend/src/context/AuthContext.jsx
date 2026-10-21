@@ -145,6 +145,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
       return nextUser;
     } catch (error) {
+      if (error.status === 503) {
+        return storedSession.user;
+      }
       clearSession();
       throw error;
     } finally {

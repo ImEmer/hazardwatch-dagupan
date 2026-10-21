@@ -56,6 +56,9 @@ import SuperAdminNotificationsPage from './pages/superadmin/SuperAdminNotificati
 import SuperAdminSystemGovernance from './pages/superadmin/SuperAdminSystemGovernance';
 import ScrollToTop from './components/common/ScrollToTop';
 import SessionExpiryModal from './components/SessionExpiryModal';
+import { AlertTriangle } from 'lucide-react';
+import useAuth from './hooks/useAuth';
+import { useSocket } from './context/SocketContext';
 const PublicPlaceholder = ({ title, description }) => (
   <div className="min-h-screen bg-[#0a0b0f] px-4 pb-10 pt-28 text-white">
     <div className="mx-auto max-w-6xl rounded-2xl border border-[#2e303a] bg-[#14151d] p-8">
@@ -67,6 +70,45 @@ const PublicPlaceholder = ({ title, description }) => (
 );
 
 const PublicPage = ({ children }) => <PublicLayout>{children}</PublicLayout>;
+
+const MaintenanceModeGuard = ({ children }) => {
+  const { user, isAuthenticated, logout } = useAuth();
+  const { maintenanceMode } = useSocket();
+
+  if (!maintenanceMode) return children;
+
+  if (user?.role === 'superadmin') {
+    return (
+      <>
+        <div role="status" className="fixed inset-x-0 top-0 z-[100] flex h-10 items-center justify-center bg-red-700 px-4 text-center text-sm font-semibold text-white">
+          Maintenance Mode is Active
+        </div>
+        <div className="pt-10">{children}</div>
+      </>
+    );
+  }
+
+  return (
+    <main className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-slate-950 px-5 py-10 text-white">
+      <section className="w-full max-w-xl rounded-3xl border border-amber-500/30 bg-slate-900 p-8 text-center shadow-2xl sm:p-12">
+        <AlertTriangle className="mx-auto h-16 w-16 text-amber-400" aria-hidden="true" />
+        <h1 className="mt-6 text-3xl font-bold">Under Maintenance</h1>
+        <p className="mt-4 text-base leading-7 text-slate-300">
+          HazardWatch is currently being updated. Please check back later.
+        </p>
+        {isAuthenticated && (
+          <button
+            type="button"
+            onClick={() => logout().catch((error) => console.error('Unable to log out during maintenance.', error))}
+            className="mt-8 rounded-lg border border-slate-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Logout
+          </button>
+        )}
+      </section>
+    </main>
+  );
+};
 
 const pageTitles = [
   { match: (pathname) => pathname === '/', title: 'Dagupan HazardWatch - Home' },
@@ -123,6 +165,7 @@ function App() {
             <Toaster position="top-right" richColors closeButton duration={4000} theme="system" />
             <ReportProvider>
               <Router>
+            <MaintenanceModeGuard>
             <SessionExpiryModal />
             <ScrollToTop />
             <PageTitle />
@@ -194,6 +237,7 @@ function App() {
             <Route path="/logout" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </MaintenanceModeGuard>
               </Router>
             </ReportProvider>
           </ConfirmProvider>
