@@ -67,8 +67,8 @@ const SubmitReport = () => {
     const handlePhotoChange = (e) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
-        const validFiles = files.filter((file) => /^image\/(jpeg|jpg|png|webp)$/.test(file.type) && file.size <= 5 * 1024 * 1024);
-        if (validFiles.length !== files.length) setErrors((prev) => ({ ...prev, photo: 'Images must be JPG, PNG, or WebP files no larger than 5MB.' }));
+        const validFiles = files.filter((file) => /^image\/(jpeg|jpg|jfif|png|webp)$/.test(file.type) && file.size <= 5 * 1024 * 1024);
+        if (validFiles.length !== files.length) setErrors((prev) => ({ ...prev, photo: 'Images must be JPG, JPEG, PNG, WebP, or JFIF files no larger than 5MB.' }));
         const available = Math.max(0, 3 - images.length);
         if (files.length > available) showWarning('Maximum 3 images allowed.');
         const nextImages = [...images, ...validFiles.slice(0, available)];
@@ -288,7 +288,7 @@ const SubmitReport = () => {
                         ))}
                         </div>
                         {images.length < 3 && <button type="button" onClick={() => photoInputRef.current?.click()} className={`mt-3 rounded-lg border px-3 py-2 text-sm transition ${isDark ? 'border-slate-600 text-slate-300 hover:border-blue-500 hover:bg-slate-800' : 'border-gray-300 text-gray-700 hover:border-blue-500 hover:bg-gray-50'}`}><span className={isDark ? 'text-slate-400' : 'text-gray-600'} aria-hidden="true">+</span> Add More</button>}
-                        <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple ref={photoInputRef} onChange={handlePhotoChange} className="hidden" />
+                        <input type="file" accept="image/jpeg,image/jpg,image/jfif,image/png,image/webp,.jfif" multiple ref={photoInputRef} onChange={handlePhotoChange} className="hidden" />
                         </div>
                     ) : (
                         <div className="text-center py-4">
@@ -296,7 +296,7 @@ const SubmitReport = () => {
                             type="file"
                             id="photo"
                             name="images"
-                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            accept="image/jpeg,image/jpg,image/jfif,image/png,image/webp,.jfif"
                             multiple
                             ref={photoInputRef}
                             onChange={handlePhotoChange}
@@ -310,7 +310,7 @@ const SubmitReport = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             <span className="text-sm font-medium">Click to upload photos</span>
-                            <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP (max 5MB)</p>
+                            <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG, WebP, JFIF (max 5MB)</p>
                         </label>
                         </div>
                     )}

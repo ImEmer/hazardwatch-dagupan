@@ -12,7 +12,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'hazardwatch',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    allowed_formats: ['jpg', 'jpeg', 'jfif', 'png', 'webp'],
     transformation: [{ width: 1200, crop: 'limit' }],
   },
 });
@@ -20,7 +20,7 @@ const storage = new CloudinaryStorage({
 export const uploadPhoto = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, callback) => callback(null, /^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)),
+  fileFilter: (req, file, callback) => callback(null, /^image\/(jpeg|jpg|jfif|png|webp)$/.test(file.mimetype)),
 });
 
 export { cloudinary };
