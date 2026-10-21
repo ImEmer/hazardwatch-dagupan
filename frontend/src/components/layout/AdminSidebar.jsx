@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Archive, Bell, FileText, LayoutDashboard, Mail, Map, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from 'lucide-react';
+import { Activity, Archive, Bell, FileText, LayoutDashboard, Mail, Map, PanelLeftClose, PanelLeftOpen, Settings, Shield, Users, X } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -8,6 +8,7 @@ import { HEADER_HEIGHT } from './layoutConstants';
 const items = [
   { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin'], icon: LayoutDashboard },
   { to: '/superadmin/dashboard', label: 'Dashboard', roles: ['superadmin'], icon: LayoutDashboard },
+  { to: '/superadmin/system-governance', label: 'System Governance', roles: ['superadmin'], icon: Shield },
   { to: '/admin/reports', label: 'Reports', icon: FileText },
   { to: '/admin/archived', label: 'Archived', icon: Archive },
   { to: '/admin/map', label: 'Map View', icon: Map },

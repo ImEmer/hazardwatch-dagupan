@@ -198,7 +198,7 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (response.requiresOTP || response.requiresBiometric) return response;
+    if (response.requiresEmailOTP || response.requiresBiometric) return response;
     const session = response.token ? response : response.data;
     persistSession(session);
     return { ...session.user, twoFactorDisabled: Boolean(session.twoFactorDisabled) };

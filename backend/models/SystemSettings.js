@@ -9,6 +9,7 @@ const systemSettingsSchema = new mongoose.Schema({
   priorityLevels: { type: [String], default: ['Low', 'Medium', 'High', 'Urgent'] },
   userRoles: { type: [String], default: ['user', 'barangay', 'admin', 'superadmin'] },
   maintenanceMode: { type: Boolean, default: false },
+  globalAnnouncement: { type: String, default: '' },
   notificationsEnabled: { type: Boolean, default: true },
   defaultUserRole: { type: String, default: 'user' },
   roleHierarchy: { type: mongoose.Schema.Types.Mixed, default: { user: 1, barangay: 2, admin: 3, superadmin: 4 } },

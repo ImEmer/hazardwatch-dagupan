@@ -18,7 +18,7 @@ const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium tr
   isActive ? 'text-[#3b82f6]' : 'text-gray-700 hover:text-[#3b82f6] dark:text-gray-300'
 }`;
 
-const Navbar = () => {
+const Navbar = ({ announcementVisible = false }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -51,7 +51,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className={`fixed inset-x-0 top-0 z-50 h-16 transition ${
+    <header className={`fixed inset-x-0 ${announcementVisible ? 'top-12' : 'top-0'} z-50 h-16 transition ${
       scrolled ? `border-b backdrop-blur-md ${isDark ? 'border-[#2e303a] bg-[#0a0b0f]/95' : 'border-slate-200 bg-white/95'}` : isDark ? 'bg-transparent' : 'bg-white/90'
     }`}>
       <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between px-4 md:px-6">

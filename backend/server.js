@@ -25,6 +25,7 @@ import { globalLimiter } from './middleware/rateLimit.js';
 import cron from 'node-cron';
 import { runBackup } from './scripts/backup.js';
 import TokenBlacklist from './models/TokenBlacklist.js';
+import { enforceMaintenanceMode } from './middleware/maintenance.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -125,6 +126,7 @@ app.set('io', io);
 
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', globalLimiter);
+app.use('/api', enforceMaintenanceMode);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);

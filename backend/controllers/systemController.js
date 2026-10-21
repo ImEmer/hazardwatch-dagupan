@@ -9,6 +9,7 @@ const defaultSettings = {
   priorityLevels: ['Low', 'Medium', 'High', 'Urgent'],
   userRoles: ['user', 'barangay', 'admin', 'superadmin'],
   maintenanceMode: false,
+  globalAnnouncement: '',
   notificationsEnabled: true,
   defaultUserRole: 'user',
   roleHierarchy: { user: 1, barangay: 2, admin: 3, superadmin: 4 },
@@ -31,6 +32,19 @@ export const getSystemSettings = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const getPublicSystemSettings = async (req, res, next) => {
+  try {
+    const settings = await SystemSettings.findOne({ key: 'global' }).select('maintenanceMode globalAnnouncement');
+    res.json({
+      success: true,
+      settings: {
+        maintenanceMode: settings?.maintenanceMode ?? false,
+        globalAnnouncement: settings?.globalAnnouncement ?? '',
+      },
+    });
+  } catch (error) { next(error); }
+};
+
 export const updateSystemSettings = async (req, res, next) => {
   try {
     const body = req.body || {};
@@ -47,6 +61,9 @@ export const updateSystemSettings = async (req, res, next) => {
     if (Object.hasOwn(body, 'systemLogo') && typeof body.systemLogo !== 'string') return res.status(400).json({ success: false, message: 'System logo must be a URL string.' });
     for (const field of ['maintenanceMode', 'notificationsEnabled']) {
       if (Object.hasOwn(body, field) && typeof body[field] !== 'boolean') return res.status(400).json({ success: false, message: `${field} must be a boolean.` });
+    }
+    if (Object.hasOwn(body, 'globalAnnouncement') && typeof body.globalAnnouncement !== 'string') {
+      return res.status(400).json({ success: false, message: 'Global announcement must be a string.' });
     }
     if (Object.hasOwn(body, 'defaultUserRole') && !['user', 'barangay', 'admin'].includes(body.defaultUserRole)) {
       return res.status(400).json({ success: false, message: 'Default user role is invalid.' });

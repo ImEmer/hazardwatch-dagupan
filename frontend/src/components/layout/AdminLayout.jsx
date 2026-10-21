@@ -4,10 +4,13 @@ import AdminSidebar from './AdminSidebar';
 import PrivilegedTopBar from './PrivilegedTopBar';
 import ProtectedRoute from './ProtectedRoute';
 import useTheme from '../../hooks/useTheme';
+import GlobalAnnouncementBanner from './GlobalAnnouncementBanner';
+import useGlobalAnnouncement from '../../hooks/useGlobalAnnouncement';
 
 const AdminLayout = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const announcement = useGlobalAnnouncement();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
 
   useEffect(() => {
@@ -30,14 +33,16 @@ const AdminLayout = () => {
   return (
     <ProtectedRoute roles={['superadmin', 'admin']}>
       <div className={`h-screen overflow-hidden ${isDark ? 'bg-[#0a0b0f] text-white' : 'bg-slate-100 text-slate-900'}`}>
+        <GlobalAnnouncementBanner announcement={announcement} />
         <div className="h-full">
           <PrivilegedTopBar
             sidebarEventName="hw:toggle-admin-sidebar"
             sidebarWidthClass="lg:left-72 lg:w-[calc(100%-18rem)]"
             sidebarCollapsed={sidebarCollapsed}
+            announcementVisible={Boolean(announcement)}
           />
           <AdminSidebar />
-          <main className={`h-screen overflow-y-auto overflow-x-hidden p-6 pt-24 transition-[margin] duration-300 ease-in-out motion-reduce:transition-none ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} lg:pt-20 ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-100'}`}>
+          <main className={`h-screen overflow-y-auto overflow-x-hidden p-6 ${announcement ? 'pt-36 lg:pt-32' : 'pt-24 lg:pt-20'} transition-[margin] duration-300 ease-in-out motion-reduce:transition-none ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} ${isDark ? 'bg-[#0a0b0f]' : 'bg-slate-100'}`}>
             <div className="mx-auto max-w-7xl">
               <Outlet />
             </div>

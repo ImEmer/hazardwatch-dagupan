@@ -5,9 +5,10 @@ import { showError, showSuccess } from '../../services/alerts';
 import { AuthCard } from './RegisterPage';
 import { validateEmail } from '../../services/validation';
 import PasswordToggle from '../../components/PasswordToggle';
+import { authenticateBiometricLogin, isBiometricPromptCancelled } from '../../services/biometric';
 
 const LoginPage = () => {
-  const { login, user, isAuthenticated } = useAuth();
+  const { login, completeLogin, user, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -68,18 +69,32 @@ const LoginPage = () => {
     }
     setSubmitting(true);
     try {
-      const loggedInUser = await login(form.email, form.password);
-      if (loggedInUser?.requiresBiometric || loggedInUser?.requiresOTP) {
+      const loginResponse = await login(form.email, form.password);
+      if (loginResponse?.requiresBiometric) {
+        const session = await authenticateBiometricLogin(form.email.trim().toLowerCase(), loginResponse.tempToken);
+        const loggedInUser = completeLogin(session);
+        await showSuccess(`Welcome back, ${loggedInUser?.name || form.email.split('@')[0]}!`);
+        const role = loggedInUser?.role?.toLowerCase();
+        const targetRoute = role === 'barangay'
+          ? '/barangay/dashboard'
+          : role === 'superadmin'
+            ? '/superadmin/dashboard'
+            : role === 'admin'
+              ? '/admin/dashboard'
+              : '/';
+        navigate(targetRoute, { replace: true });
+        return;
+      }
+      if (loginResponse?.requiresEmailOTP) {
         const email = form.email.trim().toLowerCase();
         const twoFactorState = {
-          tempToken: loggedInUser.tempToken,
+          tempToken: loginResponse.tempToken,
           email,
-          biometricEnabled: Boolean(loggedInUser.biometricEnabled),
-          biometricAvailable: Boolean(loggedInUser.biometricAvailable),
         };
         navigate('/verify-2fa', { replace: true, state: twoFactorState });
         return;
       }
+      const loggedInUser = loginResponse;
       const role = loggedInUser?.role?.toLowerCase();
       const name = form.email.split('@')[0];
       await showSuccess(`Welcome back, ${name}!`);
@@ -97,6 +112,10 @@ const LoginPage = () => {
         const email = loginError.data.email || form.email.trim().toLowerCase();
         await showError('Email verification required', loginError.message);
         navigate(`/verify-email?email=${encodeURIComponent(email)}`, { replace: true });
+        return;
+      }
+      if (isBiometricPromptCancelled(loginError) || loginError?.name === 'NotAllowedError') {
+        setError('Biometric verification was cancelled or unavailable. Please try logging in again.');
         return;
       }
       const friendlyMessage = getFriendlyError(loginError?.message);

@@ -53,6 +53,7 @@ import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
 import AdminInboxPage from './pages/admin/AdminInboxPage';
 import BarangayNotificationsPage from './pages/barangay/BarangayNotificationsPage';
 import SuperAdminNotificationsPage from './pages/superadmin/SuperAdminNotificationsPage';
+import SuperAdminSystemGovernance from './pages/superadmin/SuperAdminSystemGovernance';
 import ScrollToTop from './components/common/ScrollToTop';
 import SessionExpiryModal from './components/SessionExpiryModal';
 const PublicPlaceholder = ({ title, description }) => (
@@ -87,6 +88,7 @@ const pageTitles = [
   { match: (pathname) => pathname === '/superadmin/dashboard', title: 'Super Admin Dashboard | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/users', title: 'Super Admin Users | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/settings', title: 'Super Admin Settings | HazardWatch' },
+  { match: (pathname) => pathname === '/superadmin/system-governance', title: 'System Governance | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/activity', title: 'Super Admin Activity | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/notifications', title: 'Notifications | HazardWatch' },
   { match: (pathname) => pathname === '/superadmin/inbox', title: 'Contact Inbox | HazardWatch' },
@@ -169,6 +171,7 @@ function App() {
               <Route path="users" element={<SuperAdminUsers />} />
               <Route path="inbox" element={<ProtectedRoute allowedRoles={['superadmin']}><AdminInboxPage /></ProtectedRoute>} />
               <Route path="settings" element={<SettingsDashboard />} />
+              <Route path="system-governance" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminSystemGovernance /></ProtectedRoute>} />
               <Route path="activity" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminActivityPage /></ProtectedRoute>} />
               <Route path="notifications" element={<ProtectedRoute allowedRoles={['superadmin']}><SuperAdminNotificationsPage /></ProtectedRoute>} />
             </Route>
