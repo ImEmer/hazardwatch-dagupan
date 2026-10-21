@@ -97,9 +97,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(TOKEN_KEY, nextToken);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     localStorage.setItem('token', nextToken);
-    if (nextUser?.biometricEnabled && nextUser.email) {
-      localStorage.setItem('lastBiometricUser', nextUser.email);
-    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -201,7 +198,7 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (response.requiresOTP) return response;
+    if (response.requiresOTP || response.requiresBiometric) return response;
     const session = response.token ? response : response.data;
     persistSession(session);
     return { ...session.user, twoFactorDisabled: Boolean(session.twoFactorDisabled) };

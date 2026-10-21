@@ -112,11 +112,16 @@ const TwoFactorPage = () => {
   }, [biometricAvailable]);
 
   return (
-    <AuthCard title="Two-factor verification" description={`Enter the security code sent to ${email}.`}>
+    <AuthCard
+      title={biometricEnabled ? 'Biometric verification' : 'Two-factor verification'}
+      description={biometricEnabled
+        ? `Verify your identity with biometrics. An email code was also sent to ${email} as a fallback.`
+        : `Enter the security code sent to ${email}.`}
+    >
       <form onSubmit={(event) => { event.preventDefault(); finishVerification(); }} className="space-y-4">
         {biometricFallbackMessage && <p role="status" className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-300">{biometricFallbackMessage}</p>}
         {error && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-        {biometricEnabled && biometricAvailable && <button type="button" onClick={finishBiometric} disabled={verifying} className="auth-button disabled:cursor-not-allowed disabled:opacity-50">{verifying ? 'Waiting for biometrics...' : 'Sign in with biometrics'}</button>}
+        {biometricEnabled && biometricAvailable && <button type="button" onClick={finishBiometric} disabled={verifying} className="auth-button disabled:cursor-not-allowed disabled:opacity-50">{verifying ? 'Waiting for biometrics...' : 'Verify with biometrics'}</button>}
         <label className="block text-sm text-gray-300">6-digit security code
           <CodeInput value={code} onChange={setCode} onComplete={finishVerification} disabled={verifying} className="auth-input mt-2 text-center font-mono text-2xl tracking-[0.5em]" inputProps={{ required: true, 'aria-label': '6-digit security code' }} />
         </label>
