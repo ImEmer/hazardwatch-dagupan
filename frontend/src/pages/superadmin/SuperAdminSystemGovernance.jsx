@@ -22,7 +22,16 @@ const SuperAdminSystemGovernance = () => {
   const fetchSecurityStatus = useCallback(async () => {
     try {
       const { data } = await systemSettingsApi.getSecurityStatus();
-      setSecurityEntries(data?.entries || []);
+      const lockouts = Array.isArray(data?.lockouts) ? data.lockouts : [];
+      const rateLimitEntries = Array.isArray(data?.rateLimitEntries) ? data.rateLimitEntries : [];
+      const entries = Array.isArray(data?.entries) ? data.entries : [...lockouts, ...rateLimitEntries];
+      if (import.meta.env.DEV) {
+        console.debug('[security-status] Loaded entry counts', {
+          lockouts: lockouts.length,
+          rateLimitEntries: rateLimitEntries.length,
+        });
+      }
+      setSecurityEntries(entries);
       setRateLimitStats(data?.rateLimitStats || []);
       setSecurityError('');
     } catch (requestError) {
