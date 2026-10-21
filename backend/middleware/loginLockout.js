@@ -1,6 +1,8 @@
-const MAX_FAILED_ATTEMPTS = 3;
+import SecurityLog from '../models/SecurityLog.js';
+
+const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
-export const loginLockout = new Map();
+const loginLockout = new Map();
 
 const getKey = (req, email) => `${req.ip}:${String(email || '').trim().toLowerCase()}`;
 
@@ -24,7 +26,7 @@ export const getLoginLockout = (req, email) => {
   return null;
 };
 
-export const recordFailedLogin = (req, email) => {
+export const recordFailedLogin = async (req, email) => {
   const key = getKey(req, email);
   const current = loginLockout.get(key) || { failedAttempts: 0 };
   const failedAttempts = current.failedAttempts + 1;
@@ -36,49 +38,18 @@ export const recordFailedLogin = (req, email) => {
     lockedUntil,
   });
 
+  if (lockedUntil) {
+    await SecurityLog.create({
+      identifier: `${String(email || '').trim().toLowerCase()} / ${req.ip}`,
+      reason: 'Failed Login',
+      details: `${failedAttempts} failed attempts on /login.`,
+      status: 'Blocked',
+    });
+  }
+
   return lockedUntil ? { retryAfter: getRemainingSeconds(lockedUntil) } : null;
 };
 
 export const clearFailedLogins = (req, email) => {
   loginLockout.delete(getKey(req, email));
-};
-
-export const getActiveLoginLockouts = () => {
-  const now = Date.now();
-  const entries = [];
-
-  for (const [key, record] of loginLockout) {
-    const unlockAt = record.lockedUntil || record.lastAttemptAt + LOCKOUT_MS;
-    if (unlockAt <= now) {
-      loginLockout.delete(key);
-      continue;
-    }
-
-    const separator = key.lastIndexOf(':');
-    const ip = key.slice(0, separator);
-    const email = key.slice(separator + 1);
-    entries.push({
-      type: 'login-lockout',
-      id: Buffer.from(key).toString('base64url'),
-      identifier: `${email} / ${ip}`,
-      reason: 'Failed Logins',
-      unlockAt: new Date(unlockAt).toISOString(),
-      remainingMinutes: Math.ceil((unlockAt - now) / 60000),
-      failedAttempts: record.failedAttempts,
-      locked: Boolean(record.lockedUntil),
-    });
-  }
-
-  return entries;
-};
-
-export const clearLoginLockoutById = (id) => {
-  let key;
-  try {
-    key = Buffer.from(id, 'base64url').toString();
-  } catch {
-    return false;
-  }
-  if (!key || Buffer.from(key).toString('base64url') !== id) return false;
-  return loginLockout.delete(key);
 };

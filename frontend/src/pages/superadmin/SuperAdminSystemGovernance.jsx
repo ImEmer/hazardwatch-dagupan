@@ -11,28 +11,16 @@ const SuperAdminSystemGovernance = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [securityEntries, setSecurityEntries] = useState([]);
-  const [rateLimitStats, setRateLimitStats] = useState([]);
+  const [securityLogs, setSecurityLogs] = useState([]);
   const [securityLoading, setSecurityLoading] = useState(true);
   const [securityError, setSecurityError] = useState('');
-  const [unlockingId, setUnlockingId] = useState('');
   const cardClass = `rounded-2xl border p-6 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`;
   const secondaryTextClass = isDark ? 'text-gray-400' : 'text-slate-500';
 
   const fetchSecurityStatus = useCallback(async () => {
     try {
       const { data } = await systemSettingsApi.getSecurityStatus();
-      const lockouts = Array.isArray(data?.lockouts) ? data.lockouts : [];
-      const rateLimitEntries = Array.isArray(data?.rateLimitEntries) ? data.rateLimitEntries : [];
-      const entries = Array.isArray(data?.entries) ? data.entries : [...lockouts, ...rateLimitEntries];
-      if (import.meta.env.DEV) {
-        console.debug('[security-status] Loaded entry counts', {
-          lockouts: lockouts.length,
-          rateLimitEntries: rateLimitEntries.length,
-        });
-      }
-      setSecurityEntries(entries);
-      setRateLimitStats(data?.rateLimitStats || []);
+      setSecurityLogs(Array.isArray(data?.logs) ? data.logs : []);
       setSecurityError('');
     } catch (requestError) {
       setSecurityError(requestError.response?.data?.message || 'Unable to load security status.');
@@ -95,19 +83,6 @@ const SuperAdminSystemGovernance = () => {
   const clearAnnouncement = () => {
     setGlobalAnnouncement('');
     saveSettings({ globalAnnouncement: '' }, 'Global announcement cleared.');
-  };
-
-  const unlockEntry = async (entry) => {
-    setUnlockingId(entry.id);
-    try {
-      await systemSettingsApi.unlockSecurityEntry(entry.type, entry.id);
-      toast.success('Security entry unlocked.');
-      await fetchSecurityStatus();
-    } catch (requestError) {
-      toast.error(requestError.response?.data?.message || 'Unable to unlock this entry.');
-    } finally {
-      setUnlockingId('');
-    }
   };
 
   return (
@@ -174,15 +149,8 @@ const SuperAdminSystemGovernance = () => {
       <section className={cardClass}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Security Overview</h2>
-            <p className={`mt-1 text-sm ${secondaryTextClass}`}>Active login lockouts and rate-limit blocks. Refreshes every 30 seconds.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {rateLimitStats.map(({ limiter, blockedClients }) => (
-              <span key={limiter} className={`rounded-full px-3 py-1 text-xs ${isDark ? 'bg-[#0a0b0f] text-gray-300' : 'bg-slate-100 text-slate-600'}`}>
-                {limiter}: {blockedClients} blocked
-              </span>
-            ))}
+            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Security Audit Trail</h2>
+            <p className={`mt-1 text-sm ${secondaryTextClass}`}>This is a permanent log of unauthorized access attempts for monitoring and forensic purposes.</p>
           </div>
         </div>
         {securityError && <p role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">{securityError}</p>}
@@ -190,25 +158,21 @@ const SuperAdminSystemGovernance = () => {
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className={isDark ? 'text-gray-400' : 'text-slate-500'}>
               <tr>
-                <th className="px-3 py-3 font-medium">Identifier (Email/IP)</th>
-                <th className="px-3 py-3 font-medium">Reason (Failed Logins/Rate Limit)</th>
-                <th className="px-3 py-3 font-medium">Unlock Time (Remaining minutes)</th>
-                <th className="px-3 py-3 font-medium">Action</th>
+                <th className="px-3 py-3 font-medium">Date &amp; Time</th>
+                <th className="px-3 py-3 font-medium">Identifier (Email / IP)</th>
+                <th className="px-3 py-3 font-medium">Threat Type</th>
+                <th className="px-3 py-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className={isDark ? 'divide-y divide-[#2e303a]' : 'divide-y divide-slate-200'}>
-              {securityLoading && securityEntries.length === 0 && <tr><td colSpan="4" className={`px-3 py-6 text-center ${secondaryTextClass}`}>Loading security status...</td></tr>}
-              {!securityLoading && securityEntries.length === 0 && <tr><td colSpan="4" className={`px-3 py-6 text-center ${secondaryTextClass}`}>No active lockouts or rate limits.</td></tr>}
-              {securityEntries.map((entry) => (
-                <tr key={`${entry.type}:${entry.id}`}>
-                  <td className={`px-3 py-3 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{entry.identifier}</td>
-                  <td className={`px-3 py-3 ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{entry.reason}</td>
-                  <td className={`px-3 py-3 ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{entry.remainingMinutes} min</td>
-                  <td className="px-3 py-3">
-                    <button type="button" onClick={() => unlockEntry(entry)} disabled={unlockingId === entry.id} className="rounded-md border border-amber-500/40 px-3 py-1.5 text-xs font-semibold text-amber-500 transition hover:bg-amber-500/10 disabled:opacity-50">
-                      {unlockingId === entry.id ? 'Unlocking...' : 'Unlock'}
-                    </button>
-                  </td>
+              {securityLoading && securityLogs.length === 0 && <tr><td colSpan="4" className={`px-3 py-6 text-center ${secondaryTextClass}`}>Loading security audit trail...</td></tr>}
+              {!securityLoading && securityLogs.length === 0 && <tr><td colSpan="4" className={`px-3 py-6 text-center ${secondaryTextClass}`}>No security events recorded.</td></tr>}
+              {securityLogs.map((log) => (
+                <tr key={log._id}>
+                  <td className={`whitespace-nowrap px-3 py-3 ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{new Date(log.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                  <td className={`px-3 py-3 ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{log.identifier}</td>
+                  <td className={`px-3 py-3 ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{log.reason}</td>
+                  <td className={`px-3 py-3 ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>{log.status}</td>
                 </tr>
               ))}
             </tbody>

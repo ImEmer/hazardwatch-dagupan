@@ -203,7 +203,7 @@ export const login = async (req, res, next) => {
 
     const user = await User.findOne({ email: normalizedEmail }).select('+password +notificationEmail +otpCode +otpExpires +otpAttempts +otpBlockedUntil +biometricCredentials');
     if (!user || !(await user.comparePassword(password))) {
-      const failedLogin = recordFailedLogin(req, normalizedEmail);
+      const failedLogin = await recordFailedLogin(req, normalizedEmail);
       if (failedLogin) {
         res.set('Retry-After', String(failedLogin.retryAfter));
         return res.status(429).json({ success: false, message: 'Too many failed login attempts. Please try again in 5 minutes.' });
