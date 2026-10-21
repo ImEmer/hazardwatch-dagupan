@@ -16,9 +16,6 @@ const SuperAdminSystemGovernance = () => {
   const [securityLoading, setSecurityLoading] = useState(true);
   const [securityError, setSecurityError] = useState('');
   const [unlockingId, setUnlockingId] = useState('');
-  const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [broadcastType, setBroadcastType] = useState('info');
-  const [broadcasting, setBroadcasting] = useState(false);
   const cardClass = `rounded-2xl border p-6 ${isDark ? 'border-[#2e303a] bg-[#14151d]' : 'border-slate-200 bg-white'}`;
   const secondaryTextClass = isDark ? 'text-gray-400' : 'text-slate-500';
 
@@ -104,20 +101,6 @@ const SuperAdminSystemGovernance = () => {
     }
   };
 
-  const sendBroadcast = async (event) => {
-    event.preventDefault();
-    setBroadcasting(true);
-    try {
-      await systemSettingsApi.sendBroadcast(broadcastMessage, broadcastType);
-      setBroadcastMessage('');
-      toast.success('Global broadcast sent.');
-    } catch (requestError) {
-      toast.error(requestError.response?.data?.message || 'Unable to send global broadcast.');
-    } finally {
-      setBroadcasting(false);
-    }
-  };
-
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-10">
       <header>
@@ -157,7 +140,7 @@ const SuperAdminSystemGovernance = () => {
       <form onSubmit={saveAnnouncement}>
         <section className={cardClass}>
           <label htmlFor="global-announcement" className={`block text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Global Announcement</label>
-          <p className={`mt-1 text-sm ${secondaryTextClass}`}>This message appears in a banner across public and privileged pages.</p>
+          <p className={`mt-1 text-sm ${secondaryTextClass}`}>This message appears in a yellow banner across public and privileged pages.</p>
           <textarea
             id="global-announcement"
             rows={5}
@@ -169,9 +152,9 @@ const SuperAdminSystemGovernance = () => {
           />
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="submit" disabled={loading || saving} className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
-              {loading ? 'Loading...' : saving ? 'Saving...' : 'Save Announcement'}
+              {loading ? 'Loading...' : saving ? 'Saving...' : 'Update Announcement'}
             </button>
-            <button type="button" onClick={clearAnnouncement} disabled={loading || saving || !globalAnnouncement} className={`rounded-lg border px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? 'border-[#343640] text-gray-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            <button type="button" onClick={clearAnnouncement} disabled={loading || saving || !globalAnnouncement} className="rounded-lg border border-red-500 px-5 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50">
               Clear Announcement
             </button>
           </div>
@@ -224,27 +207,6 @@ const SuperAdminSystemGovernance = () => {
         </div>
       </section>
 
-      <section className={cardClass}>
-        <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Global Broadcast</h2>
-        <p className={`mt-1 text-sm ${secondaryTextClass}`}>Send a real-time alert to all users currently connected to the system.</p>
-        <form onSubmit={sendBroadcast} className="mt-4 space-y-4">
-          <label htmlFor="broadcast-message" className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>Message
-            <textarea id="broadcast-message" required maxLength={1000} rows={3} value={broadcastMessage} onChange={(event) => setBroadcastMessage(event.target.value)} className={`mt-1.5 w-full resize-y rounded-lg border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} placeholder="Write an emergency alert or announcement..." />
-          </label>
-          <div className="flex flex-wrap items-end gap-3">
-            <label htmlFor="broadcast-type" className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>Type
-              <select id="broadcast-type" value={broadcastType} onChange={(event) => setBroadcastType(event.target.value)} className={`mt-1.5 block rounded-lg border px-3 py-2 text-sm outline-none focus:border-blue-500 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
-                <option value="info">Info</option>
-                <option value="warning">Warning</option>
-                <option value="emergency">Emergency</option>
-              </select>
-            </label>
-            <button type="submit" disabled={broadcasting || !broadcastMessage.trim()} className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
-              {broadcasting ? 'Sending...' : 'Send Broadcast'}
-            </button>
-          </div>
-        </form>
-      </section>
     </div>
   );
 };

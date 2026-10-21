@@ -146,7 +146,6 @@ export const systemSettingsApi = {
   update: (settings) => api.patch('/system/settings', settings),
   getSecurityStatus: () => api.get('/system/security-status'),
   unlockSecurityEntry: (type, id) => api.delete(`/system/security-status/${encodeURIComponent(type)}/${encodeURIComponent(id)}`),
-  sendBroadcast: (message, type) => api.post('/system/broadcast', { message, type }),
   uploadLogo: (file) => {
     const body = new FormData();
     body.append('logo', file);

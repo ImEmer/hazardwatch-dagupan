@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import useAuth from '../hooks/useAuth';
-import { showInfo, showWarning } from '../services/alerts';
-import { toast } from 'sonner';
+import { showInfo } from '../services/alerts';
 import { systemSettingsApi } from '../services/api';
 
 const SocketContext = createContext({ socket: null, latestReport: null, announcement: '' });
@@ -44,30 +43,11 @@ export const SocketProvider = ({ children }) => {
       setLatestReport(report);
       showInfo('New report submitted', `${report.category} in ${report.barangay}`);
     };
-    const handleGlobalBroadcast = ({ message, type } = {}) => {
-      if (typeof message !== 'string' || !['info', 'warning', 'emergency'].includes(type)) return;
-      if (type === 'emergency') {
-        return;
-      } else if (type === 'warning') {
-        showWarning('Global Broadcast', message);
-      } else {
-        showInfo('Global Broadcast', message);
-      }
-    };
     const handleAnnouncementUpdated = ({ text } = {}) => {
       if (typeof text === 'string') {
         announcementUpdatedOverSocket.current = true;
         setAnnouncement(text);
       }
-    };
-    const handleEmergencyAlert = (message) => {
-      const text = typeof message === 'string' ? message : message?.message;
-      if (typeof text !== 'string' || !text.trim()) return;
-      toast.error('EMERGENCY ALERT', {
-        description: text,
-        duration: Infinity,
-        style: { background: '#dc2626', color: '#fff', border: '1px solid #991b1b' },
-      });
     };
     const handleConnect = () => {
       console.info('[socket] connected');
@@ -80,9 +60,7 @@ export const SocketProvider = ({ children }) => {
     };
 
     connection.on('new-report', handleNewReport);
-    connection.on('global-broadcast', handleGlobalBroadcast);
     connection.on('announcement-updated', handleAnnouncementUpdated);
-    connection.on('emergency-alert', handleEmergencyAlert);
     connection.on('connect', handleConnect);
     connection.on('disconnect', handleDisconnect);
     connection.on('connect_error', handleConnectError);
@@ -90,9 +68,7 @@ export const SocketProvider = ({ children }) => {
 
     return () => {
       connection.off('new-report', handleNewReport);
-      connection.off('global-broadcast', handleGlobalBroadcast);
       connection.off('announcement-updated', handleAnnouncementUpdated);
-      connection.off('emergency-alert', handleEmergencyAlert);
       connection.off('connect', handleConnect);
       connection.off('disconnect', handleDisconnect);
       connection.off('connect_error', handleConnectError);

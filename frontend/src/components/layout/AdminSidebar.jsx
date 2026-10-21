@@ -8,7 +8,6 @@ import { HEADER_HEIGHT } from './layoutConstants';
 const items = [
   { to: '/admin/dashboard', label: 'Dashboard', roles: ['admin'], icon: LayoutDashboard },
   { to: '/superadmin/dashboard', label: 'Dashboard', roles: ['superadmin'], icon: LayoutDashboard },
-  { to: '/superadmin/system-governance', label: 'System Governance', roles: ['superadmin'], icon: Shield },
   { to: '/admin/reports', label: 'Reports', icon: FileText },
   { to: '/admin/archived', label: 'Archived', icon: Archive },
   { to: '/admin/map', label: 'Map View', icon: Map },
@@ -17,6 +16,7 @@ const items = [
   { to: '/admin/users', label: 'Users', roles: ['superadmin', 'admin'], icon: Users },
   { to: '/admin/inbox', label: 'Contact Inbox', roles: ['superadmin', 'admin'], icon: Mail },
   { to: '/admin/notifications', label: 'Notifications', roles: ['superadmin', 'admin'], icon: Bell },
+  { to: '/superadmin/system-governance', label: 'System Governance', roles: ['superadmin'], icon: Shield },
   { to: '/admin/settings', label: 'Settings', roles: ['superadmin', 'admin'], icon: Settings },
 ];
 

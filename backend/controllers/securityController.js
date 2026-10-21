@@ -23,19 +23,3 @@ export const unlockSecurityEntry = async (req, res, next) => {
     next(error);
   }
 };
-
-export const sendGlobalBroadcast = (req, res) => {
-  const { message, type } = req.body || {};
-  if (typeof message !== 'string' || !message.trim() || message.trim().length > 1000) {
-    return res.status(400).json({ success: false, message: 'Broadcast message must be between 1 and 1000 characters.' });
-  }
-  if (!['info', 'warning', 'emergency'].includes(type)) {
-    return res.status(400).json({ success: false, message: 'Broadcast type must be info, warning, or emergency.' });
-  }
-
-  const payload = { message: message.trim(), type };
-  const io = req.app.get('io');
-  io.emit('global-broadcast', payload);
-  if (type === 'emergency') io.emit('emergency-alert', payload.message);
-  res.json({ success: true, broadcast: payload });
-};
