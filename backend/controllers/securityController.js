@@ -34,6 +34,8 @@ export const sendGlobalBroadcast = (req, res) => {
   }
 
   const payload = { message: message.trim(), type };
-  req.app.get('io').emit('global-broadcast', payload);
+  const io = req.app.get('io');
+  io.emit('global-broadcast', payload);
+  if (type === 'emergency') io.emit('emergency-alert', payload.message);
   res.json({ success: true, broadcast: payload });
 };

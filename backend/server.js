@@ -88,10 +88,13 @@ setActivitySocketServer(io);
 console.log('[socket] Socket.IO initialized');
 
 io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token;
-    if (typeof token !== 'string' || !token) return next(new Error('Authentication required.'));
+  const token = socket.handshake.auth?.token;
+  if (typeof token !== 'string' || !token) {
+    socket.data.user = null;
+    return next();
+  }
 
+  try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.purpose || !decoded.id) return next(new Error('A full access token is required.'));
 
@@ -111,7 +114,7 @@ io.use(async (socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  const { role, barangay } = socket.data.user;
+  const { role, barangay } = socket.data.user || {};
   if (role === 'admin' || role === 'superadmin') {
     socket.join('room:admin');
     if (role === 'superadmin') socket.join('room:superadmin');

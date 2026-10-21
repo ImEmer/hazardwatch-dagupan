@@ -78,6 +78,9 @@ export const updateSystemSettings = async (req, res, next) => {
     await loadSettings();
     const updates = Object.fromEntries(Object.entries(body).map(([field, value]) => [field, typeof value === 'string' ? value.trim() : value]));
     const settings = await SystemSettings.findOneAndUpdate({ key: 'global' }, { $set: updates }, { new: true, runValidators: true });
+    if (Object.hasOwn(body, 'globalAnnouncement')) {
+      req.app.get('io').emit('announcement-updated', { text: settings.globalAnnouncement });
+    }
     res.json({ success: true, settings });
   } catch (error) { next(error); }
 };

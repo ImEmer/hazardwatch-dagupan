@@ -59,15 +59,14 @@ const SuperAdminSystemGovernance = () => {
     return () => window.clearInterval(intervalId);
   }, [fetchSecurityStatus]);
 
-  const saveSettings = async (event) => {
-    event.preventDefault();
+  const saveSettings = async (settings, successMessage) => {
     setSaving(true);
     setError('');
     try {
-      const { data } = await systemSettingsApi.update({ maintenanceMode, globalAnnouncement });
+      const { data } = await systemSettingsApi.update(settings);
       setMaintenanceMode(Boolean(data?.settings?.maintenanceMode));
       setGlobalAnnouncement(data?.settings?.globalAnnouncement || '');
-      toast.success('System governance settings saved.');
+      toast.success(successMessage);
     } catch (requestError) {
       const message = requestError.response?.data?.message || 'Unable to save system governance settings.';
       setError(message);
@@ -75,6 +74,21 @@ const SuperAdminSystemGovernance = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveMaintenanceMode = (event) => {
+    event.preventDefault();
+    saveSettings({ maintenanceMode }, 'Maintenance mode saved.');
+  };
+
+  const saveAnnouncement = (event) => {
+    event.preventDefault();
+    saveSettings({ globalAnnouncement }, 'Global announcement saved.');
+  };
+
+  const clearAnnouncement = () => {
+    setGlobalAnnouncement('');
+    saveSettings({ globalAnnouncement: '' }, 'Global announcement cleared.');
   };
 
   const unlockEntry = async (entry) => {
@@ -112,7 +126,7 @@ const SuperAdminSystemGovernance = () => {
         <p className={`mt-1 text-sm ${secondaryTextClass}`}>Control system availability and publish announcements to all users.</p>
       </header>
 
-      <form onSubmit={saveSettings} className="space-y-6">
+      <form onSubmit={saveMaintenanceMode}>
         <section className={cardClass}>
           <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Maintenance Mode</h2>
           <p className={`mt-1 text-sm ${secondaryTextClass}`}>Temporarily make the system unavailable to non-superadmins.</p>
@@ -133,8 +147,14 @@ const SuperAdminSystemGovernance = () => {
               <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </label>
+          <button type="submit" disabled={loading || saving} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
+            {loading ? 'Loading...' : saving ? 'Saving...' : 'Save Maintenance Settings'}
+          </button>
         </section>
+        {error && <p role="alert" className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</p>}
+      </form>
 
+      <form onSubmit={saveAnnouncement}>
         <section className={cardClass}>
           <label htmlFor="global-announcement" className={`block text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Global Announcement</label>
           <p className={`mt-1 text-sm ${secondaryTextClass}`}>This message appears in a banner across public and privileged pages.</p>
@@ -147,12 +167,16 @@ const SuperAdminSystemGovernance = () => {
             className={`mt-4 w-full resize-y rounded-lg border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 ${isDark ? 'border-[#343640] bg-[#0a0b0f] text-white placeholder:text-gray-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`}
             placeholder="Write an announcement for all users..."
           />
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button type="submit" disabled={loading || saving} className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
+              {loading ? 'Loading...' : saving ? 'Saving...' : 'Save Announcement'}
+            </button>
+            <button type="button" onClick={clearAnnouncement} disabled={loading || saving || !globalAnnouncement} className={`rounded-lg border px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? 'border-[#343640] text-gray-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+              Clear Announcement
+            </button>
+          </div>
         </section>
-
-        {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</p>}
-        <button type="submit" disabled={loading || saving} className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
-          {loading ? 'Loading...' : saving ? 'Saving...' : 'Save'}
-        </button>
+        {error && <p role="alert" className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</p>}
       </form>
 
       <section className={cardClass}>
